@@ -14,15 +14,25 @@ datasource db {
 }
 
 model User {
-  id            String     @id @default(cuid())
-  email         String     @unique
-  emailVerified DateTime?
-  name          String?
-  image         String?
-  password      String
-  groups        Group[]
-  bookmarks     Bookmark[]
-  apiTokens     ApiToken[]
+  id                   String               @id @default(cuid())
+  email                String               @unique
+  emailVerified        DateTime?
+  name                 String?
+  image                String?
+  password             String
+  groups               Group[]
+  bookmarks            Bookmark[]
+  apiTokens            ApiToken[]
+  passwordResetTokens  PasswordResetToken[]
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
 
 model ApiToken {

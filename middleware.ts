@@ -7,6 +7,8 @@ export async function middleware(req: NextRequest) {
   if (
     path.startsWith("/sign-in") ||
     path.startsWith("/sign-up") ||
+    path.startsWith("/forgot-password") ||
+    path.startsWith("/reset-password") ||
     path.startsWith("/api/auth")
   ) {
     return NextResponse.next();
