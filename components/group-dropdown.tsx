@@ -109,11 +109,13 @@ function SortableGroupRow({
 
 export function GroupDropdown({
   groups,
+  totalBookmarkCount,
   selectedGroupId,
   onSelectGroupId,
   onGroupsChange,
 }: {
   groups: GroupWithCount[];
+  totalBookmarkCount: number;
   selectedGroupId: string | null;
   onSelectGroupId: (id: string | null) => void;
   onGroupsChange: () => void;
@@ -175,8 +177,6 @@ export function GroupDropdown({
     selectedGroupId === null
       ? "#6b7280"
       : groups.find((g) => g.id === selectedGroupId)?.color ?? "#6b7280";
-  const totalCount = groups.reduce((s, g) => s + g._count.bookmarks, 0);
-
   const handleEditClick = useCallback(
     (e: React.MouseEvent | React.PointerEvent, g: GroupWithCount) => {
       e.preventDefault();
@@ -250,7 +250,7 @@ export function GroupDropdown({
             />
             All Bookmarks
             <span className="ml-auto text-muted-foreground text-xs pl-2">
-              {totalCount}
+              {totalBookmarkCount}
             </span>
           </DropdownMenuCheckboxItem>
           {groups.length > 0 && <DropdownMenuSeparator />}

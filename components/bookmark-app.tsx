@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
 import type { Group } from "@/app/generated/prisma/client";
-import { getBookmarks } from "@/app/actions/bookmarks";
+import { getBookmarks, getTotalBookmarkCount } from "@/app/actions/bookmarks";
 import { getGroups } from "@/app/actions/groups";
 import { createBookmark, createNote } from "@/app/actions/bookmarks";
 import { parseTextForUrls, parseImageForUrls, unfurlUrl } from "@/app/actions/parse";
@@ -102,14 +102,21 @@ export function BookmarkApp({
     }
   }, [selectedGroupId, sortKey, sortOrder, searchMode, searchQuery]);
 
+  const [totalBookmarkCount, setTotalBookmarkCount] = useState(0);
+
   const refreshGroups = useCallback(async () => {
-    const next = await getGroups();
-    setGroups(next);
+    const [nextGroups, total] = await Promise.all([getGroups(), getTotalBookmarkCount()]);
+    setGroups(nextGroups);
+    setTotalBookmarkCount(total);
   }, []);
 
   useEffect(() => {
     refreshBookmarks();
   }, [refreshBookmarks]);
+
+  useEffect(() => {
+    refreshGroups();
+  }, [refreshGroups]);
 
   useEffect(() => {
     if (!searchMode) return;
@@ -144,22 +151,33 @@ export function BookmarkApp({
         ? -1
         : Math.min(Math.max(0, focusedIndex), displayedBookmarks.length - 1);
     const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const inInput = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
+      const inDialog = !!target.closest("[role='dialog']");
       if ((e.metaKey || e.ctrlKey) && e.key === "f") {
         e.preventDefault();
         setSearchMode((m) => !m);
         setSearchQuery("");
         setInputValue("");
       }
-      if (e.key === "?" && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        const target = e.target as HTMLElement;
-        if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA" && !target.closest("[role='dialog']")) {
+      if (e.key === "?" && !e.ctrlKey && !e.metaKey && !e.altKey && !inInput && !inDialog) {
+        e.preventDefault();
+        setShowShortcuts((s) => !s);
+      }
+      if (!inInput && !inDialog && displayedBookmarks.length > 0) {
+        if (e.key === "ArrowDown" || e.key === "j") {
           e.preventDefault();
-          setShowShortcuts((s) => !s);
+          setFocusedIndex((i) => Math.min(i >= 0 ? i + 1 : 0, displayedBookmarks.length - 1));
+          return;
+        }
+        if (e.key === "ArrowUp" || e.key === "k") {
+          e.preventDefault();
+          setFocusedIndex((i) => Math.max(0, (i >= 0 ? i : 0) - 1));
+          return;
         }
       }
       if (e.key === " ") {
-        const target = e.target as HTMLElement;
-        if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.closest("[role='dialog']")) return;
+        if (inInput || inDialog) return;
         if (clampedFocus >= 0 && displayedBookmarks[clampedFocus]) {
           e.preventDefault();
           setPreviewBookmark(displayedBookmarks[clampedFocus]);
@@ -175,10 +193,7 @@ export function BookmarkApp({
     const raw = inputValue.trim();
     if (!raw) return;
     setInputValue("");
-    const defaultGroupId =
-      typeof window !== "undefined" && localStorage.getItem("bookmark-auto-group") === "true"
-        ? selectedGroupId
-        : null;
+    const defaultGroupId = selectedGroupId;
     if (raw.startsWith("http://") || raw.startsWith("https://")) {
       const optId = `${OPT_PREFIX}${Date.now()}`;
       const opt = makeOptimisticBookmark(optId, { url: raw, groupId: defaultGroupId }, groups);
@@ -290,10 +305,7 @@ export function BookmarkApp({
             r.readAsDataURL(file);
           });
           const urls = await parseImageForUrls(base64, mime);
-          const defaultGroupId =
-            typeof window !== "undefined" && localStorage.getItem("bookmark-auto-group") === "true"
-              ? selectedGroupId
-              : null;
+          const defaultGroupId = selectedGroupId;
           const created: BookmarkWithGroup[] = [];
           for (const url of urls) {
             try {
@@ -345,6 +357,7 @@ export function BookmarkApp({
       <header className="flex items-center justify-between gap-2 sm:gap-4 px-4 py-3 sm:px-6 sm:py-4 border-b border-border">
         <GroupDropdown
           groups={groups}
+          totalBookmarkCount={totalBookmarkCount}
           selectedGroupId={selectedGroupId}
           onSelectGroupId={setSelectedGroupId}
           onGroupsChange={refreshGroups}

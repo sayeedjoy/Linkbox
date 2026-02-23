@@ -49,6 +49,11 @@ export async function getBookmarks(options?: {
   return list as BookmarkWithGroup[];
 }
 
+export async function getTotalBookmarkCount(): Promise<number> {
+  const userId = await currentUserId();
+  return prisma.bookmark.count({ where: { userId } });
+}
+
 export async function createBookmark(
   url: string,
   options?: { groupId?: string | null; title?: string; description?: string }
