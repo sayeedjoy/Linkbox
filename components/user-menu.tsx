@@ -25,15 +25,16 @@ export function UserMenu() {
 
   const user = session.user;
   const initial = user.name?.slice(0, 1).toUpperCase() ?? user.email?.slice(0, 1).toUpperCase() ?? "?";
+  const avatarId = encodeURIComponent(user.email ?? user.name ?? "user");
 
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="rounded-full">
-            {user.image ? (
+            {(user.image || avatarId) ? (
               <img
-                src={user.image}
+                src={user.image ?? `https://avatar.vercel.sh/${avatarId}?size=32`}
                 alt=""
                 className="size-8 rounded-full object-cover"
               />
