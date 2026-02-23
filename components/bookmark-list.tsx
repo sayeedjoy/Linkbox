@@ -208,7 +208,7 @@ export function BookmarkList({
       aria-activedescendant={activeId ? `bookmark-row-${activeId}` : undefined}
       onKeyDown={handleListKeyDown}
     >
-      <div className="hidden sm:grid grid-cols-[auto_1fr_auto] gap-4 items-center px-4 py-2 border-b border-border/50 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <div className="hidden sm:grid grid-cols-[auto_1fr_auto] gap-4 items-center px-4 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         <button
           type="button"
           className="flex items-center gap-1 hover:text-foreground"
@@ -276,7 +276,7 @@ export function BookmarkList({
               key={b.id}
               id={`bookmark-row-${b.id}`}
               ref={editCardRef}
-              className="rounded-xl border border-border bg-background shadow-sm p-4 sm:p-5 flex flex-col gap-4"
+              className="rounded-2xl border border-border bg-background overflow-hidden p-4 sm:p-5 flex flex-col gap-4 animate-in fade-in-0 duration-200 ease-out"
             >
               <div className="flex items-center gap-3 min-w-0">
                 {editing?.faviconUrl ? (
