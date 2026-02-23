@@ -12,11 +12,14 @@ import { Button } from "@/components/ui/button";
 import { KeyIcon, SettingsIcon, LogOutIcon } from "lucide-react";
 import { useCallback, useState } from "react";
 import { SettingsModal } from "@/components/settings-modal";
+import { GenerateApiTokenModal } from "@/components/generate-api-token-modal";
 
 export function UserMenu() {
   const { data: session, status } = useSession();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [apiTokenModalOpen, setApiTokenModalOpen] = useState(false);
   const openSettings = useCallback(() => setSettingsOpen(true), []);
+  const openApiTokenModal = useCallback(() => setApiTokenModalOpen(true), []);
 
   if (status !== "authenticated" || !session?.user) return null;
 
@@ -42,7 +45,7 @@ export function UserMenu() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-[180px]">
-          <DropdownMenuItem onClick={openSettings}>
+          <DropdownMenuItem onClick={openApiTokenModal}>
             <KeyIcon className="size-4" />
             Generate API Token
           </DropdownMenuItem>
@@ -61,6 +64,10 @@ export function UserMenu() {
         </DropdownMenuContent>
       </DropdownMenu>
       <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <GenerateApiTokenModal
+        open={apiTokenModalOpen}
+        onOpenChange={setApiTokenModalOpen}
+      />
     </>
   );
 }
