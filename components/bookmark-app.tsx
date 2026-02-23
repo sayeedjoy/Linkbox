@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState, useDeferredValue } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { GroupDropdown } from "@/components/group-dropdown";
@@ -22,7 +22,6 @@ import { createBookmark, createNote } from "@/app/actions/bookmarks";
 import { parseTextForUrls, parseImageForUrls, unfurlUrl } from "@/app/actions/parse";
 import { createBookmarkFromMetadata } from "@/app/actions/bookmarks";
 
-const SEARCH_DEBOUNCE_MS = 300;
 const OPT_PREFIX = "opt-";
 const LAST_GROUP_KEY = "bookmark-last-group";
 
@@ -34,6 +33,18 @@ function hostnameFromUrl(url: string): string {
   } catch {
     return url;
   }
+}
+
+function filterBookmarks(list: BookmarkWithGroup[], q: string): BookmarkWithGroup[] {
+  const lower = q.trim().toLowerCase();
+  if (!lower) return list;
+  return list.filter((b) => {
+    const title = (b.title ?? "").toLowerCase();
+    const url = (b.url ?? "").toLowerCase();
+    const desc = (b.description ?? "").toLowerCase();
+    const group = (b.group?.name ?? "").toLowerCase();
+    return title.includes(lower) || url.includes(lower) || desc.includes(lower) || group.includes(lower);
+  });
 }
 
 function makeOptimisticBookmark(
@@ -75,7 +86,6 @@ export function BookmarkApp({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [bookmarks, setBookmarks] = useState<BookmarkWithGroup[]>(initialBookmarks);
-  const [searchResults, setSearchResults] = useState<BookmarkWithGroup[]>(initialBookmarks);
   const [groups, setGroups] = useState<GroupWithCount[]>(initialGroups);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(
     initialSelectedGroupId ?? null
@@ -89,7 +99,12 @@ export function BookmarkApp({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [showShortcuts, setShowShortcuts] = useState(false);
-  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+
+  const displayedBookmarks = useMemo(
+    () => (searchMode ? filterBookmarks(bookmarks, deferredSearchQuery) : bookmarks),
+    [searchMode, bookmarks, deferredSearchQuery]
+  );
 
   const refreshBookmarks = useCallback(async () => {
     const next = await getBookmarks({
@@ -98,18 +113,7 @@ export function BookmarkApp({
       order: sortOrder,
     });
     setBookmarks(next);
-    if (!searchMode) setSearchResults(next);
-    else {
-      const q = searchQuery.trim();
-      const searchNext = await getBookmarks({
-        groupId: selectedGroupId,
-        search: q || undefined,
-        sort: sortKey,
-        order: sortOrder,
-      });
-      setSearchResults(searchNext);
-    }
-  }, [selectedGroupId, sortKey, sortOrder, searchMode, searchQuery]);
+  }, [selectedGroupId, sortKey, sortOrder]);
 
   const [totalBookmarkCount, setTotalBookmarkCount] = useState(0);
 
@@ -166,33 +170,6 @@ export function BookmarkApp({
   );
 
   useEffect(() => {
-    if (!searchMode) return;
-    const q = searchQuery.trim();
-    if (searchDebounceRef.current) {
-      clearTimeout(searchDebounceRef.current);
-      searchDebounceRef.current = null;
-    }
-    const run = async () => {
-      const next = await getBookmarks({
-        groupId: selectedGroupId,
-        search: q || undefined,
-        sort: sortKey,
-        order: sortOrder,
-      });
-      setSearchResults(next);
-    };
-    searchDebounceRef.current = setTimeout(run, SEARCH_DEBOUNCE_MS);
-    return () => {
-      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-    };
-  }, [searchMode, searchQuery, selectedGroupId, sortKey, sortOrder]);
-
-  useEffect(() => {
-    if (!searchMode) setSearchResults(bookmarks);
-  }, [searchMode, bookmarks]);
-
-  useEffect(() => {
-    const displayedBookmarks = searchMode ? searchResults : bookmarks;
     const clampedFocus =
       displayedBookmarks.length === 0
         ? -1
@@ -233,7 +210,7 @@ export function BookmarkApp({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [searchMode, searchResults, bookmarks, focusedIndex]);
+  }, [displayedBookmarks, focusedIndex]);
 
   const handleHeroSubmit = useCallback(async () => {
     if (searchMode) return;
@@ -245,16 +222,13 @@ export function BookmarkApp({
       const optId = `${OPT_PREFIX}${Date.now()}`;
       const opt = makeOptimisticBookmark(optId, { url: raw, groupId: defaultGroupId }, groups);
       setBookmarks((prev) => [opt, ...prev]);
-      setSearchResults((prev) => [opt, ...prev]);
       try {
         const b = await createBookmark(raw, { groupId: defaultGroupId });
         setBookmarks((prev) => [b, ...prev.filter((x) => x.id !== optId && x.id !== b.id)]);
-        setSearchResults((prev) => [b, ...prev.filter((x) => x.id !== optId && x.id !== b.id)]);
         refreshGroups();
         toast.success("Saved");
       } catch {
         setBookmarks((prev) => prev.filter((x) => x.id !== optId));
-        setSearchResults((prev) => prev.filter((x) => x.id !== optId));
         toast.error("Failed to save");
       }
       return;
@@ -266,7 +240,6 @@ export function BookmarkApp({
         makeOptimisticBookmark(id, { url: urls[i], groupId: defaultGroupId }, groups)
       );
       setBookmarks((prev) => [...optimistic, ...prev]);
-      setSearchResults((prev) => [...optimistic, ...prev]);
       setIsSubmitting(true);
       const created: BookmarkWithGroup[] = [];
       let failed = 0;
@@ -287,13 +260,9 @@ export function BookmarkApp({
           setBookmarks((prev) =>
             prev.filter((x) => x.id !== b.id || x.id === optIds[i]).map((x) => (x.id === optIds[i] ? b : x))
           );
-          setSearchResults((prev) =>
-            prev.filter((x) => x.id !== b.id || x.id === optIds[i]).map((x) => (x.id === optIds[i] ? b : x))
-          );
         } catch {
           failed++;
           setBookmarks((prev) => prev.filter((x) => x.id !== optIds[i]));
-          setSearchResults((prev) => prev.filter((x) => x.id !== optIds[i]));
         }
       }
       if (failed > 0) toast.error(failed === urls.length ? "Failed to save" : `${failed} of ${urls.length} failed`);
@@ -311,17 +280,14 @@ export function BookmarkApp({
     }, groups);
     opt.description = raw;
     setBookmarks((prev) => [opt, ...prev]);
-    setSearchResults((prev) => [opt, ...prev]);
     setIsSubmitting(true);
     try {
       const note = await createNote(raw, defaultGroupId);
       setBookmarks((prev) => prev.map((x) => (x.id === optId ? note : x)));
-      setSearchResults((prev) => prev.map((x) => (x.id === optId ? note : x)));
       toast.success("Note saved");
       refreshGroups();
     } catch {
       setBookmarks((prev) => prev.filter((x) => x.id !== optId));
-      setSearchResults((prev) => prev.filter((x) => x.id !== optId));
       toast.error("Failed to save");
     } finally {
       setIsSubmitting(false);
@@ -393,7 +359,6 @@ export function BookmarkApp({
     [selectedGroupId, refreshGroups]
   );
 
-  const displayedBookmarks = searchMode ? searchResults : bookmarks;
   const clampedFocus =
     displayedBookmarks.length === 0
       ? -1
@@ -444,7 +409,6 @@ export function BookmarkApp({
                   }
                 : b;
             setBookmarks((prev) => prev.map(upd));
-            setSearchResults((prev) => prev.map(upd));
           }}
           onOpenPreview={setPreviewBookmark}
           focusedIndex={clampedFocus}
