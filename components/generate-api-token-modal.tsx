@@ -92,11 +92,13 @@ export function GenerateApiTokenModal({
             integrations. For security, tokens are only shown once.
           </p>
         </DialogHeader>
-        <div className="overflow-y-auto min-h-0 flex-1 grid gap-6 py-2">
-          <div className="grid gap-2">
-            <span className="text-sm font-medium">Your API Tokens</span>
+        <div className="overflow-y-auto min-h-0 flex-1 flex flex-col gap-4 py-2">
+          <div className="rounded-xl border border-border bg-muted/20 p-4 flex flex-col gap-3">
+            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Your API Tokens
+            </span>
             {apiTokens.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 No tokens yet. Create one below.
               </p>
             ) : (
@@ -104,18 +106,18 @@ export function GenerateApiTokenModal({
                 {apiTokens.map((t) => (
                   <li
                     key={t.id}
-                    className="flex items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2.5"
+                    className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2.5 min-h-10"
                   >
                     <div className="min-w-0 flex-1">
-                      <span className="font-medium block truncate">{t.name}</span>
+                      <span className="font-medium block truncate text-sm">{t.name}</span>
                       <span className="text-xs text-muted-foreground">
-                        Created: {formatTokenDate(t.createdAt)}
+                        Created {formatTokenDate(t.createdAt)}
                       </span>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="shrink-0 text-muted-foreground hover:text-destructive"
+                      className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
                       onClick={() => handleRevoke(t.id)}
                       aria-label="Revoke token"
                     >
@@ -126,25 +128,29 @@ export function GenerateApiTokenModal({
               </ul>
             )}
           </div>
-          <div className="grid gap-2">
-            <span className="text-sm font-medium">Create New Token</span>
-            <Input
-              placeholder="e.g., Chrome Extension"
-              value={newTokenName}
-              onChange={(e) => setNewTokenName(e.target.value)}
-              className="w-full"
-            />
-            <Button
-              onClick={handleCreateToken}
-              disabled={isCreating}
-              className="w-full sm:w-auto"
-            >
-              {isCreating ? "Creating…" : "Create Token"}
-            </Button>
+          <div className="rounded-xl border border-border bg-muted/20 p-4 flex flex-col gap-3">
+            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Create New Token
+            </span>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Input
+                placeholder="e.g., Chrome Extension"
+                value={newTokenName}
+                onChange={(e) => setNewTokenName(e.target.value)}
+                className="h-8 flex-1 min-w-0"
+              />
+              <Button
+                onClick={handleCreateToken}
+                disabled={isCreating}
+                className="h-8 shrink-0"
+              >
+                {isCreating ? "Creating…" : "Create Token"}
+              </Button>
+            </div>
           </div>
         </div>
-        <div className="flex justify-end pt-2 border-t border-border">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <div className="flex justify-end pt-4 -mx-4 -mb-4 px-4 pb-4 border-t border-border">
+          <Button variant="outline" size="default" className="h-8" onClick={() => onOpenChange(false)}>
             Close
           </Button>
         </div>

@@ -102,14 +102,14 @@ export function SettingsModal({
           <DialogHeader>
             <DialogTitle>Settings</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto overflow-x-hidden min-h-0 flex-1 grid gap-6 py-2 min-w-0">
-            <div className="grid gap-2">
+          <div className="overflow-y-auto overflow-x-hidden min-h-0 flex-1 flex flex-col gap-4 py-2 min-w-0">
+            <div className="rounded-xl border border-border bg-muted/20 p-4 flex flex-col gap-3">
               <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 THEME
               </span>
               <Select value={theme} onValueChange={handleThemeChange}>
-                <SelectTrigger className="w-full">
-                  <SunIcon className="size-4" />
+                <SelectTrigger className="w-full h-8">
+                  <SunIcon className="size-4 shrink-0" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -119,7 +119,7 @@ export function SettingsModal({
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2">
+            <div className="rounded-xl border border-border bg-muted/20 p-4 flex flex-col gap-3">
               <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 ORGANIZATION
               </span>
@@ -142,7 +142,7 @@ export function SettingsModal({
                 />
               </div>
             </div>
-            <div className="grid gap-2">
+            <div className="rounded-xl border border-border bg-muted/20 p-4 flex flex-col gap-3">
               <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 ACCOUNT
               </span>
@@ -150,13 +150,14 @@ export function SettingsModal({
                 {session?.user?.email ?? "—"}
               </p>
               <div className="flex flex-col gap-2">
-                <Button variant="outline" onClick={handleExport}>
+                <Button variant="outline" size="default" className="h-8 w-full sm:w-auto" onClick={handleExport}>
                   <DownloadIcon className="size-4" />
                   Export bookmarks
                 </Button>
                 <Button
                   variant="ghost"
-                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  size="default"
+                  className="h-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
                   onClick={() => setDeleteConfirmOpen(true)}
                 >
                   <TrashIcon className="size-4" />
