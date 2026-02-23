@@ -428,10 +428,20 @@ export function BookmarkList({
                 <SelectTrigger>
                   <SelectValue placeholder="No group" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No group</SelectItem>
+                <SelectContent side="bottom">
+                  <SelectItem value="none">
+                    <span
+                      className="size-3 rounded-full shrink-0 mr-2"
+                      style={{ backgroundColor: "#6b7280" }}
+                    />
+                    No group
+                  </SelectItem>
                   {groups.map((g) => (
                     <SelectItem key={g.id} value={g.id}>
+                      <span
+                        className="size-3 rounded-full shrink-0 mr-2"
+                        style={{ backgroundColor: g.color ?? "#6b7280" }}
+                      />
                       {g.name}
                     </SelectItem>
                   ))}
