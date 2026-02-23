@@ -3,84 +3,28 @@
 import { useCallback, useEffect, useMemo, useState, useDeferredValue } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { GroupDropdown } from "@/components/group-dropdown";
-import { UserMenu } from "@/components/user-menu";
-import { BookmarkHeroInput } from "@/components/bookmark-hero-input";
-import { BookmarkList } from "@/components/bookmark-list";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
-import type { Group } from "@/app/generated/prisma/client";
+import type { GroupWithCount } from "@/lib/types";
 import { getBookmarks, getTotalBookmarkCount } from "@/app/actions/bookmarks";
 import { getGroups } from "@/app/actions/groups";
 import { createBookmark, createNote } from "@/app/actions/bookmarks";
 import { parseTextForUrls, parseImageForUrls, unfurlUrl } from "@/app/actions/parse";
 import { createBookmarkFromMetadata } from "@/app/actions/bookmarks";
+import { filterBookmarks, makeOptimisticBookmark } from "./utils";
 
 const OPT_PREFIX = "opt-";
 const LAST_GROUP_KEY = "bookmark-last-group";
 
-type GroupWithCount = Group & { _count: { bookmarks: number } };
-
-function hostnameFromUrl(url: string): string {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return url;
-  }
-}
-
-function filterBookmarks(list: BookmarkWithGroup[], q: string): BookmarkWithGroup[] {
-  const lower = q.trim().toLowerCase();
-  if (!lower) return list;
-  return list.filter((b) => {
-    const title = (b.title ?? "").toLowerCase();
-    const url = (b.url ?? "").toLowerCase();
-    const desc = (b.description ?? "").toLowerCase();
-    const group = (b.group?.name ?? "").toLowerCase();
-    return title.includes(lower) || url.includes(lower) || desc.includes(lower) || group.includes(lower);
-  });
-}
-
-function makeOptimisticBookmark(
-  optId: string,
-  payload: { url?: string | null; title?: string | null; groupId?: string | null },
-  groups: GroupWithCount[]
-): BookmarkWithGroup {
-  const group = payload.groupId ? groups.find((g) => g.id === payload.groupId) ?? null : null;
-  const now = new Date();
-  const title =
-    payload.title ??
-    (payload.url ? hostnameFromUrl(payload.url) : null) ??
-    "Loading…";
-  return {
-    id: optId,
-    userId: "",
-    groupId: payload.groupId ?? null,
-    url: payload.url ?? null,
-    title,
-    description: null,
-    faviconUrl: null,
-    previewImageUrl: null,
-    createdAt: now,
-    updatedAt: now,
-    group: group ? { id: group.id, name: group.name, color: group.color } : null,
-  };
-}
-
-export function BookmarkApp({
+export function useBookmarkApp({
   initialBookmarks,
   initialGroups,
   initialSelectedGroupId,
+  initialTotalBookmarkCount = 0,
 }: {
   initialBookmarks: BookmarkWithGroup[];
   initialGroups: GroupWithCount[];
   initialSelectedGroupId?: string | null;
+  initialTotalBookmarkCount?: number;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -115,7 +59,7 @@ export function BookmarkApp({
     setBookmarks(next);
   }, [selectedGroupId, sortKey, sortOrder]);
 
-  const [totalBookmarkCount, setTotalBookmarkCount] = useState(0);
+  const [totalBookmarkCount, setTotalBookmarkCount] = useState(initialTotalBookmarkCount);
 
   const refreshGroups = useCallback(async () => {
     const [nextGroups, total] = await Promise.all([getGroups(), getTotalBookmarkCount()]);
@@ -141,7 +85,6 @@ export function BookmarkApp({
       const last = typeof window !== "undefined" ? localStorage.getItem(LAST_GROUP_KEY) : null;
       if (last) router.replace(`/?group=${encodeURIComponent(last)}`);
     } catch {
-      //
     }
   }, [searchParams, router, initialSelectedGroupId]);
 
@@ -154,7 +97,6 @@ export function BookmarkApp({
           else localStorage.removeItem(LAST_GROUP_KEY);
         }
       } catch {
-        //
       }
       const params = new URLSearchParams(searchParams.toString());
       if (id) {
@@ -335,7 +277,6 @@ export function BookmarkApp({
               );
               created.push(b);
             } catch {
-              //
             }
           }
           if (created.length) {
@@ -364,148 +305,32 @@ export function BookmarkApp({
       ? -1
       : Math.min(Math.max(0, focusedIndex), displayedBookmarks.length - 1);
 
-  return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <header>
-        <div className="flex items-center justify-between gap-2 sm:gap-4 px-4 py-3 sm:px-6 sm:py-4 max-w-4xl w-full mx-auto">
-          <GroupDropdown
-            groups={groups}
-            totalBookmarkCount={totalBookmarkCount}
-            selectedGroupId={selectedGroupId}
-            onSelectGroupId={handleSelectGroupId}
-            onGroupsChange={refreshGroups}
-          />
-          <UserMenu />
-        </div>
-      </header>
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-4 sm:px-6 sm:py-6 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col gap-6">
-        <BookmarkHeroInput
-          value={searchMode ? searchQuery : inputValue}
-          onChange={searchMode ? setSearchQuery : setInputValue}
-          onSubmit={handleHeroSubmit}
-          onPaste={handleHeroPaste}
-          searchMode={searchMode}
-          disabled={isSubmitting}
-        />
-        <BookmarkList
-          bookmarks={displayedBookmarks}
-          groups={groups}
-          sortKey={sortKey}
-          sortOrder={sortOrder}
-          onSortChange={(key, order) => {
-            setSortKey(key);
-            setSortOrder(order);
-          }}
-          onBookmarksChange={handleBookmarksChange}
-          onBookmarkUpdate={(id, patch) => {
-            const upd = (b: BookmarkWithGroup) =>
-              b.id === id
-                ? {
-                    ...b,
-                    ...patch,
-                    group: patch.groupId
-                      ? groups.find((g) => g.id === patch.groupId!) ?? null
-                      : null,
-                  }
-                : b;
-            setBookmarks((prev) => prev.map(upd));
-          }}
-          onOpenPreview={setPreviewBookmark}
-          focusedIndex={clampedFocus}
-          onFocusChange={setFocusedIndex}
-        />
-      </main>
-      <Dialog open={!!previewBookmark} onOpenChange={(o) => !o && setPreviewBookmark(null)}>
-        <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="truncate pr-8">
-              {previewBookmark
-                ? (previewBookmark.title || (previewBookmark.url ? hostnameFromUrl(previewBookmark.url) : "Note"))
-                : ""}
-            </DialogTitle>
-          </DialogHeader>
-          {previewBookmark && (
-            <div className="space-y-3 overflow-y-auto min-h-0 flex-1">
-              {previewBookmark.previewImageUrl && (
-                <img
-                  src={previewBookmark.previewImageUrl}
-                  alt=""
-                  className="w-full rounded-lg border border-border object-cover max-h-48"
-                />
-              )}
-              {previewBookmark.description && (
-                <p className="text-sm text-muted-foreground line-clamp-3 whitespace-pre-wrap">
-                  {previewBookmark.description}
-                </p>
-              )}
-              {previewBookmark.url ? (
-                <>
-                  <a
-                    href={previewBookmark.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-muted-foreground hover:text-foreground truncate block"
-                  >
-                    {previewBookmark.url}
-                  </a>
-                  <Button asChild size="sm">
-                    <a href={previewBookmark.url} target="_blank" rel="noopener noreferrer">
-                      Open
-                    </a>
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    const text = [previewBookmark.title, previewBookmark.description].filter(Boolean).join("\n");
-                    navigator.clipboard.writeText(text || "");
-                  }}
-                >
-                  Copy
-                </Button>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-      <Dialog open={showShortcuts} onOpenChange={setShowShortcuts}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Keyboard shortcuts</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-2 text-sm">
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Search</span>
-              <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">⌘F</kbd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Move down</span>
-              <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">j</kbd> or <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">↓</kbd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Move up</span>
-              <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">k</kbd> or <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">↑</kbd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Open bookmark</span>
-              <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">Enter</kbd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Edit</span>
-              <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">e</kbd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Delete</span>
-              <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">Backspace</kbd> / <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">Delete</kbd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">This help</span>
-              <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">?</kbd>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+  return {
+    groups,
+    totalBookmarkCount,
+    selectedGroupId,
+    handleSelectGroupId,
+    refreshGroups,
+    searchMode,
+    searchQuery,
+    inputValue,
+    setInputValue,
+    setSearchQuery,
+    displayedBookmarks,
+    sortKey,
+    sortOrder,
+    setSortKey,
+    setSortOrder,
+    handleHeroSubmit,
+    handleHeroPaste,
+    handleBookmarksChange,
+    previewBookmark,
+    setPreviewBookmark,
+    showShortcuts,
+    setShowShortcuts,
+    isSubmitting,
+    focusedIndex: clampedFocus,
+    setFocusedIndex,
+    setBookmarks,
+  };
 }

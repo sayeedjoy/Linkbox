@@ -1,4 +1,4 @@
-import { getBookmarks } from "@/app/actions/bookmarks";
+import { getBookmarks, getTotalBookmarkCount } from "@/app/actions/bookmarks";
 import { getGroups } from "@/app/actions/groups";
 import { BookmarkApp } from "@/components/bookmark-app";
 import { Suspense } from "react";
@@ -17,13 +17,14 @@ export default async function Page({
         ? groupParam[0]
         : null;
 
-  const [initialGroups, initialBookmarks] = await Promise.all([
+  const [initialGroups, initialBookmarks, initialTotalCount] = await Promise.all([
     getGroups(),
     getBookmarks({
       groupId: groupId ?? undefined,
       sort: "createdAt",
       order: "desc",
     }),
+    getTotalBookmarkCount(),
   ]);
 
   const validGroupId =
@@ -41,6 +42,7 @@ export default async function Page({
         initialBookmarks={initialBookmarks}
         initialGroups={initialGroups}
         initialSelectedGroupId={validGroupId}
+        initialTotalBookmarkCount={initialTotalCount}
       />
     </Suspense>
   );
