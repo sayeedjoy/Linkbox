@@ -282,11 +282,9 @@ export function BookmarkList({
               rowRefs.current[index] = el;
             }}
             className={`
-              /* ── Mobile: card ── */
-              flex flex-col gap-1.5 p-3.5 rounded-xl border border-border bg-background shadow-sm
-              /* ── Desktop: table row ── */
+              flex flex-col gap-1.5 p-3.5 rounded-xl border border-border bg-background
               sm:grid sm:grid-cols-[auto_1fr_auto] sm:gap-4 sm:items-center sm:p-0 sm:py-3 sm:px-4
-              sm:border-0 sm:shadow-none sm:rounded-none
+              sm:border-0 sm:rounded-none
               hover:bg-muted/20 group
               ${focusedIndex === index ? "bg-muted/40" : ""}
             `}
@@ -303,7 +301,7 @@ export function BookmarkList({
                 <div className="size-5 shrink-0 rounded bg-muted" />
               )}
               <div className="min-w-0 flex-1">
-                <div className="font-medium truncate leading-snug">
+                <div className="font-medium truncate leading-snug line-clamp-1">
                   {b.title || safeHostname(b.url)}
                 </div>
                 {/* ── Row 2 (mobile): Domain ── */}
