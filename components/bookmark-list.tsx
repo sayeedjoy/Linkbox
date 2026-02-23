@@ -210,7 +210,7 @@ export function BookmarkList({
       aria-activedescendant={activeId ? `bookmark-row-${activeId}` : undefined}
       onKeyDown={handleListKeyDown}
     >
-      <div className="grid grid-cols-[auto_1fr_auto] gap-4 items-center px-4 py-2 border-b border-border/50 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <div className="hidden sm:grid grid-cols-[auto_1fr_auto] gap-4 items-center px-4 py-2 border-b border-border/50 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         <button
           type="button"
           className="flex items-center gap-1 hover:text-foreground"
