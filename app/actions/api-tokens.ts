@@ -13,21 +13,29 @@ export async function createApiToken(name: string = "Default"): Promise<
   if (!userId) return { error: "Not authenticated" };
   const plaintext = randomBytes(32).toString("hex");
   const tokenHash = hashToken(plaintext);
+  const prefix = plaintext.slice(0, 4);
+  const suffix = plaintext.slice(-4);
   const record = await prisma.apiToken.create({
-    data: { userId, name: name.trim() || "Default", tokenHash },
+    data: {
+      userId,
+      name: name.trim() || "Default",
+      tokenHash,
+      tokenPrefix: prefix,
+      tokenSuffix: suffix,
+    },
   });
   return { token: plaintext, id: record.id, name: record.name, createdAt: record.createdAt };
 }
 
 export async function listApiTokens(): Promise<
-  { id: string; name: string; createdAt: Date }[]
+  { id: string; name: string; tokenPrefix: string | null; tokenSuffix: string | null; createdAt: Date; lastUsedAt: Date | null }[]
 > {
   const userId = await currentUserId().catch(() => null);
   if (!userId) return [];
   const list = await prisma.apiToken.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
-    select: { id: true, name: true, createdAt: true },
+    select: { id: true, name: true, tokenPrefix: true, tokenSuffix: true, createdAt: true, lastUsedAt: true },
   });
   return list;
 }

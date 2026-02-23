@@ -29,7 +29,7 @@ export function GenerateApiTokenModal({
   onOpenChange: (open: boolean) => void;
 }) {
   const [apiTokens, setApiTokens] = useState<
-    { id: string; name: string; createdAt: Date }[]
+    { id: string; name: string; tokenPrefix: string | null; tokenSuffix: string | null; createdAt: Date; lastUsedAt: Date | null }[]
   >([]);
   const [newTokenName, setNewTokenName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
@@ -106,18 +106,30 @@ export function GenerateApiTokenModal({
                 {apiTokens.map((t) => (
                   <li
                     key={t.id}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2.5 min-h-10"
+                    className="flex items-start justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2.5"
                   >
-                    <div className="min-w-0 flex-1">
-                      <span className="font-medium block truncate text-sm">{t.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        Created {formatTokenDate(t.createdAt)}
-                      </span>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-sm">{t.name}</span>
+                        {(t.tokenPrefix ?? t.tokenSuffix) && (
+                          <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground">
+                            {[t.tokenPrefix, "…", t.tokenSuffix].filter(Boolean).join("")}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                        <span>Created: {formatTokenDate(t.createdAt)}</span>
+                        {t.lastUsedAt != null ? (
+                          <span>Last used: {formatTokenDate(t.lastUsedAt)}</span>
+                        ) : (
+                          <span>Last used: Never</span>
+                        )}
+                      </div>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                      className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive mt-0.5"
                       onClick={() => handleRevoke(t.id)}
                       aria-label="Revoke token"
                     >

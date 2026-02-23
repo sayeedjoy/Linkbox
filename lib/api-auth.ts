@@ -12,7 +12,12 @@ export async function userIdFromBearerToken(authHeader: string | null): Promise<
   const hash = hashToken(token);
   const record = await prisma.apiToken.findFirst({
     where: { tokenHash: hash },
-    select: { userId: true },
+    select: { id: true, userId: true },
   });
-  return record?.userId ?? null;
+  if (!record) return null;
+  await prisma.apiToken.update({
+    where: { id: record.id },
+    data: { lastUsedAt: new Date() },
+  });
+  return record.userId;
 }

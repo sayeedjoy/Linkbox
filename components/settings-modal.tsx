@@ -31,6 +31,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { deleteAccount } from "@/app/actions/auth";
+import { listApiTokens } from "@/app/actions/api-tokens";
 
 const THEME_KEY = "bookmark-theme";
 const AUTO_GROUP_KEY = "bookmark-auto-group";
@@ -47,6 +48,14 @@ export function SettingsModal({
   const [autoGroup, setAutoGroup] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [apiTokens, setApiTokens] = useState<
+    { id: string; name: string; tokenPrefix: string | null; tokenSuffix: string | null; createdAt: Date; lastUsedAt: Date | null }[]
+  >([]);
+
+  useEffect(() => {
+    if (open) listApiTokens().then(setApiTokens);
+  }, [open]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     setTheme(
@@ -141,6 +150,44 @@ export function SettingsModal({
                   className="shrink-0"
                 />
               </div>
+            </div>
+            <div className="rounded-xl border border-border bg-muted/20 p-4 flex flex-col gap-3">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                API TOKENS
+              </span>
+              {apiTokens.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No API tokens. Create one from the Generate API Token option in the menu.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {apiTokens.map((t) => (
+                    <li
+                      key={t.id}
+                      className="flex items-start gap-3 rounded-lg border border-border bg-background px-3 py-2.5"
+                    >
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-sm">{t.name}</span>
+                          {(t.tokenPrefix ?? t.tokenSuffix) && (
+                            <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground">
+                              {[t.tokenPrefix, "…", t.tokenSuffix].filter(Boolean).join("")}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                          <span>Created: {new Intl.DateTimeFormat("en-US", { month: "numeric", day: "numeric", year: "numeric" }).format(new Date(t.createdAt))}</span>
+                          {t.lastUsedAt != null ? (
+                            <span>Last used: {new Intl.DateTimeFormat("en-US", { month: "numeric", day: "numeric", year: "numeric" }).format(new Date(t.lastUsedAt))}</span>
+                          ) : (
+                            <span>Last used: Never</span>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             <div className="rounded-xl border border-border bg-muted/20 p-4 flex flex-col gap-3">
               <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">

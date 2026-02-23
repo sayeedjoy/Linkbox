@@ -26,12 +26,15 @@ model User {
 }
 
 model ApiToken {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name      String
-  tokenHash String
-  createdAt DateTime @default(now())
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  tokenHash   String
+  tokenPrefix String?
+  tokenSuffix String?
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
 }
 
 model Group {

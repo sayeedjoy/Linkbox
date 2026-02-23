@@ -90,6 +90,9 @@ export const ApiTokenScalarFieldEnum = {
   userId: 'userId',
   name: 'name',
   tokenHash: 'tokenHash',
+  tokenPrefix: 'tokenPrefix',
+  tokenSuffix: 'tokenSuffix',
+  lastUsedAt: 'lastUsedAt',
   createdAt: 'createdAt'
 } as const
 
