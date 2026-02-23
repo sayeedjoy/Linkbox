@@ -321,7 +321,7 @@ export function BookmarkList({
               </div>
 
               {/* Action icons — mobile bottom-right, desktop middle column */}
-              <div className="flex items-center gap-0.5 sm:gap-1 sm:order-first opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-0.5 sm:gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                 <Button
                   variant="ghost"
                   size="icon"
