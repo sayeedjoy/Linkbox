@@ -28,7 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${inter.variable} ${geistMono.variable} antialiased`}
       >
         <NextAuthSessionProvider>
           <ThemeInit />

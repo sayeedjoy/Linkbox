@@ -93,7 +93,7 @@ export function BookmarkHeroInput({
     >
       <div
         className={cn(
-          "flex items-center gap-2 rounded-lg border bg-background px-3 py-2 transition-colors",
+          "flex items-center gap-2 rounded-lg border bg-background px-3 py-2 min-h-11 transition-colors",
           isDragging && "border-primary/50 bg-muted/50",
           disabled && "opacity-70 pointer-events-none"
         )}

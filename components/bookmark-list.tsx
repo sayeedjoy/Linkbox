@@ -37,6 +37,15 @@ function formatDate(d: Date) {
   }).format(new Date(d));
 }
 
+function safeHostname(url: string | null): string {
+  if (!url) return "Note";
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+}
+
 export function BookmarkList({
   bookmarks,
   groups,
@@ -59,7 +68,9 @@ export function BookmarkList({
   onOpenPreview?: (b: BookmarkWithGroup) => void;
   onBookmarkUpdate?: (
     id: string,
-    patch: Partial<Pick<BookmarkWithGroup, "title" | "description" | "url" | "groupId">>
+    patch: Partial<
+      Pick<BookmarkWithGroup, "title" | "description" | "url" | "groupId">
+    >,
   ) => void;
   focusedIndex?: number;
   onFocusChange?: (index: number) => void;
@@ -88,7 +99,8 @@ export function BookmarkList({
   }, [editing?.id]);
 
   useEffect(() => {
-    if (openEditId && bookmarks.some((b) => b.id === openEditId)) setEditingId(openEditId);
+    if (openEditId && bookmarks.some((b) => b.id === openEditId))
+      setEditingId(openEditId);
   }, [openEditId, bookmarks]);
 
   useEffect(() => {
@@ -115,7 +127,7 @@ export function BookmarkList({
         toast.error("Failed to delete");
       }
     },
-    [onBookmarksChange]
+    [onBookmarksChange],
   );
 
   const handleSaveEdit = useCallback(async () => {
@@ -160,7 +172,16 @@ export function BookmarkList({
         else onOpenPreview?.(b);
         return;
       }
-      if ((e.key === "Backspace" || e.key === "Delete") && current >= 0 && bookmarks[current]) {
+      if (e.key === " " && current >= 0 && bookmarks[current]) {
+        e.preventDefault();
+        onOpenPreview?.(bookmarks[current]);
+        return;
+      }
+      if (
+        (e.key === "Backspace" || e.key === "Delete") &&
+        current >= 0 &&
+        bookmarks[current]
+      ) {
         e.preventDefault();
         handleDelete(bookmarks[current].id);
         onFocusChange?.(Math.min(current, max - 1));
@@ -171,35 +192,36 @@ export function BookmarkList({
         setEditingId(bookmarks[current].id);
       }
     },
-    [bookmarks, focusedIndex, onFocusChange, onOpenPreview]
+    [bookmarks, focusedIndex, onFocusChange, onOpenPreview],
   );
 
   useEffect(() => {
     const i = focusedIndex ?? -1;
-    if (i >= 0 && rowRefs.current[i]) rowRefs.current[i]?.scrollIntoView({ block: "nearest" });
+    if (i >= 0 && rowRefs.current[i])
+      rowRefs.current[i]?.scrollIntoView({ block: "nearest" });
   }, [focusedIndex]);
 
   return (
     <div
       ref={listRef}
-      className="w-full border border-border rounded-lg overflow-hidden"
+      className="w-full"
       tabIndex={0}
       role="listbox"
       aria-activedescendant={activeId ? `bookmark-row-${activeId}` : undefined}
       onKeyDown={handleListKeyDown}
     >
-      <div className="grid grid-cols-[auto_1fr_auto] gap-4 items-center px-4 py-2 bg-muted/30 border-b border-border text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <div className="grid grid-cols-[auto_1fr_auto] gap-4 items-center px-4 py-2 border-b border-border/50 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         <button
           type="button"
           className="flex items-center gap-1 hover:text-foreground"
           onClick={() =>
             onSortChange(
               "title",
-              sortKey === "title" && sortOrder === "asc" ? "desc" : "asc"
+              sortKey === "title" && sortOrder === "asc" ? "desc" : "asc",
             )
           }
         >
-          Title
+          TITLE
           {sortKey === "title" ? (
             sortOrder === "asc" ? (
               <ArrowUpIcon className="size-3" />
@@ -208,11 +230,26 @@ export function BookmarkList({
             )
           ) : null}
         </button>
-        <div className="flex items-center gap-2 text-muted-foreground font-normal normal-case">
-          <span>j/k navigate</span>
-          <span>Enter open</span>
-          <span>e edit</span>
-          <span>Del delete</span>
+        <div className="hidden sm:flex items-center gap-3 text-muted-foreground font-normal normal-case justify-self-center">
+          <span className="flex items-center gap-1">
+            <ArrowUpIcon className="size-3" />
+            <ArrowDownIcon className="size-3" />
+            navigate
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="rounded px-1.5 py-0.5 bg-muted/50 text-xs">
+              Space
+            </span>
+            preview
+          </span>
+          <span className="flex items-center gap-1">
+            <CopyIcon className="size-3" />
+            copy
+          </span>
+          <span className="flex items-center gap-1">
+            <ExternalLinkIcon className="size-3" />
+            open
+          </span>
         </div>
         <button
           type="button"
@@ -220,11 +257,11 @@ export function BookmarkList({
           onClick={() =>
             onSortChange(
               "createdAt",
-              sortKey === "createdAt" && sortOrder === "asc" ? "desc" : "asc"
+              sortKey === "createdAt" && sortOrder === "asc" ? "desc" : "asc",
             )
           }
         >
-          Created at
+          CREATED AT
           {sortKey === "createdAt" ? (
             sortOrder === "asc" ? (
               <ArrowUpIcon className="size-3" />
@@ -234,17 +271,28 @@ export function BookmarkList({
           ) : null}
         </button>
       </div>
-      <ul className="divide-y divide-border">
+      <ul className="space-y-3 sm:space-y-0 sm:divide-y sm:divide-border/50">
         {bookmarks.map((b, index) => (
           <li
             key={b.id}
             id={`bookmark-row-${b.id}`}
             role="option"
             aria-selected={focusedIndex === index}
-            ref={(el) => { rowRefs.current[index] = el; }}
-            className={`grid grid-cols-[auto_1fr_auto] gap-4 items-center px-4 py-3 hover:bg-muted/20 group ${focusedIndex === index ? "bg-muted/40" : ""}`}
+            ref={(el) => {
+              rowRefs.current[index] = el;
+            }}
+            className={`
+              /* ── Mobile: card ── */
+              flex flex-col gap-1.5 p-3.5 rounded-xl border border-border bg-background shadow-sm
+              /* ── Desktop: table row ── */
+              sm:grid sm:grid-cols-[auto_1fr_auto] sm:gap-4 sm:items-center sm:p-0 sm:py-3 sm:px-4
+              sm:border-0 sm:shadow-none sm:rounded-none
+              hover:bg-muted/20 group
+              ${focusedIndex === index ? "bg-muted/40" : ""}
+            `}
           >
-            <div className="flex items-center gap-3 min-w-0">
+            {/* ── Row 1: Favicon + Title ── */}
+            <div className="flex items-center gap-2.5 min-w-0 sm:flex-row sm:gap-3">
               {b.faviconUrl ? (
                 <img
                   src={b.faviconUrl}
@@ -254,66 +302,79 @@ export function BookmarkList({
               ) : (
                 <div className="size-5 shrink-0 rounded bg-muted" />
               )}
-              <div className="min-w-0">
-                <div className="font-medium truncate">
-                  {b.title || (b.url ? new URL(b.url).hostname : "Note")}
+              <div className="min-w-0 flex-1">
+                <div className="font-medium truncate leading-snug">
+                  {b.title || safeHostname(b.url)}
                 </div>
-                <div className="text-xs text-muted-foreground truncate">
-                  {b.url ? new URL(b.url).hostname : (b.description?.slice(0, 60) ?? "Note")}
+                {/* ── Row 2 (mobile): Domain ── */}
+                <div className="text-xs text-muted-foreground truncate mt-0.5">
+                  {b.url
+                    ? safeHostname(b.url)
+                    : (b.description?.slice(0, 60) ?? "Note")}
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-1 justify-self-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-8"
-                onClick={() => setEditingId(b.id)}
-                aria-label="Edit"
-              >
-                <PencilIcon className="size-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-8"
-                onClick={() => (b.url ? handleCopyUrl(b.url) : handleCopyNote(b))}
-                aria-label={b.url ? "Copy URL" : "Copy note"}
-              >
-                <CopyIcon className="size-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-8"
-                onClick={() => onOpenPreview?.(b)}
-                aria-label="Preview"
-              >
-                <span className="text-xs">Space</span>
-              </Button>
-              {b.url ? (
-                <a
-                  href={b.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center size-8 rounded-md hover:bg-muted"
-                  aria-label="Open in new tab"
+
+            {/* ── Row 3 (mobile): Date + Action icons ── */}
+            <div className="flex items-center justify-between mt-1 sm:mt-0 sm:contents">
+              {/* Date — mobile bottom-left, desktop far-right column */}
+              <div className="text-xs text-muted-foreground">
+                {formatDate(b.createdAt)}
+              </div>
+
+              {/* Action icons — mobile bottom-right, desktop middle column */}
+              <div className="flex items-center gap-0.5 sm:gap-1 sm:order-first opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 sm:size-8"
+                  onClick={() => setEditingId(b.id)}
+                  aria-label="Edit"
                 >
-                  <ExternalLinkIcon className="size-4" />
-                </a>
-              ) : null}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-8 text-destructive hover:text-destructive"
-                onClick={() => handleDelete(b.id)}
-                aria-label="Delete"
-              >
-                <TrashIcon className="size-4" />
-              </Button>
-            </div>
-            <div className="text-xs text-muted-foreground justify-self-end">
-              {formatDate(b.createdAt)}
+                  <PencilIcon className="size-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 sm:size-8"
+                  onClick={() =>
+                    b.url ? handleCopyUrl(b.url) : handleCopyNote(b)
+                  }
+                  aria-label={b.url ? "Copy URL" : "Copy note"}
+                >
+                  <CopyIcon className="size-4" />
+                </Button>
+                {/* Space preview — desktop only */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="hidden sm:inline-flex sm:size-8"
+                  onClick={() => onOpenPreview?.(b)}
+                  aria-label="Preview"
+                >
+                  <span className="text-xs">Space</span>
+                </Button>
+                {b.url ? (
+                  <a
+                    href={b.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center size-8 sm:size-8 rounded-md hover:bg-muted"
+                    aria-label="Open in new tab"
+                  >
+                    <ExternalLinkIcon className="size-4" />
+                  </a>
+                ) : null}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 sm:size-8 text-destructive hover:text-destructive"
+                  onClick={() => handleDelete(b.id)}
+                  aria-label="Delete"
+                >
+                  <TrashIcon className="size-4" />
+                </Button>
+              </div>
             </div>
           </li>
         ))}

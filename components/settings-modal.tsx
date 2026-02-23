@@ -150,11 +150,11 @@ export function SettingsModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Settings</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-6 py-2">
+          <div className="overflow-y-auto min-h-0 flex-1 grid gap-6 py-2">
             <div className="grid gap-2">
               <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Theme

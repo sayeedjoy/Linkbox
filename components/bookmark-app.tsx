@@ -138,6 +138,11 @@ export function BookmarkApp({
   }, [searchMode, bookmarks]);
 
   useEffect(() => {
+    const displayedBookmarks = searchMode ? searchResults : bookmarks;
+    const clampedFocus =
+      displayedBookmarks.length === 0
+        ? -1
+        : Math.min(Math.max(0, focusedIndex), displayedBookmarks.length - 1);
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "f") {
         e.preventDefault();
@@ -152,10 +157,18 @@ export function BookmarkApp({
           setShowShortcuts((s) => !s);
         }
       }
+      if (e.key === " ") {
+        const target = e.target as HTMLElement;
+        if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.closest("[role='dialog']")) return;
+        if (clampedFocus >= 0 && displayedBookmarks[clampedFocus]) {
+          e.preventDefault();
+          setPreviewBookmark(displayedBookmarks[clampedFocus]);
+        }
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [searchMode, searchResults, bookmarks, focusedIndex]);
 
   const handleHeroSubmit = useCallback(async () => {
     if (searchMode) return;
@@ -175,6 +188,7 @@ export function BookmarkApp({
         const b = await createBookmark(raw, { groupId: defaultGroupId });
         setBookmarks((prev) => [b, ...prev.filter((x) => x.id !== optId && x.id !== b.id)]);
         setSearchResults((prev) => [b, ...prev.filter((x) => x.id !== optId && x.id !== b.id)]);
+        refreshGroups();
         toast.success("Saved");
       } catch {
         setBookmarks((prev) => prev.filter((x) => x.id !== optId));
@@ -252,6 +266,11 @@ export function BookmarkApp({
     }
   }, [inputValue, selectedGroupId, groups, refreshGroups]);
 
+  const handleBookmarksChange = useCallback(async () => {
+    await refreshBookmarks();
+    await refreshGroups();
+  }, [refreshBookmarks, refreshGroups]);
+
   const handleHeroPaste = useCallback(
     async (text: string, files: FileList | null) => {
       if (files?.length) {
@@ -323,7 +342,7 @@ export function BookmarkApp({
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <header className="flex items-center justify-between gap-4 px-6 py-4 border-b border-border">
+      <header className="flex items-center justify-between gap-2 sm:gap-4 px-4 py-3 sm:px-6 sm:py-4 border-b border-border">
         <GroupDropdown
           groups={groups}
           selectedGroupId={selectedGroupId}
@@ -332,7 +351,7 @@ export function BookmarkApp({
         />
         <UserMenu />
       </header>
-      <main className="flex-1 max-w-4xl w-full mx-auto px-6 py-6 flex flex-col gap-6">
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-4 sm:px-6 sm:py-6 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col gap-6">
         <BookmarkHeroInput
           value={searchMode ? searchQuery : inputValue}
           onChange={searchMode ? setSearchQuery : setInputValue}
@@ -350,7 +369,7 @@ export function BookmarkApp({
             setSortKey(key);
             setSortOrder(order);
           }}
-          onBookmarksChange={refreshBookmarks}
+          onBookmarksChange={handleBookmarksChange}
           onBookmarkUpdate={(id, patch) => {
             const upd = (b: BookmarkWithGroup) =>
               b.id === id
@@ -371,16 +390,16 @@ export function BookmarkApp({
         />
       </main>
       <Dialog open={!!previewBookmark} onOpenChange={(o) => !o && setPreviewBookmark(null)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="truncate pr-8">
               {previewBookmark
-                ? (previewBookmark.title || (previewBookmark.url ? new URL(previewBookmark.url).hostname : "Note"))
+                ? (previewBookmark.title || (previewBookmark.url ? hostnameFromUrl(previewBookmark.url) : "Note"))
                 : ""}
             </DialogTitle>
           </DialogHeader>
           {previewBookmark && (
-            <div className="space-y-3">
+            <div className="space-y-3 overflow-y-auto min-h-0 flex-1">
               {previewBookmark.previewImageUrl && (
                 <img
                   src={previewBookmark.previewImageUrl}

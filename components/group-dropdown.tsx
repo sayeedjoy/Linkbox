@@ -230,12 +230,12 @@ export function GroupDropdown({
     <>
       <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" className="gap-1 font-normal">
+          <Button variant="outline" className="gap-1 font-normal min-w-0 max-w-[calc(100vw-8rem)]">
             <span
               className="size-3 rounded-full shrink-0"
               style={{ backgroundColor: triggerDotColor }}
             />
-            <span className="max-w-[140px] truncate">{label}</span>
+            <span className="min-w-0 truncate">{label}</span>
             <ChevronDownIcon className="size-4 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
