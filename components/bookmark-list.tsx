@@ -283,7 +283,7 @@ export function BookmarkList({
             }}
             className={`
               flex flex-col gap-1.5 p-3.5 rounded-xl border border-border bg-background
-              sm:grid sm:grid-cols-[auto_1fr_auto] sm:gap-4 sm:items-center sm:p-0 sm:py-3 sm:px-4
+              sm:grid sm:grid-cols-[1fr_auto] sm:gap-4 sm:items-center sm:p-0 sm:py-3 sm:px-4
               sm:border-0 sm:rounded-none
               hover:bg-muted/20 group
               ${focusedIndex === index ? "bg-muted/40" : ""}
@@ -313,15 +313,11 @@ export function BookmarkList({
               </div>
             </div>
 
-            {/* ── Row 3 (mobile): Date + Action icons ── */}
-            <div className="flex items-center justify-between mt-1 sm:mt-0 sm:contents">
-              {/* Date — mobile bottom-left, desktop far-right column */}
-              <div className="text-xs text-muted-foreground">
+            <div className="flex items-center justify-between mt-1 sm:mt-0 sm:relative sm:justify-end">
+              <div className="text-xs text-muted-foreground sm:transition-opacity sm:group-hover:opacity-0">
                 {formatDate(b.createdAt)}
               </div>
-
-              {/* Action icons — mobile bottom-right, desktop middle column */}
-              <div className="flex items-center gap-0.5 sm:gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-0.5 sm:gap-1 opacity-100 sm:absolute sm:right-0 sm:inset-y-0 sm:items-center sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                 <Button
                   variant="ghost"
                   size="icon"
