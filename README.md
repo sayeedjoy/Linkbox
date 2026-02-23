@@ -77,6 +77,25 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | `npm run start` | Start production server |
 | `npm run lint` | Run ESLint |
 
+## Docker
+
+Build the image:
+
+```bash
+docker build -t linkbox .
+```
+
+Run the container (provide env vars):
+
+```bash
+docker run -p 3000:3000 \
+  -e DATABASE_URL="postgresql://..." \
+  -e AUTH_SECRET="..." \
+  linkbox
+```
+
+Run `prisma migrate deploy` before starting the container (on the host or in CI), or use an init container in your orchestration.
+
 ## Project Structure
 
 ```
