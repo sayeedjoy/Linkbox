@@ -56,16 +56,32 @@ export async function createBookmark(
   const userId = await currentUserId();
   const normalized = url.trim();
   if (!normalized.startsWith("http")) throw new Error("Invalid URL");
+  const groupId = options?.groupId ?? null;
+  const existing = await prisma.bookmark.findFirst({
+    where: { userId, url: normalized, groupId },
+    include: { group: { select: { id: true, name: true, color: true } } },
+  });
   const unfurled = await unfurlUrl(normalized);
+  const data = {
+    title: options?.title ?? unfurled.title ?? null,
+    description: options?.description ?? unfurled.description ?? null,
+    faviconUrl: unfurled.faviconUrl ?? null,
+    previewImageUrl: unfurled.previewImageUrl ?? null,
+  };
+  if (existing) {
+    const updated = await prisma.bookmark.update({
+      where: { id: existing.id },
+      data,
+      include: { group: { select: { id: true, name: true, color: true } } },
+    });
+    return updated as BookmarkWithGroup;
+  }
   const bookmark = await prisma.bookmark.create({
     data: {
       userId,
-      groupId: options?.groupId ?? null,
+      groupId,
       url: normalized,
-      title: options?.title ?? unfurled.title ?? null,
-      description: options?.description ?? unfurled.description ?? null,
-      faviconUrl: unfurled.faviconUrl ?? null,
-      previewImageUrl: unfurled.previewImageUrl ?? null,
+      ...data,
     },
     include: {
       group: { select: { id: true, name: true, color: true } },
@@ -87,15 +103,31 @@ export async function createBookmarkFromMetadata(
   const userId = await currentUserId();
   const normalized = url.trim();
   if (!normalized.startsWith("http")) throw new Error("Invalid URL");
+  const gid = groupId ?? null;
+  const existing = await prisma.bookmark.findFirst({
+    where: { userId, url: normalized, groupId: gid },
+    include: { group: { select: { id: true, name: true, color: true } } },
+  });
+  const data = {
+    title: metadata.title ?? null,
+    description: metadata.description ?? null,
+    faviconUrl: metadata.faviconUrl ?? null,
+    previewImageUrl: metadata.previewImageUrl ?? null,
+  };
+  if (existing) {
+    const updated = await prisma.bookmark.update({
+      where: { id: existing.id },
+      data,
+      include: { group: { select: { id: true, name: true, color: true } } },
+    });
+    return updated as BookmarkWithGroup;
+  }
   const bookmark = await prisma.bookmark.create({
     data: {
       userId,
-      groupId: groupId ?? null,
+      groupId: gid,
       url: normalized,
-      title: metadata.title ?? null,
-      description: metadata.description ?? null,
-      faviconUrl: metadata.faviconUrl ?? null,
-      previewImageUrl: metadata.previewImageUrl ?? null,
+      ...data,
     },
     include: {
       group: { select: { id: true, name: true, color: true } },

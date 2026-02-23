@@ -22,8 +22,31 @@ import { parseTextForUrls, parseImageForUrls, unfurlUrl } from "@/app/actions/pa
 import { createBookmarkFromMetadata } from "@/app/actions/bookmarks";
 
 const SEARCH_DEBOUNCE_MS = 300;
+const OPT_PREFIX = "opt-";
 
 type GroupWithCount = Group & { _count: { bookmarks: number } };
+
+function makeOptimisticBookmark(
+  optId: string,
+  payload: { url?: string | null; title?: string | null; groupId?: string | null },
+  groups: GroupWithCount[]
+): BookmarkWithGroup {
+  const group = payload.groupId ? groups.find((g) => g.id === payload.groupId) ?? null : null;
+  const now = new Date();
+  return {
+    id: optId,
+    userId: "",
+    groupId: payload.groupId ?? null,
+    url: payload.url ?? null,
+    title: payload.title ?? "Loading…",
+    description: null,
+    faviconUrl: null,
+    previewImageUrl: null,
+    createdAt: now,
+    updatedAt: now,
+    group: group ? { id: group.id, name: group.name, color: group.color } : null,
+  };
+}
 
 export function BookmarkApp({
   initialBookmarks,
@@ -131,21 +154,42 @@ export function BookmarkApp({
       typeof window !== "undefined" && localStorage.getItem("bookmark-auto-group") === "true"
         ? selectedGroupId
         : null;
-    setIsSubmitting(true);
-    try {
-      if (raw.startsWith("http://") || raw.startsWith("https://")) {
+    if (raw.startsWith("http://") || raw.startsWith("https://")) {
+      const optId = `${OPT_PREFIX}${Date.now()}`;
+      const opt = makeOptimisticBookmark(optId, { url: raw, title: "Loading…", groupId: defaultGroupId }, groups);
+      setBookmarks((prev) => [opt, ...prev]);
+      setSearchResults((prev) => [opt, ...prev]);
+      setIsSubmitting(true);
+      try {
         const b = await createBookmark(raw, { groupId: defaultGroupId });
-        setBookmarks((prev) => [b, ...prev]);
+        setBookmarks((prev) => [b, ...prev.filter((x) => x.id !== optId && x.id !== b.id)]);
+        setSearchResults((prev) => [b, ...prev.filter((x) => x.id !== optId && x.id !== b.id)]);
         toast.success("Saved");
-        return;
+      } catch {
+        setBookmarks((prev) => prev.filter((x) => x.id !== optId));
+        setSearchResults((prev) => prev.filter((x) => x.id !== optId));
+        toast.error("Failed to save");
+      } finally {
+        setIsSubmitting(false);
       }
-      const urls = await parseTextForUrls(raw);
-      if (urls.length > 0) {
-        const created: BookmarkWithGroup[] = [];
-        for (const url of urls) {
-          const meta = await unfurlUrl(url);
+      return;
+    }
+    const urls = await parseTextForUrls(raw);
+    if (urls.length > 0) {
+      const optIds = urls.map((_, i) => `${OPT_PREFIX}${Date.now()}-${i}`);
+      const optimistic = optIds.map((id, i) =>
+        makeOptimisticBookmark(id, { url: urls[i], title: "Loading…", groupId: defaultGroupId }, groups)
+      );
+      setBookmarks((prev) => [...optimistic, ...prev]);
+      setSearchResults((prev) => [...optimistic, ...prev]);
+      setIsSubmitting(true);
+      const created: BookmarkWithGroup[] = [];
+      let failed = 0;
+      for (let i = 0; i < urls.length; i++) {
+        try {
+          const meta = await unfurlUrl(urls[i]);
           const b = await createBookmarkFromMetadata(
-            url,
+            urls[i],
             {
               title: meta.title,
               description: meta.description,
@@ -155,23 +199,49 @@ export function BookmarkApp({
             defaultGroupId
           );
           created.push(b);
+          setBookmarks((prev) =>
+            prev.filter((x) => x.id !== b.id || x.id === optIds[i]).map((x) => (x.id === optIds[i] ? b : x))
+          );
+          setSearchResults((prev) =>
+            prev.filter((x) => x.id !== b.id || x.id === optIds[i]).map((x) => (x.id === optIds[i] ? b : x))
+          );
+        } catch {
+          failed++;
+          setBookmarks((prev) => prev.filter((x) => x.id !== optIds[i]));
+          setSearchResults((prev) => prev.filter((x) => x.id !== optIds[i]));
         }
-        setBookmarks((prev) => [...created, ...prev]);
-        refreshGroups();
-        toast.success(created.length === 1 ? "Saved" : `${created.length} links saved`);
-        return;
       }
+      if (failed > 0) toast.error(failed === urls.length ? "Failed to save" : `${failed} of ${urls.length} failed`);
+      else toast.success(created.length === 1 ? "Saved" : `${created.length} links saved`);
+      if (created.length > 0) refreshGroups();
+      setIsSubmitting(false);
+      return;
+    }
+    const optId = `${OPT_PREFIX}note-${Date.now()}`;
+    const lines = raw.split(/\r?\n/);
+    const opt = makeOptimisticBookmark(optId, {
+      url: null,
+      title: lines[0]?.slice(0, 500) ?? "Note",
+      groupId: defaultGroupId,
+    }, groups);
+    opt.description = raw;
+    setBookmarks((prev) => [opt, ...prev]);
+    setSearchResults((prev) => [opt, ...prev]);
+    setIsSubmitting(true);
+    try {
       const note = await createNote(raw, defaultGroupId);
-      setBookmarks((prev) => [note, ...prev]);
-      refreshGroups();
+      setBookmarks((prev) => prev.map((x) => (x.id === optId ? note : x)));
+      setSearchResults((prev) => prev.map((x) => (x.id === optId ? note : x)));
       toast.success("Note saved");
+      refreshGroups();
     } catch {
-      refreshBookmarks();
+      setBookmarks((prev) => prev.filter((x) => x.id !== optId));
+      setSearchResults((prev) => prev.filter((x) => x.id !== optId));
       toast.error("Failed to save");
     } finally {
       setIsSubmitting(false);
     }
-  }, [inputValue, selectedGroupId, refreshBookmarks, refreshGroups]);
+  }, [inputValue, selectedGroupId, groups, refreshGroups]);
 
   const handleHeroPaste = useCallback(
     async (text: string, files: FileList | null) => {

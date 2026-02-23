@@ -55,7 +55,10 @@ export function BookmarkHeroInput({
     (e: React.ClipboardEvent) => {
       const text = e.clipboardData.getData("text");
       const files = e.clipboardData.files;
-      if (text || files?.length) onPaste?.(text, files.length ? files : null);
+      if (text || files?.length) {
+        e.preventDefault();
+        onPaste?.(text, files.length ? files : null);
+      }
     },
     [onPaste]
   );
