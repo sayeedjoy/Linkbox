@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { toast } from "sonner";
 import { GroupDropdown } from "@/components/group-dropdown";
 import { UserMenu } from "@/components/user-menu";
@@ -21,6 +21,8 @@ import { createBookmark, createNote } from "@/app/actions/bookmarks";
 import { parseTextForUrls, parseImageForUrls, unfurlUrl } from "@/app/actions/parse";
 import { createBookmarkFromMetadata } from "@/app/actions/bookmarks";
 
+const SEARCH_DEBOUNCE_MS = 300;
+
 type GroupWithCount = Group & { _count: { bookmarks: number } };
 
 export function BookmarkApp({
@@ -31,6 +33,7 @@ export function BookmarkApp({
   initialGroups: GroupWithCount[];
 }) {
   const [bookmarks, setBookmarks] = useState<BookmarkWithGroup[]>(initialBookmarks);
+  const [searchResults, setSearchResults] = useState<BookmarkWithGroup[]>(initialBookmarks);
   const [groups, setGroups] = useState<GroupWithCount[]>(initialGroups);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -40,6 +43,9 @@ export function BookmarkApp({
   const [inputValue, setInputValue] = useState("");
   const [previewBookmark, setPreviewBookmark] = useState<BookmarkWithGroup | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState(0);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refreshBookmarks = useCallback(async () => {
     const next = await getBookmarks({
@@ -48,7 +54,18 @@ export function BookmarkApp({
       order: sortOrder,
     });
     setBookmarks(next);
-  }, [selectedGroupId, sortKey, sortOrder]);
+    if (!searchMode) setSearchResults(next);
+    else {
+      const q = searchQuery.trim();
+      const searchNext = await getBookmarks({
+        groupId: selectedGroupId,
+        search: q || undefined,
+        sort: sortKey,
+        order: sortOrder,
+      });
+      setSearchResults(searchNext);
+    }
+  }, [selectedGroupId, sortKey, sortOrder, searchMode, searchQuery]);
 
   const refreshGroups = useCallback(async () => {
     const next = await getGroups();
@@ -60,12 +77,45 @@ export function BookmarkApp({
   }, [refreshBookmarks]);
 
   useEffect(() => {
+    if (!searchMode) return;
+    const q = searchQuery.trim();
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+      searchDebounceRef.current = null;
+    }
+    const run = async () => {
+      const next = await getBookmarks({
+        groupId: selectedGroupId,
+        search: q || undefined,
+        sort: sortKey,
+        order: sortOrder,
+      });
+      setSearchResults(next);
+    };
+    searchDebounceRef.current = setTimeout(run, SEARCH_DEBOUNCE_MS);
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, [searchMode, searchQuery, selectedGroupId, sortKey, sortOrder]);
+
+  useEffect(() => {
+    if (!searchMode) setSearchResults(bookmarks);
+  }, [searchMode, bookmarks]);
+
+  useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "f") {
         e.preventDefault();
         setSearchMode((m) => !m);
         setSearchQuery("");
         setInputValue("");
+      }
+      if (e.key === "?" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const target = e.target as HTMLElement;
+        if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA" && !target.closest("[role='dialog']")) {
+          e.preventDefault();
+          setShowShortcuts((s) => !s);
+        }
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -186,15 +236,11 @@ export function BookmarkApp({
     [selectedGroupId, refreshGroups]
   );
 
-  const filteredBookmarks = searchMode && searchQuery.trim()
-    ? bookmarks.filter(
-        (b) =>
-          b.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (b.url?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
-          b.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          b.group?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : bookmarks;
+  const displayedBookmarks = searchMode ? searchResults : bookmarks;
+  const clampedFocus =
+    displayedBookmarks.length === 0
+      ? -1
+      : Math.min(Math.max(0, focusedIndex), displayedBookmarks.length - 1);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -217,7 +263,7 @@ export function BookmarkApp({
           disabled={isSubmitting}
         />
         <BookmarkList
-          bookmarks={filteredBookmarks}
+          bookmarks={displayedBookmarks}
           groups={groups}
           sortKey={sortKey}
           sortOrder={sortOrder}
@@ -227,21 +273,22 @@ export function BookmarkApp({
           }}
           onBookmarksChange={refreshBookmarks}
           onBookmarkUpdate={(id, patch) => {
-            setBookmarks((prev) =>
-              prev.map((b) =>
-                b.id === id
-                  ? {
-                      ...b,
-                      ...patch,
-                      group: patch.groupId
-                        ? groups.find((g) => g.id === patch.groupId!) ?? null
-                        : null,
-                    }
-                  : b
-              )
-            );
+            const upd = (b: BookmarkWithGroup) =>
+              b.id === id
+                ? {
+                    ...b,
+                    ...patch,
+                    group: patch.groupId
+                      ? groups.find((g) => g.id === patch.groupId!) ?? null
+                      : null,
+                  }
+                : b;
+            setBookmarks((prev) => prev.map(upd));
+            setSearchResults((prev) => prev.map(upd));
           }}
           onOpenPreview={setPreviewBookmark}
+          focusedIndex={clampedFocus}
+          onFocusChange={setFocusedIndex}
         />
       </main>
       <Dialog open={!!previewBookmark} onOpenChange={(o) => !o && setPreviewBookmark(null)}>
@@ -296,6 +343,43 @@ export function BookmarkApp({
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={showShortcuts} onOpenChange={setShowShortcuts}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Keyboard shortcuts</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-2 text-sm">
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Search</span>
+              <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">⌘F</kbd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Move down</span>
+              <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">j</kbd> or <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">↓</kbd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Move up</span>
+              <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">k</kbd> or <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">↑</kbd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Open bookmark</span>
+              <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">Enter</kbd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Edit</span>
+              <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">e</kbd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Delete</span>
+              <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">Backspace</kbd> / <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">Delete</kbd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">This help</span>
+              <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">?</kbd>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

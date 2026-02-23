@@ -1,7 +1,7 @@
 "use client";
 
 import { toast } from "sonner";
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -46,6 +46,9 @@ export function BookmarkList({
   onBookmarksChange,
   onOpenPreview,
   onBookmarkUpdate,
+  focusedIndex,
+  onFocusChange,
+  openEditId,
 }: {
   bookmarks: BookmarkWithGroup[];
   groups: { id: string; name: string; color: string | null }[];
@@ -58,6 +61,9 @@ export function BookmarkList({
     id: string,
     patch: Partial<Pick<BookmarkWithGroup, "title" | "description" | "url" | "groupId">>
   ) => void;
+  focusedIndex?: number;
+  onFocusChange?: (index: number) => void;
+  openEditId?: string | null;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
@@ -66,6 +72,8 @@ export function BookmarkList({
     url: "",
     groupId: "" as string | null,
   });
+  const listRef = useRef<HTMLDivElement>(null);
+  const rowRefs = useRef<(HTMLLIElement | null)[]>([]);
 
   const editing = editingId ? bookmarks.find((b) => b.id === editingId) : null;
   useEffect(() => {
@@ -78,6 +86,14 @@ export function BookmarkList({
       });
     }
   }, [editing?.id]);
+
+  useEffect(() => {
+    if (openEditId && bookmarks.some((b) => b.id === openEditId)) setEditingId(openEditId);
+  }, [openEditId, bookmarks]);
+
+  useEffect(() => {
+    rowRefs.current = rowRefs.current.slice(0, bookmarks.length);
+  }, [bookmarks.length]);
 
   const handleCopyUrl = useCallback(async (url: string) => {
     await navigator.clipboard.writeText(url);
@@ -120,8 +136,58 @@ export function BookmarkList({
     }
   }, [editingId, editing, editForm, onBookmarkUpdate, onBookmarksChange]);
 
+  const idx = focusedIndex ?? -1;
+  const activeId = idx >= 0 && bookmarks[idx] ? bookmarks[idx].id : undefined;
+  const handleListKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (bookmarks.length === 0) return;
+      const max = bookmarks.length - 1;
+      const current = focusedIndex ?? -1;
+      if (e.key === "j" || e.key === "ArrowDown") {
+        e.preventDefault();
+        onFocusChange?.(current >= max ? max : current + 1);
+        return;
+      }
+      if (e.key === "k" || e.key === "ArrowUp") {
+        e.preventDefault();
+        onFocusChange?.(current <= 0 ? 0 : current - 1);
+        return;
+      }
+      if (e.key === "Enter" && current >= 0 && bookmarks[current]) {
+        e.preventDefault();
+        const b = bookmarks[current];
+        if (b.url) window.open(b.url, "_blank");
+        else onOpenPreview?.(b);
+        return;
+      }
+      if ((e.key === "Backspace" || e.key === "Delete") && current >= 0 && bookmarks[current]) {
+        e.preventDefault();
+        handleDelete(bookmarks[current].id);
+        onFocusChange?.(Math.min(current, max - 1));
+        return;
+      }
+      if (e.key === "e" && current >= 0 && bookmarks[current]) {
+        e.preventDefault();
+        setEditingId(bookmarks[current].id);
+      }
+    },
+    [bookmarks, focusedIndex, onFocusChange, onOpenPreview]
+  );
+
+  useEffect(() => {
+    const i = focusedIndex ?? -1;
+    if (i >= 0 && rowRefs.current[i]) rowRefs.current[i]?.scrollIntoView({ block: "nearest" });
+  }, [focusedIndex]);
+
   return (
-    <div className="w-full border border-border rounded-lg overflow-hidden">
+    <div
+      ref={listRef}
+      className="w-full border border-border rounded-lg overflow-hidden"
+      tabIndex={0}
+      role="listbox"
+      aria-activedescendant={activeId ? `bookmark-row-${activeId}` : undefined}
+      onKeyDown={handleListKeyDown}
+    >
       <div className="grid grid-cols-[auto_1fr_auto] gap-4 items-center px-4 py-2 bg-muted/30 border-b border-border text-xs font-medium uppercase tracking-wide text-muted-foreground">
         <button
           type="button"
@@ -143,10 +209,10 @@ export function BookmarkList({
           ) : null}
         </button>
         <div className="flex items-center gap-2 text-muted-foreground font-normal normal-case">
-          <span>navigate</span>
-          <span>Space preview</span>
-          <span>copy</span>
-          <span>open</span>
+          <span>j/k navigate</span>
+          <span>Enter open</span>
+          <span>e edit</span>
+          <span>Del delete</span>
         </div>
         <button
           type="button"
@@ -169,10 +235,14 @@ export function BookmarkList({
         </button>
       </div>
       <ul className="divide-y divide-border">
-        {bookmarks.map((b) => (
+        {bookmarks.map((b, index) => (
           <li
             key={b.id}
-            className="grid grid-cols-[auto_1fr_auto] gap-4 items-center px-4 py-3 hover:bg-muted/20 group"
+            id={`bookmark-row-${b.id}`}
+            role="option"
+            aria-selected={focusedIndex === index}
+            ref={(el) => { rowRefs.current[index] = el; }}
+            className={`grid grid-cols-[auto_1fr_auto] gap-4 items-center px-4 py-3 hover:bg-muted/20 group ${focusedIndex === index ? "bg-muted/40" : ""}`}
           >
             <div className="flex items-center gap-3 min-w-0">
               {b.faviconUrl ? (

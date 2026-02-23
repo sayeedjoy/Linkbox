@@ -14,14 +14,24 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
+  id            String     @id @default(cuid())
+  email         String     @unique
   emailVerified DateTime?
   name          String?
   image         String?
   password      String
   groups        Group[]
   bookmarks     Bookmark[]
+  apiTokens     ApiToken[]
+}
+
+model ApiToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  tokenHash String
+  createdAt DateTime @default(now())
 }
 
 model Group {

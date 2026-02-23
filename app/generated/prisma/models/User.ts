@@ -192,6 +192,7 @@ export type UserWhereInput = {
   password?: Prisma.StringFilter<"User"> | string
   groups?: Prisma.GroupListRelationFilter
   bookmarks?: Prisma.BookmarkListRelationFilter
+  apiTokens?: Prisma.ApiTokenListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -203,6 +204,7 @@ export type UserOrderByWithRelationInput = {
   password?: Prisma.SortOrder
   groups?: Prisma.GroupOrderByRelationAggregateInput
   bookmarks?: Prisma.BookmarkOrderByRelationAggregateInput
+  apiTokens?: Prisma.ApiTokenOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -217,6 +219,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   password?: Prisma.StringFilter<"User"> | string
   groups?: Prisma.GroupListRelationFilter
   bookmarks?: Prisma.BookmarkListRelationFilter
+  apiTokens?: Prisma.ApiTokenListRelationFilter
 }, "id" | "email">
 
 export type UserOrderByWithAggregationInput = {
@@ -252,6 +255,7 @@ export type UserCreateInput = {
   password: string
   groups?: Prisma.GroupCreateNestedManyWithoutUserInput
   bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
+  apiTokens?: Prisma.ApiTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -263,6 +267,7 @@ export type UserUncheckedCreateInput = {
   password: string
   groups?: Prisma.GroupUncheckedCreateNestedManyWithoutUserInput
   bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
+  apiTokens?: Prisma.ApiTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserUpdateInput = {
@@ -274,6 +279,7 @@ export type UserUpdateInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   groups?: Prisma.GroupUpdateManyWithoutUserNestedInput
   bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
+  apiTokens?: Prisma.ApiTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -285,6 +291,7 @@ export type UserUncheckedUpdateInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   groups?: Prisma.GroupUncheckedUpdateManyWithoutUserNestedInput
   bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
+  apiTokens?: Prisma.ApiTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -358,6 +365,20 @@ export type NullableStringFieldUpdateOperationsInput = {
   set?: string | null
 }
 
+export type UserCreateNestedOneWithoutApiTokensInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutApiTokensInput, Prisma.UserUncheckedCreateWithoutApiTokensInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutApiTokensInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutApiTokensNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutApiTokensInput, Prisma.UserUncheckedCreateWithoutApiTokensInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutApiTokensInput
+  upsert?: Prisma.UserUpsertWithoutApiTokensInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutApiTokensInput, Prisma.UserUpdateWithoutApiTokensInput>, Prisma.UserUncheckedUpdateWithoutApiTokensInput>
+}
+
 export type UserCreateNestedOneWithoutGroupsInput = {
   create?: Prisma.XOR<Prisma.UserCreateWithoutGroupsInput, Prisma.UserUncheckedCreateWithoutGroupsInput>
   connectOrCreate?: Prisma.UserCreateOrConnectWithoutGroupsInput
@@ -386,6 +407,66 @@ export type UserUpdateOneRequiredWithoutBookmarksNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutBookmarksInput, Prisma.UserUpdateWithoutBookmarksInput>, Prisma.UserUncheckedUpdateWithoutBookmarksInput>
 }
 
+export type UserCreateWithoutApiTokensInput = {
+  id?: string
+  email: string
+  emailVerified?: Date | string | null
+  name?: string | null
+  image?: string | null
+  password: string
+  groups?: Prisma.GroupCreateNestedManyWithoutUserInput
+  bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutApiTokensInput = {
+  id?: string
+  email: string
+  emailVerified?: Date | string | null
+  name?: string | null
+  image?: string | null
+  password: string
+  groups?: Prisma.GroupUncheckedCreateNestedManyWithoutUserInput
+  bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutApiTokensInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutApiTokensInput, Prisma.UserUncheckedCreateWithoutApiTokensInput>
+}
+
+export type UserUpsertWithoutApiTokensInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutApiTokensInput, Prisma.UserUncheckedUpdateWithoutApiTokensInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutApiTokensInput, Prisma.UserUncheckedCreateWithoutApiTokensInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutApiTokensInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutApiTokensInput, Prisma.UserUncheckedUpdateWithoutApiTokensInput>
+}
+
+export type UserUpdateWithoutApiTokensInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  groups?: Prisma.GroupUpdateManyWithoutUserNestedInput
+  bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutApiTokensInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  groups?: Prisma.GroupUncheckedUpdateManyWithoutUserNestedInput
+  bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
+}
+
 export type UserCreateWithoutGroupsInput = {
   id?: string
   email: string
@@ -394,6 +475,7 @@ export type UserCreateWithoutGroupsInput = {
   image?: string | null
   password: string
   bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
+  apiTokens?: Prisma.ApiTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutGroupsInput = {
@@ -404,6 +486,7 @@ export type UserUncheckedCreateWithoutGroupsInput = {
   image?: string | null
   password: string
   bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
+  apiTokens?: Prisma.ApiTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutGroupsInput = {
@@ -430,6 +513,7 @@ export type UserUpdateWithoutGroupsInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   password?: Prisma.StringFieldUpdateOperationsInput | string
   bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
+  apiTokens?: Prisma.ApiTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutGroupsInput = {
@@ -440,6 +524,7 @@ export type UserUncheckedUpdateWithoutGroupsInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   password?: Prisma.StringFieldUpdateOperationsInput | string
   bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
+  apiTokens?: Prisma.ApiTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutBookmarksInput = {
@@ -450,6 +535,7 @@ export type UserCreateWithoutBookmarksInput = {
   image?: string | null
   password: string
   groups?: Prisma.GroupCreateNestedManyWithoutUserInput
+  apiTokens?: Prisma.ApiTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutBookmarksInput = {
@@ -460,6 +546,7 @@ export type UserUncheckedCreateWithoutBookmarksInput = {
   image?: string | null
   password: string
   groups?: Prisma.GroupUncheckedCreateNestedManyWithoutUserInput
+  apiTokens?: Prisma.ApiTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutBookmarksInput = {
@@ -486,6 +573,7 @@ export type UserUpdateWithoutBookmarksInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   password?: Prisma.StringFieldUpdateOperationsInput | string
   groups?: Prisma.GroupUpdateManyWithoutUserNestedInput
+  apiTokens?: Prisma.ApiTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutBookmarksInput = {
@@ -496,6 +584,7 @@ export type UserUncheckedUpdateWithoutBookmarksInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   password?: Prisma.StringFieldUpdateOperationsInput | string
   groups?: Prisma.GroupUncheckedUpdateManyWithoutUserNestedInput
+  apiTokens?: Prisma.ApiTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 
@@ -506,11 +595,13 @@ export type UserUncheckedUpdateWithoutBookmarksInput = {
 export type UserCountOutputType = {
   groups: number
   bookmarks: number
+  apiTokens: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   groups?: boolean | UserCountOutputTypeCountGroupsArgs
   bookmarks?: boolean | UserCountOutputTypeCountBookmarksArgs
+  apiTokens?: boolean | UserCountOutputTypeCountApiTokensArgs
 }
 
 /**
@@ -537,6 +628,13 @@ export type UserCountOutputTypeCountBookmarksArgs<ExtArgs extends runtime.Types.
   where?: Prisma.BookmarkWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountApiTokensArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ApiTokenWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -547,6 +645,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   password?: boolean
   groups?: boolean | Prisma.User$groupsArgs<ExtArgs>
   bookmarks?: boolean | Prisma.User$bookmarksArgs<ExtArgs>
+  apiTokens?: boolean | Prisma.User$apiTokensArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -581,6 +680,7 @@ export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = run
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   groups?: boolean | Prisma.User$groupsArgs<ExtArgs>
   bookmarks?: boolean | Prisma.User$bookmarksArgs<ExtArgs>
+  apiTokens?: boolean | Prisma.User$apiTokensArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -591,6 +691,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   objects: {
     groups: Prisma.$GroupPayload<ExtArgs>[]
     bookmarks: Prisma.$BookmarkPayload<ExtArgs>[]
+    apiTokens: Prisma.$ApiTokenPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -995,6 +1096,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   readonly [Symbol.toStringTag]: "PrismaPromise"
   groups<T extends Prisma.User$groupsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$groupsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GroupPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   bookmarks<T extends Prisma.User$bookmarksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$bookmarksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BookmarkPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  apiTokens<T extends Prisma.User$apiTokensArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$apiTokensArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ApiTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1463,6 +1565,30 @@ export type User$bookmarksArgs<ExtArgs extends runtime.Types.Extensions.Internal
   take?: number
   skip?: number
   distinct?: Prisma.BookmarkScalarFieldEnum | Prisma.BookmarkScalarFieldEnum[]
+}
+
+/**
+ * User.apiTokens
+ */
+export type User$apiTokensArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ApiToken
+   */
+  select?: Prisma.ApiTokenSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ApiToken
+   */
+  omit?: Prisma.ApiTokenOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ApiTokenInclude<ExtArgs> | null
+  where?: Prisma.ApiTokenWhereInput
+  orderBy?: Prisma.ApiTokenOrderByWithRelationInput | Prisma.ApiTokenOrderByWithRelationInput[]
+  cursor?: Prisma.ApiTokenWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ApiTokenScalarFieldEnum | Prisma.ApiTokenScalarFieldEnum[]
 }
 
 /**

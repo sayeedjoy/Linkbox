@@ -2,10 +2,15 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-config";
 import { prisma } from "@/lib/prisma";
+import { userIdFromBearerToken } from "@/lib/api-auth";
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
-  const userId = session?.user?.id;
+  let userId = session?.user?.id;
+  if (!userId) {
+    const authHeader = request.headers.get("Authorization");
+    userId = await userIdFromBearerToken(authHeader) ?? undefined;
+  }
   if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const bookmarks = await prisma.bookmark.findMany({

@@ -385,6 +385,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 export const ModelName = {
   User: 'User',
+  ApiToken: 'ApiToken',
   Group: 'Group',
   Bookmark: 'Bookmark'
 } as const
@@ -402,7 +403,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "group" | "bookmark"
+    modelProps: "user" | "apiToken" | "group" | "bookmark"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -477,6 +478,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.UserCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.UserCountAggregateOutputType> | number
+        }
+      }
+    }
+    ApiToken: {
+      payload: Prisma.$ApiTokenPayload<ExtArgs>
+      fields: Prisma.ApiTokenFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ApiTokenFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ApiTokenPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ApiTokenFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ApiTokenPayload>
+        }
+        findFirst: {
+          args: Prisma.ApiTokenFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ApiTokenPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ApiTokenFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ApiTokenPayload>
+        }
+        findMany: {
+          args: Prisma.ApiTokenFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ApiTokenPayload>[]
+        }
+        create: {
+          args: Prisma.ApiTokenCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ApiTokenPayload>
+        }
+        createMany: {
+          args: Prisma.ApiTokenCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ApiTokenCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ApiTokenPayload>[]
+        }
+        delete: {
+          args: Prisma.ApiTokenDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ApiTokenPayload>
+        }
+        update: {
+          args: Prisma.ApiTokenUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ApiTokenPayload>
+        }
+        deleteMany: {
+          args: Prisma.ApiTokenDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ApiTokenUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ApiTokenUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ApiTokenPayload>[]
+        }
+        upsert: {
+          args: Prisma.ApiTokenUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ApiTokenPayload>
+        }
+        aggregate: {
+          args: Prisma.ApiTokenAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateApiToken>
+        }
+        groupBy: {
+          args: Prisma.ApiTokenGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ApiTokenGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ApiTokenCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ApiTokenCountAggregateOutputType> | number
         }
       }
     }
@@ -677,6 +752,17 @@ export const UserScalarFieldEnum = {
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const ApiTokenScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  name: 'name',
+  tokenHash: 'tokenHash',
+  createdAt: 'createdAt'
+} as const
+
+export type ApiTokenScalarFieldEnum = (typeof ApiTokenScalarFieldEnum)[keyof typeof ApiTokenScalarFieldEnum]
 
 
 export const GroupScalarFieldEnum = {
@@ -887,6 +973,7 @@ export type PrismaClientOptions = ({
 }
 export type GlobalOmitConfig = {
   user?: Prisma.UserOmit
+  apiToken?: Prisma.ApiTokenOmit
   group?: Prisma.GroupOmit
   bookmark?: Prisma.BookmarkOmit
 }

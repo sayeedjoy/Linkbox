@@ -513,10 +513,6 @@ export type BookmarkUncheckedUpdateManyWithoutGroupNestedInput = {
   deleteMany?: Prisma.BookmarkScalarWhereInput | Prisma.BookmarkScalarWhereInput[]
 }
 
-export type DateTimeFieldUpdateOperationsInput = {
-  set?: Date | string
-}
-
 export type BookmarkCreateWithoutUserInput = {
   id?: string
   url?: string | null

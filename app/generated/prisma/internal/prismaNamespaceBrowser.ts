@@ -52,6 +52,7 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   User: 'User',
+  ApiToken: 'ApiToken',
   Group: 'Group',
   Bookmark: 'Bookmark'
 } as const
@@ -82,6 +83,17 @@ export const UserScalarFieldEnum = {
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const ApiTokenScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  name: 'name',
+  tokenHash: 'tokenHash',
+  createdAt: 'createdAt'
+} as const
+
+export type ApiTokenScalarFieldEnum = (typeof ApiTokenScalarFieldEnum)[keyof typeof ApiTokenScalarFieldEnum]
 
 
 export const GroupScalarFieldEnum = {
