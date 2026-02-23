@@ -1,14 +1,8 @@
-"use client";
-
-import { signIn } from "next-auth/react";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Link from "next/link";
-import { register } from "@/app/actions/auth";
 import { JSX, SVGProps } from "react";
 
 const Logo = (props: JSX.IntrinsicAttributes & SVGProps<SVGSVGElement>) => (
@@ -33,42 +27,7 @@ const Logo = (props: JSX.IntrinsicAttributes & SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-export default function SignUpPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [name, setName] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-    setLoading(true);
-    try {
-      await register(email, password, name || undefined);
-      const res = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-        callbackUrl: "/",
-      });
-      if (res?.error) {
-        setError("Account created. Please sign in.");
-        setLoading(false);
-        return;
-      }
-      window.location.href = "/";
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-      setLoading(false);
-    }
-  }
-
+export default function Login05() {
   return (
     <div className="flex items-center justify-center min-h-dvh">
       <div className="flex flex-1 flex-col justify-center px-4 py-10 lg:px-6">
@@ -84,7 +43,7 @@ export default function SignUpPage() {
 
         <Card className="mt-4 sm:mx-auto sm:w-full sm:max-w-md">
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form action="#" method="post" className="space-y-4">
               <div>
                 <Label
                   htmlFor="name-login-05"
@@ -95,12 +54,10 @@ export default function SignUpPage() {
                 <Input
                   type="text"
                   id="name-login-05"
-                  name="name"
-                  autoComplete="name"
+                  name="name-login-05"
+                  autoComplete="name-login-05"
                   placeholder="Name"
                   className="mt-2"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
                 />
               </div>
 
@@ -114,13 +71,10 @@ export default function SignUpPage() {
                 <Input
                   type="email"
                   id="email-login-05"
-                  name="email"
-                  autoComplete="email"
+                  name="email-login-05"
+                  autoComplete="email-login-05"
                   placeholder="ephraim@blocks.so"
                   className="mt-2"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
                 />
               </div>
 
@@ -133,14 +87,11 @@ export default function SignUpPage() {
                 </Label>
                 <Input
                   type="password"
-                  id="password-login-05"
-                  name="password"
-                  autoComplete="new-password"
+                  id="password-login-05   "
+                  name="password-login-05"
+                  autoComplete="password-login-05"
                   placeholder="Password"
                   className="mt-2"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
                 />
               </div>
 
@@ -154,19 +105,20 @@ export default function SignUpPage() {
                 <Input
                   type="password"
                   id="confirm-password-login-05"
-                  name="confirm-password"
-                  autoComplete="new-password"
+                  name="confirm-password-login-05"
+                  autoComplete="confirm-password-login-05"
                   placeholder="Password"
                   className="mt-2"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
                 />
               </div>
 
-              <div className="flex items-start">
+              <div className="mt-2 flex items-start">
                 <div className="flex h-6 items-center">
-                  <Checkbox id="newsletter-login-05" name="newsletter" className="size-4" />
+                  <Checkbox
+                    id="newsletter-login-05"
+                    name="newsletter-login-05"
+                    className="size-4"
+                  />
                 </div>
                 <Label
                   htmlFor="newsletter-login-05"
@@ -176,27 +128,25 @@ export default function SignUpPage() {
                 </Label>
               </div>
 
-              {error && <p className="text-sm text-destructive">{error}</p>}
-
-              <Button type="submit" className="mt-4 w-full py-2 font-medium" disabled={loading}>
-                {loading ? "Creating account…" : "Create account"}
+              <Button type="submit" className="mt-4 w-full py-2 font-medium">
+                Create account
               </Button>
 
               <p className="text-pretty text-center text-xs text-muted-foreground dark:text-muted-foreground">
-                By signing up, you agree to our{" "}
-                <Link
+                By signing in, you agree to our{" "}
+                <a
                   href="#"
                   className="capitalize text-primary hover:text-primary/90 dark:text-primary hover:dark:text-primary/90"
                 >
                   Terms of use
-                </Link>{" "}
+                </a>{" "}
                 and{" "}
-                <Link
+                <a
                   href="#"
                   className="capitalize text-primary hover:text-primary/90 dark:text-primary hover:dark:text-primary/90"
                 >
                   Privacy policy
-                </Link>
+                </a>
               </p>
             </form>
           </CardContent>
@@ -204,12 +154,12 @@ export default function SignUpPage() {
 
         <p className="text-pretty mt-6 text-center text-sm text-muted-foreground dark:text-muted-foreground">
           Already have an account?{" "}
-          <Link
-            href="/sign-in"
+          <a
+            href="#"
             className="font-medium text-primary hover:text-primary/90 dark:text-primary hover:dark:text-primary/90"
           >
             Sign in
-          </Link>
+          </a>
         </p>
       </div>
     </div>
