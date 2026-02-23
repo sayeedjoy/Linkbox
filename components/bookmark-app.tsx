@@ -26,6 +26,14 @@ const OPT_PREFIX = "opt-";
 
 type GroupWithCount = Group & { _count: { bookmarks: number } };
 
+function hostnameFromUrl(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+}
+
 function makeOptimisticBookmark(
   optId: string,
   payload: { url?: string | null; title?: string | null; groupId?: string | null },
@@ -33,12 +41,16 @@ function makeOptimisticBookmark(
 ): BookmarkWithGroup {
   const group = payload.groupId ? groups.find((g) => g.id === payload.groupId) ?? null : null;
   const now = new Date();
+  const title =
+    payload.title ??
+    (payload.url ? hostnameFromUrl(payload.url) : null) ??
+    "Loading…";
   return {
     id: optId,
     userId: "",
     groupId: payload.groupId ?? null,
     url: payload.url ?? null,
-    title: payload.title ?? "Loading…",
+    title,
     description: null,
     faviconUrl: null,
     previewImageUrl: null,
@@ -156,10 +168,9 @@ export function BookmarkApp({
         : null;
     if (raw.startsWith("http://") || raw.startsWith("https://")) {
       const optId = `${OPT_PREFIX}${Date.now()}`;
-      const opt = makeOptimisticBookmark(optId, { url: raw, title: "Loading…", groupId: defaultGroupId }, groups);
+      const opt = makeOptimisticBookmark(optId, { url: raw, groupId: defaultGroupId }, groups);
       setBookmarks((prev) => [opt, ...prev]);
       setSearchResults((prev) => [opt, ...prev]);
-      setIsSubmitting(true);
       try {
         const b = await createBookmark(raw, { groupId: defaultGroupId });
         setBookmarks((prev) => [b, ...prev.filter((x) => x.id !== optId && x.id !== b.id)]);
@@ -169,8 +180,6 @@ export function BookmarkApp({
         setBookmarks((prev) => prev.filter((x) => x.id !== optId));
         setSearchResults((prev) => prev.filter((x) => x.id !== optId));
         toast.error("Failed to save");
-      } finally {
-        setIsSubmitting(false);
       }
       return;
     }
@@ -178,7 +187,7 @@ export function BookmarkApp({
     if (urls.length > 0) {
       const optIds = urls.map((_, i) => `${OPT_PREFIX}${Date.now()}-${i}`);
       const optimistic = optIds.map((id, i) =>
-        makeOptimisticBookmark(id, { url: urls[i], title: "Loading…", groupId: defaultGroupId }, groups)
+        makeOptimisticBookmark(id, { url: urls[i], groupId: defaultGroupId }, groups)
       );
       setBookmarks((prev) => [...optimistic, ...prev]);
       setSearchResults((prev) => [...optimistic, ...prev]);

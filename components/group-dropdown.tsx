@@ -6,10 +6,11 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
   DropdownMenuItem,
+  DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { ChevronDownIcon, PlusIcon, CircleIcon, GripVerticalIcon } from "lucide-react";
+import { ChevronDownIcon, PlusIcon, GripVerticalIcon, PencilIcon, TrashIcon } from "lucide-react";
 import { useCallback, useState } from "react";
 import {
   Dialog,
@@ -20,6 +21,16 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   DndContext,
   closestCenter,
@@ -37,7 +48,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { createGroup, reorderGroups } from "@/app/actions/groups";
+import { createGroup, reorderGroups, updateGroup, deleteGroup } from "@/app/actions/groups";
 import type { Group } from "@/app/generated/prisma/client";
 
 type GroupWithCount = Group & { _count: { bookmarks: number } };
@@ -107,8 +118,13 @@ export function GroupDropdown({
   onSelectGroupId: (id: string | null) => void;
   onGroupsChange: () => void;
 }) {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [reorderOpen, setReorderOpen] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<GroupWithCount | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editColor, setEditColor] = useState(GROUP_COLORS[0]);
+  const [deleteTarget, setDeleteTarget] = useState<GroupWithCount | null>(null);
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(GROUP_COLORS[0]);
   const sensors = useSensors(
@@ -155,41 +171,125 @@ export function GroupDropdown({
     selectedGroupId === null
       ? "All Bookmarks"
       : groups.find((g) => g.id === selectedGroupId)?.name ?? "All Bookmarks";
+  const triggerDotColor =
+    selectedGroupId === null
+      ? "#6b7280"
+      : groups.find((g) => g.id === selectedGroupId)?.color ?? "#6b7280";
   const totalCount = groups.reduce((s, g) => s + g._count.bookmarks, 0);
+
+  const handleEditClick = useCallback(
+    (e: React.MouseEvent | React.PointerEvent, g: GroupWithCount) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setEditingGroup(g);
+      setEditName(g.name);
+      setEditColor(g.color ?? GROUP_COLORS[0]);
+      setDropdownOpen(false);
+    },
+    []
+  );
+
+  const handleDeleteClick = useCallback(
+    (e: React.MouseEvent | React.PointerEvent, g: GroupWithCount) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDeleteTarget(g);
+      setDropdownOpen(false);
+    },
+    []
+  );
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteGroup(deleteTarget.id);
+      onGroupsChange();
+      if (selectedGroupId === deleteTarget.id) onSelectGroupId(null);
+      setDeleteTarget(null);
+      toast.success("Group deleted");
+    } catch {
+      toast.error("Failed to delete group");
+    }
+  }, [deleteTarget, selectedGroupId, onGroupsChange, onSelectGroupId]);
+
+  const handleEditSave = useCallback(async () => {
+    if (!editingGroup) return;
+    const name = editName.trim();
+    if (!name) return;
+    try {
+      await updateGroup(editingGroup.id, { name, color: editColor });
+      onGroupsChange();
+      setEditingGroup(null);
+      toast.success("Group updated");
+    } catch {
+      toast.error("Failed to update group");
+    }
+  }, [editingGroup, editName, editColor, onGroupsChange]);
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" className="gap-1 font-normal">
-            <CircleIcon className="size-3 fill-foreground" />
+            <span
+              className="size-3 rounded-full shrink-0"
+              style={{ backgroundColor: triggerDotColor }}
+            />
             <span className="max-w-[140px] truncate">{label}</span>
             <ChevronDownIcon className="size-4 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="min-w-[200px]">
-          <DropdownMenuItem onSelect={() => onSelectGroupId(null)}>
-            <CircleIcon className="size-3 fill-foreground mr-2" />
+          <DropdownMenuCheckboxItem
+            checked={selectedGroupId === null}
+            onSelect={() => onSelectGroupId(null)}
+          >
+            <span
+              className="size-3 rounded-full mr-2 shrink-0"
+              style={{ backgroundColor: "#6b7280" }}
+            />
             All Bookmarks
-            <span className="ml-auto text-muted-foreground text-xs">
+            <span className="ml-auto text-muted-foreground text-xs pl-2">
               {totalCount}
             </span>
-          </DropdownMenuItem>
+          </DropdownMenuCheckboxItem>
           {groups.length > 0 && <DropdownMenuSeparator />}
           {groups.map((g) => (
-            <DropdownMenuItem
+            <DropdownMenuCheckboxItem
               key={g.id}
+              checked={selectedGroupId === g.id}
               onSelect={() => onSelectGroupId(g.id)}
+              className="group/group-row"
             >
               <span
                 className="size-3 rounded-full mr-2 shrink-0"
                 style={{ backgroundColor: g.color ?? "#6b7280" }}
               />
-              <span className="truncate">{g.name}</span>
-              <span className="ml-auto text-muted-foreground text-xs">
+              <span className="truncate flex-1 min-w-0">{g.name}</span>
+              <span className="opacity-0 group-hover/group-row:opacity-100 flex items-center gap-0.5 ml-1 transition-opacity">
+                <button
+                  type="button"
+                  className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
+                  onClick={(e) => handleEditClick(e, g)}
+                  onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  aria-label="Edit group"
+                >
+                  <PencilIcon className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                  onClick={(e) => handleDeleteClick(e, g)}
+                  onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  aria-label="Delete group"
+                >
+                  <TrashIcon className="size-3.5" />
+                </button>
+              </span>
+              <span className="text-muted-foreground text-xs pl-1">
                 {g._count.bookmarks}
               </span>
-            </DropdownMenuItem>
+            </DropdownMenuCheckboxItem>
           ))}
           <DropdownMenuSeparator />
           {groups.length > 1 && (
@@ -200,7 +300,7 @@ export function GroupDropdown({
           )}
           <DropdownMenuItem onSelect={() => setCreateOpen(true)}>
             <PlusIcon className="size-4" />
-            Create group
+            New Group
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -247,7 +347,7 @@ export function GroupDropdown({
               placeholder="Group name"
               onKeyDown={(e) => e.key === "Enter" && handleCreate()}
             />
-            <div className="flex gap-1 flex-wrap">
+            <div className="flex gap-1 flex-wrap items-center">
               {GROUP_COLORS.map((c) => (
                 <button
                   key={c}
@@ -258,6 +358,13 @@ export function GroupDropdown({
                   aria-label={`Color ${c}`}
                 />
               ))}
+              <input
+                type="color"
+                value={newColor}
+                onChange={(e) => setNewColor(e.target.value)}
+                className="size-6 rounded cursor-pointer border-0 w-6 h-6 p-0 bg-transparent"
+                aria-label="Custom color"
+              />
             </div>
           </div>
           <DialogFooter showCloseButton={false}>
@@ -270,6 +377,74 @@ export function GroupDropdown({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Dialog open={editingGroup !== null} onOpenChange={(open) => !open && setEditingGroup(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit group</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-2 py-2">
+            <Label htmlFor="edit-group-name">Name</Label>
+            <Input
+              id="edit-group-name"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              placeholder="Group name"
+              onKeyDown={(e) => e.key === "Enter" && handleEditSave()}
+            />
+            <div className="flex gap-1 flex-wrap items-center">
+              {GROUP_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  className="size-6 rounded-full border-2 border-transparent hover:border-foreground"
+                  style={{ backgroundColor: c }}
+                  onClick={() => setEditColor(c)}
+                  aria-label={`Color ${c}`}
+                />
+              ))}
+              <input
+                type="color"
+                value={editColor}
+                onChange={(e) => setEditColor(e.target.value)}
+                className="size-6 rounded cursor-pointer border-0 w-6 h-6 p-0 bg-transparent"
+                aria-label="Custom color"
+              />
+            </div>
+          </div>
+          <DialogFooter showCloseButton={false}>
+            <Button variant="outline" onClick={() => setEditingGroup(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditSave} disabled={!editName.trim()}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete group?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget
+                ? `"${deleteTarget.name}" will be removed. Bookmarks in this group will move to All Bookmarks.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteConfirm();
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
