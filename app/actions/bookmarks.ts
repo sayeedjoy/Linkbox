@@ -23,16 +23,18 @@ export async function getBookmarks(options?: {
       title?: { contains: string; mode: "insensitive" };
       url?: { contains: string; mode: "insensitive" };
       description?: { contains: string; mode: "insensitive" };
+      group?: { name: { contains: string; mode: "insensitive" } };
     }>;
   } = { userId };
   if (options?.groupId !== undefined && options.groupId !== null)
     where.groupId = options.groupId;
   if (options?.search?.trim()) {
-    const q = `%${options.search.trim()}%`;
+    const q = options.search.trim();
     where.OR = [
       { title: { contains: q, mode: "insensitive" } },
       { url: { contains: q, mode: "insensitive" } },
       { description: { contains: q, mode: "insensitive" } },
+      { group: { name: { contains: q, mode: "insensitive" } } },
     ];
   }
   const sortKey = options?.sort ?? "createdAt";
@@ -102,12 +104,35 @@ export async function createBookmarkFromMetadata(
   return bookmark as BookmarkWithGroup;
 }
 
+export async function createNote(content: string, groupId?: string | null) {
+  const userId = await currentUserId();
+  const trimmed = content.trim();
+  if (!trimmed) throw new Error("Empty note");
+  const lines = trimmed.split(/\r?\n/);
+  const title = lines[0]?.slice(0, 500) ?? "Note";
+  const bookmark = await prisma.bookmark.create({
+    data: {
+      userId,
+      groupId: groupId ?? null,
+      url: null,
+      title,
+      description: trimmed,
+      faviconUrl: null,
+      previewImageUrl: null,
+    },
+    include: {
+      group: { select: { id: true, name: true, color: true } },
+    },
+  });
+  return bookmark as BookmarkWithGroup;
+}
+
 export async function updateBookmark(
   id: string,
   data: {
     title?: string | null;
     description?: string | null;
-    url?: string;
+    url?: string | null;
     groupId?: string | null;
   }
 ) {
@@ -115,7 +140,7 @@ export async function updateBookmark(
   const updateData: Record<string, unknown> = {};
   if (data.title !== undefined) updateData.title = data.title;
   if (data.description !== undefined) updateData.description = data.description;
-  if (data.url !== undefined) updateData.url = data.url.trim();
+  if (data.url !== undefined) updateData.url = data.url === null || data.url === "" ? null : data.url.trim();
   if (data.groupId !== undefined) updateData.groupId = data.groupId;
   await prisma.bookmark.updateMany({
     where: { id, userId },

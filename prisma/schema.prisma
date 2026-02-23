@@ -41,7 +41,7 @@ model Bookmark {
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   groupId         String?
   group           Group?    @relation(fields: [groupId], references: [id], onDelete: SetNull)
-  url             String
+  url             String?
   title           String?
   description     String?
   faviconUrl      String?

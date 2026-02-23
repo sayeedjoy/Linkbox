@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "sonner";
 import { useCallback, useState, useEffect } from "react";
 import {
   ArrowDownIcon,
@@ -72,7 +73,7 @@ export function BookmarkList({
       setEditForm({
         title: editing.title ?? "",
         description: editing.description ?? "",
-        url: editing.url,
+        url: editing.url ?? "",
         groupId: editing.groupId ?? "",
       });
     }
@@ -82,13 +83,20 @@ export function BookmarkList({
     await navigator.clipboard.writeText(url);
   }, []);
 
+  const handleCopyNote = useCallback(async (b: BookmarkWithGroup) => {
+    const text = [b.title, b.description].filter(Boolean).join("\n");
+    await navigator.clipboard.writeText(text || "");
+  }, []);
+
   const handleDelete = useCallback(
     async (id: string) => {
       try {
         await deleteBookmark(id);
         onBookmarksChange();
+        toast.success("Deleted");
       } catch {
         onBookmarksChange();
+        toast.error("Failed to delete");
       }
     },
     [onBookmarksChange]
@@ -99,7 +107,7 @@ export function BookmarkList({
     const patch = {
       title: editForm.title.trim() || null,
       description: editForm.description.trim() || null,
-      url: editForm.url.trim(),
+      url: editForm.url.trim() || null,
       groupId: editForm.groupId || null,
     };
     onBookmarkUpdate?.(editingId, patch);
@@ -178,10 +186,10 @@ export function BookmarkList({
               )}
               <div className="min-w-0">
                 <div className="font-medium truncate">
-                  {b.title || new URL(b.url).hostname}
+                  {b.title || (b.url ? new URL(b.url).hostname : "Note")}
                 </div>
                 <div className="text-xs text-muted-foreground truncate">
-                  {new URL(b.url).hostname}
+                  {b.url ? new URL(b.url).hostname : (b.description?.slice(0, 60) ?? "Note")}
                 </div>
               </div>
             </div>
@@ -199,8 +207,8 @@ export function BookmarkList({
                 variant="ghost"
                 size="icon"
                 className="size-8"
-                onClick={() => handleCopyUrl(b.url)}
-                aria-label="Copy URL"
+                onClick={() => (b.url ? handleCopyUrl(b.url) : handleCopyNote(b))}
+                aria-label={b.url ? "Copy URL" : "Copy note"}
               >
                 <CopyIcon className="size-4" />
               </Button>
@@ -213,15 +221,17 @@ export function BookmarkList({
               >
                 <span className="text-xs">Space</span>
               </Button>
-              <a
-                href={b.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center size-8 rounded-md hover:bg-muted"
-                aria-label="Open in new tab"
-              >
-                <ExternalLinkIcon className="size-4" />
-              </a>
+              {b.url ? (
+                <a
+                  href={b.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center size-8 rounded-md hover:bg-muted"
+                  aria-label="Open in new tab"
+                >
+                  <ExternalLinkIcon className="size-4" />
+                </a>
+              ) : null}
               <Button
                 variant="ghost"
                 size="icon"

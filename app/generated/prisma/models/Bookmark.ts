@@ -181,7 +181,7 @@ export type BookmarkGroupByOutputType = {
   id: string
   userId: string
   groupId: string | null
-  url: string
+  url: string | null
   title: string | null
   description: string | null
   faviconUrl: string | null
@@ -215,7 +215,7 @@ export type BookmarkWhereInput = {
   id?: Prisma.StringFilter<"Bookmark"> | string
   userId?: Prisma.StringFilter<"Bookmark"> | string
   groupId?: Prisma.StringNullableFilter<"Bookmark"> | string | null
-  url?: Prisma.StringFilter<"Bookmark"> | string
+  url?: Prisma.StringNullableFilter<"Bookmark"> | string | null
   title?: Prisma.StringNullableFilter<"Bookmark"> | string | null
   description?: Prisma.StringNullableFilter<"Bookmark"> | string | null
   faviconUrl?: Prisma.StringNullableFilter<"Bookmark"> | string | null
@@ -230,7 +230,7 @@ export type BookmarkOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   groupId?: Prisma.SortOrderInput | Prisma.SortOrder
-  url?: Prisma.SortOrder
+  url?: Prisma.SortOrderInput | Prisma.SortOrder
   title?: Prisma.SortOrderInput | Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
   faviconUrl?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -248,7 +248,7 @@ export type BookmarkWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.BookmarkWhereInput | Prisma.BookmarkWhereInput[]
   userId?: Prisma.StringFilter<"Bookmark"> | string
   groupId?: Prisma.StringNullableFilter<"Bookmark"> | string | null
-  url?: Prisma.StringFilter<"Bookmark"> | string
+  url?: Prisma.StringNullableFilter<"Bookmark"> | string | null
   title?: Prisma.StringNullableFilter<"Bookmark"> | string | null
   description?: Prisma.StringNullableFilter<"Bookmark"> | string | null
   faviconUrl?: Prisma.StringNullableFilter<"Bookmark"> | string | null
@@ -263,7 +263,7 @@ export type BookmarkOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   groupId?: Prisma.SortOrderInput | Prisma.SortOrder
-  url?: Prisma.SortOrder
+  url?: Prisma.SortOrderInput | Prisma.SortOrder
   title?: Prisma.SortOrderInput | Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
   faviconUrl?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -282,7 +282,7 @@ export type BookmarkScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"Bookmark"> | string
   userId?: Prisma.StringWithAggregatesFilter<"Bookmark"> | string
   groupId?: Prisma.StringNullableWithAggregatesFilter<"Bookmark"> | string | null
-  url?: Prisma.StringWithAggregatesFilter<"Bookmark"> | string
+  url?: Prisma.StringNullableWithAggregatesFilter<"Bookmark"> | string | null
   title?: Prisma.StringNullableWithAggregatesFilter<"Bookmark"> | string | null
   description?: Prisma.StringNullableWithAggregatesFilter<"Bookmark"> | string | null
   faviconUrl?: Prisma.StringNullableWithAggregatesFilter<"Bookmark"> | string | null
@@ -293,7 +293,7 @@ export type BookmarkScalarWhereWithAggregatesInput = {
 
 export type BookmarkCreateInput = {
   id?: string
-  url: string
+  url?: string | null
   title?: string | null
   description?: string | null
   faviconUrl?: string | null
@@ -308,7 +308,7 @@ export type BookmarkUncheckedCreateInput = {
   id?: string
   userId: string
   groupId?: string | null
-  url: string
+  url?: string | null
   title?: string | null
   description?: string | null
   faviconUrl?: string | null
@@ -319,7 +319,7 @@ export type BookmarkUncheckedCreateInput = {
 
 export type BookmarkUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  url?: Prisma.StringFieldUpdateOperationsInput | string
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   faviconUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -334,7 +334,7 @@ export type BookmarkUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   groupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  url?: Prisma.StringFieldUpdateOperationsInput | string
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   faviconUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -347,7 +347,7 @@ export type BookmarkCreateManyInput = {
   id?: string
   userId: string
   groupId?: string | null
-  url: string
+  url?: string | null
   title?: string | null
   description?: string | null
   faviconUrl?: string | null
@@ -358,7 +358,7 @@ export type BookmarkCreateManyInput = {
 
 export type BookmarkUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  url?: Prisma.StringFieldUpdateOperationsInput | string
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   faviconUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -371,7 +371,7 @@ export type BookmarkUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   groupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  url?: Prisma.StringFieldUpdateOperationsInput | string
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   faviconUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -519,7 +519,7 @@ export type DateTimeFieldUpdateOperationsInput = {
 
 export type BookmarkCreateWithoutUserInput = {
   id?: string
-  url: string
+  url?: string | null
   title?: string | null
   description?: string | null
   faviconUrl?: string | null
@@ -532,7 +532,7 @@ export type BookmarkCreateWithoutUserInput = {
 export type BookmarkUncheckedCreateWithoutUserInput = {
   id?: string
   groupId?: string | null
-  url: string
+  url?: string | null
   title?: string | null
   description?: string | null
   faviconUrl?: string | null
@@ -574,7 +574,7 @@ export type BookmarkScalarWhereInput = {
   id?: Prisma.StringFilter<"Bookmark"> | string
   userId?: Prisma.StringFilter<"Bookmark"> | string
   groupId?: Prisma.StringNullableFilter<"Bookmark"> | string | null
-  url?: Prisma.StringFilter<"Bookmark"> | string
+  url?: Prisma.StringNullableFilter<"Bookmark"> | string | null
   title?: Prisma.StringNullableFilter<"Bookmark"> | string | null
   description?: Prisma.StringNullableFilter<"Bookmark"> | string | null
   faviconUrl?: Prisma.StringNullableFilter<"Bookmark"> | string | null
@@ -585,7 +585,7 @@ export type BookmarkScalarWhereInput = {
 
 export type BookmarkCreateWithoutGroupInput = {
   id?: string
-  url: string
+  url?: string | null
   title?: string | null
   description?: string | null
   faviconUrl?: string | null
@@ -598,7 +598,7 @@ export type BookmarkCreateWithoutGroupInput = {
 export type BookmarkUncheckedCreateWithoutGroupInput = {
   id?: string
   userId: string
-  url: string
+  url?: string | null
   title?: string | null
   description?: string | null
   faviconUrl?: string | null
@@ -636,7 +636,7 @@ export type BookmarkUpdateManyWithWhereWithoutGroupInput = {
 export type BookmarkCreateManyUserInput = {
   id?: string
   groupId?: string | null
-  url: string
+  url?: string | null
   title?: string | null
   description?: string | null
   faviconUrl?: string | null
@@ -647,7 +647,7 @@ export type BookmarkCreateManyUserInput = {
 
 export type BookmarkUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  url?: Prisma.StringFieldUpdateOperationsInput | string
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   faviconUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -660,7 +660,7 @@ export type BookmarkUpdateWithoutUserInput = {
 export type BookmarkUncheckedUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   groupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  url?: Prisma.StringFieldUpdateOperationsInput | string
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   faviconUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -672,7 +672,7 @@ export type BookmarkUncheckedUpdateWithoutUserInput = {
 export type BookmarkUncheckedUpdateManyWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   groupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  url?: Prisma.StringFieldUpdateOperationsInput | string
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   faviconUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -684,7 +684,7 @@ export type BookmarkUncheckedUpdateManyWithoutUserInput = {
 export type BookmarkCreateManyGroupInput = {
   id?: string
   userId: string
-  url: string
+  url?: string | null
   title?: string | null
   description?: string | null
   faviconUrl?: string | null
@@ -695,7 +695,7 @@ export type BookmarkCreateManyGroupInput = {
 
 export type BookmarkUpdateWithoutGroupInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  url?: Prisma.StringFieldUpdateOperationsInput | string
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   faviconUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -708,7 +708,7 @@ export type BookmarkUpdateWithoutGroupInput = {
 export type BookmarkUncheckedUpdateWithoutGroupInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
-  url?: Prisma.StringFieldUpdateOperationsInput | string
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   faviconUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -720,7 +720,7 @@ export type BookmarkUncheckedUpdateWithoutGroupInput = {
 export type BookmarkUncheckedUpdateManyWithoutGroupInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
-  url?: Prisma.StringFieldUpdateOperationsInput | string
+  url?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   faviconUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -813,7 +813,7 @@ export type $BookmarkPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     id: string
     userId: string
     groupId: string | null
-    url: string
+    url: string | null
     title: string | null
     description: string | null
     faviconUrl: string | null

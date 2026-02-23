@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeInit } from "@/components/theme-init";
 import { NextAuthSessionProvider } from "@/components/session-provider";
+import { Toaster } from "sonner";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const geistSans = Geist({
@@ -32,6 +33,7 @@ export default function RootLayout({
         <NextAuthSessionProvider>
           <ThemeInit />
           {children}
+          <Toaster richColors position="bottom-right" />
         </NextAuthSessionProvider>
       </body>
     </html>

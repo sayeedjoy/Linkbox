@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { GroupDropdown } from "@/components/group-dropdown";
 import { UserMenu } from "@/components/user-menu";
 import { BookmarkHeroInput } from "@/components/bookmark-hero-input";
@@ -16,7 +17,7 @@ import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
 import type { Group } from "@/app/generated/prisma/client";
 import { getBookmarks } from "@/app/actions/bookmarks";
 import { getGroups } from "@/app/actions/groups";
-import { createBookmark } from "@/app/actions/bookmarks";
+import { createBookmark, createNote } from "@/app/actions/bookmarks";
 import { parseTextForUrls, parseImageForUrls, unfurlUrl } from "@/app/actions/parse";
 import { createBookmarkFromMetadata } from "@/app/actions/bookmarks";
 
@@ -38,6 +39,7 @@ export function BookmarkApp({
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [inputValue, setInputValue] = useState("");
   const [previewBookmark, setPreviewBookmark] = useState<BookmarkWithGroup | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const refreshBookmarks = useCallback(async () => {
     const next = await getBookmarks({
@@ -79,10 +81,12 @@ export function BookmarkApp({
       typeof window !== "undefined" && localStorage.getItem("bookmark-auto-group") === "true"
         ? selectedGroupId
         : null;
+    setIsSubmitting(true);
     try {
       if (raw.startsWith("http://") || raw.startsWith("https://")) {
         const b = await createBookmark(raw, { groupId: defaultGroupId });
         setBookmarks((prev) => [b, ...prev]);
+        toast.success("Saved");
         return;
       }
       const urls = await parseTextForUrls(raw);
@@ -104,10 +108,18 @@ export function BookmarkApp({
         }
         setBookmarks((prev) => [...created, ...prev]);
         refreshGroups();
+        toast.success(created.length === 1 ? "Saved" : `${created.length} links saved`);
         return;
       }
+      const note = await createNote(raw, defaultGroupId);
+      setBookmarks((prev) => [note, ...prev]);
+      refreshGroups();
+      toast.success("Note saved");
     } catch {
       refreshBookmarks();
+      toast.error("Failed to save");
+    } finally {
+      setIsSubmitting(false);
     }
   }, [inputValue, selectedGroupId, refreshBookmarks, refreshGroups]);
 
@@ -117,43 +129,53 @@ export function BookmarkApp({
         const file = files[0];
         const mime = file.type;
         if (!mime.startsWith("image/")) return;
-        const base64 = await new Promise<string>((res, rej) => {
-          const r = new FileReader();
-          r.onload = () => {
-            const dataUrl = r.result as string;
-            const base = dataUrl.indexOf(",");
-            res(base >= 0 ? dataUrl.slice(base + 1) : "");
-          };
-          r.onerror = rej;
-          r.readAsDataURL(file);
-        });
-        const urls = await parseImageForUrls(base64, mime);
-        const defaultGroupId =
-          typeof window !== "undefined" && localStorage.getItem("bookmark-auto-group") === "true"
-            ? selectedGroupId
-            : null;
-        const created: BookmarkWithGroup[] = [];
-        for (const url of urls) {
-          try {
-            const meta = await unfurlUrl(url);
-            const b = await createBookmarkFromMetadata(
-              url,
-              {
-                title: meta.title,
-                description: meta.description,
-                faviconUrl: meta.faviconUrl,
-                previewImageUrl: meta.previewImageUrl,
-              },
-              defaultGroupId
-            );
-            created.push(b);
-          } catch {
-            //
+        setIsSubmitting(true);
+        try {
+          const base64 = await new Promise<string>((res, rej) => {
+            const r = new FileReader();
+            r.onload = () => {
+              const dataUrl = r.result as string;
+              const base = dataUrl.indexOf(",");
+              res(base >= 0 ? dataUrl.slice(base + 1) : "");
+            };
+            r.onerror = rej;
+            r.readAsDataURL(file);
+          });
+          const urls = await parseImageForUrls(base64, mime);
+          const defaultGroupId =
+            typeof window !== "undefined" && localStorage.getItem("bookmark-auto-group") === "true"
+              ? selectedGroupId
+              : null;
+          const created: BookmarkWithGroup[] = [];
+          for (const url of urls) {
+            try {
+              const meta = await unfurlUrl(url);
+              const b = await createBookmarkFromMetadata(
+                url,
+                {
+                  title: meta.title,
+                  description: meta.description,
+                  faviconUrl: meta.faviconUrl,
+                  previewImageUrl: meta.previewImageUrl,
+                },
+                defaultGroupId
+              );
+              created.push(b);
+            } catch {
+              //
+            }
           }
-        }
-        if (created.length) {
-          setBookmarks((prev) => [...created, ...prev]);
-          refreshGroups();
+          if (created.length) {
+            setBookmarks((prev) => [...created, ...prev]);
+            refreshGroups();
+            toast.success(created.length === 1 ? "Saved" : `${created.length} links saved`);
+          } else {
+            toast.error("No links found in image");
+          }
+        } catch {
+          toast.error("Failed to save");
+        } finally {
+          setIsSubmitting(false);
         }
         return;
       }
@@ -168,8 +190,9 @@ export function BookmarkApp({
     ? bookmarks.filter(
         (b) =>
           b.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          b.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          b.description?.toLowerCase().includes(searchQuery.toLowerCase())
+          (b.url?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
+          b.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          b.group?.name?.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : bookmarks;
 
@@ -191,6 +214,7 @@ export function BookmarkApp({
           onSubmit={handleHeroSubmit}
           onPaste={handleHeroPaste}
           searchMode={searchMode}
+          disabled={isSubmitting}
         />
         <BookmarkList
           bookmarks={filteredBookmarks}
@@ -225,7 +249,7 @@ export function BookmarkApp({
           <DialogHeader>
             <DialogTitle className="truncate pr-8">
               {previewBookmark
-                ? (previewBookmark.title || new URL(previewBookmark.url).hostname)
+                ? (previewBookmark.title || (previewBookmark.url ? new URL(previewBookmark.url).hostname : "Note"))
                 : ""}
             </DialogTitle>
           </DialogHeader>
@@ -239,23 +263,37 @@ export function BookmarkApp({
                 />
               )}
               {previewBookmark.description && (
-                <p className="text-sm text-muted-foreground line-clamp-3">
+                <p className="text-sm text-muted-foreground line-clamp-3 whitespace-pre-wrap">
                   {previewBookmark.description}
                 </p>
               )}
-              <a
-                href={previewBookmark.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-muted-foreground hover:text-foreground truncate block"
-              >
-                {previewBookmark.url}
-              </a>
-              <Button asChild size="sm">
-                <a href={previewBookmark.url} target="_blank" rel="noopener noreferrer">
-                  Open
-                </a>
-              </Button>
+              {previewBookmark.url ? (
+                <>
+                  <a
+                    href={previewBookmark.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-muted-foreground hover:text-foreground truncate block"
+                  >
+                    {previewBookmark.url}
+                  </a>
+                  <Button asChild size="sm">
+                    <a href={previewBookmark.url} target="_blank" rel="noopener noreferrer">
+                      Open
+                    </a>
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const text = [previewBookmark.title, previewBookmark.description].filter(Boolean).join("\n");
+                    navigator.clipboard.writeText(text || "");
+                  }}
+                >
+                  Copy
+                </Button>
+              )}
             </div>
           )}
         </DialogContent>

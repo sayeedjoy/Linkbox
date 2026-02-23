@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,11 +55,17 @@ export function GroupDropdown({
   const handleCreate = useCallback(async () => {
     const name = newName.trim();
     if (!name) return;
-    await createGroup(name, newColor);
-    setNewName("");
-    setCreateOpen(false);
-    onGroupsChange();
-  }, [newName, newColor, onGroupsChange]);
+    try {
+      const newGroup = await createGroup(name, newColor);
+      setNewName("");
+      setCreateOpen(false);
+      onGroupsChange();
+      onSelectGroupId(newGroup.id);
+      toast.success("Group created");
+    } catch {
+      toast.error("Failed to create group");
+    }
+  }, [newName, newColor, onGroupsChange, onSelectGroupId]);
 
   const label =
     selectedGroupId === null
