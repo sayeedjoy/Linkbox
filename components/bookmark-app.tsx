@@ -354,15 +354,17 @@ export function BookmarkApp({
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <header className="flex items-center justify-between gap-2 sm:gap-4 px-4 py-3 sm:px-6 sm:py-4 border-b border-border">
-        <GroupDropdown
-          groups={groups}
-          totalBookmarkCount={totalBookmarkCount}
-          selectedGroupId={selectedGroupId}
-          onSelectGroupId={setSelectedGroupId}
-          onGroupsChange={refreshGroups}
-        />
-        <UserMenu />
+      <header>
+        <div className="flex items-center justify-between gap-2 sm:gap-4 px-4 py-3 sm:px-6 sm:py-4 max-w-4xl w-full mx-auto">
+          <GroupDropdown
+            groups={groups}
+            totalBookmarkCount={totalBookmarkCount}
+            selectedGroupId={selectedGroupId}
+            onSelectGroupId={setSelectedGroupId}
+            onGroupsChange={refreshGroups}
+          />
+          <UserMenu />
+        </div>
       </header>
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-4 sm:px-6 sm:py-6 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col gap-6">
         <BookmarkHeroInput
