@@ -56,8 +56,12 @@ export function GenerateApiTokenModal({
       }
       setNewTokenName("");
       loadTokens();
-      await navigator.clipboard.writeText(result.token);
-      toast.success("Token created. Copy it now; it won't be shown again.");
+      try {
+        await navigator.clipboard.writeText(result.token);
+        toast.success("Token created and copied. Save it now; it won't be shown again.");
+      } catch {
+        toast.success("Token created. Copy failed; please try again in a secure tab.");
+      }
     } catch {
       toast.error("Failed to create token");
     } finally {
