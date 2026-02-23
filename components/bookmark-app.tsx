@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { GroupDropdown } from "@/components/group-dropdown";
 import { UserMenu } from "@/components/user-menu";
@@ -23,6 +24,7 @@ import { createBookmarkFromMetadata } from "@/app/actions/bookmarks";
 
 const SEARCH_DEBOUNCE_MS = 300;
 const OPT_PREFIX = "opt-";
+const LAST_GROUP_KEY = "bookmark-last-group";
 
 type GroupWithCount = Group & { _count: { bookmarks: number } };
 
@@ -63,14 +65,20 @@ function makeOptimisticBookmark(
 export function BookmarkApp({
   initialBookmarks,
   initialGroups,
+  initialSelectedGroupId,
 }: {
   initialBookmarks: BookmarkWithGroup[];
   initialGroups: GroupWithCount[];
+  initialSelectedGroupId?: string | null;
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [bookmarks, setBookmarks] = useState<BookmarkWithGroup[]>(initialBookmarks);
   const [searchResults, setSearchResults] = useState<BookmarkWithGroup[]>(initialBookmarks);
   const [groups, setGroups] = useState<GroupWithCount[]>(initialGroups);
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(
+    initialSelectedGroupId ?? null
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [searchMode, setSearchMode] = useState(false);
   const [sortKey, setSortKey] = useState<"createdAt" | "title">("createdAt");
@@ -117,6 +125,42 @@ export function BookmarkApp({
   useEffect(() => {
     refreshGroups();
   }, [refreshGroups]);
+
+  useEffect(() => {
+    const groupInUrl = searchParams.get("group");
+    if (groupInUrl != null && groupInUrl !== "") {
+      if (initialSelectedGroupId === null) router.replace("/");
+      return;
+    }
+    try {
+      const last = typeof window !== "undefined" ? localStorage.getItem(LAST_GROUP_KEY) : null;
+      if (last) router.replace(`/?group=${encodeURIComponent(last)}`);
+    } catch {
+      //
+    }
+  }, [searchParams, router, initialSelectedGroupId]);
+
+  const handleSelectGroupId = useCallback(
+    (id: string | null) => {
+      setSelectedGroupId(id);
+      try {
+        if (typeof window !== "undefined") {
+          if (id) localStorage.setItem(LAST_GROUP_KEY, id);
+          else localStorage.removeItem(LAST_GROUP_KEY);
+        }
+      } catch {
+        //
+      }
+      const url = new URL(window.location.href);
+      if (id) {
+        url.searchParams.set("group", id);
+      } else {
+        url.searchParams.delete("group");
+      }
+      router.replace(url.pathname + url.search);
+    },
+    [router]
+  );
 
   useEffect(() => {
     if (!searchMode) return;
@@ -360,7 +404,7 @@ export function BookmarkApp({
             groups={groups}
             totalBookmarkCount={totalBookmarkCount}
             selectedGroupId={selectedGroupId}
-            onSelectGroupId={setSelectedGroupId}
+            onSelectGroupId={handleSelectGroupId}
             onGroupsChange={refreshGroups}
           />
           <UserMenu />
