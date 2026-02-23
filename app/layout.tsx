@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
+import { siteMetadata } from "@/lib/metadata";
 import "./globals.css";
 import { ThemeInit } from "@/components/theme-init";
 import { NextAuthSessionProvider } from "@/components/session-provider";
@@ -15,10 +16,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Bookmarks",
-  description: "Save and organize your bookmarks",
-};
+export const metadata: Metadata = siteMetadata;
 
 export default function RootLayout({
   children,
