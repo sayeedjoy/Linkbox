@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { GroupDropdown } from "@/components/group-dropdown";
 import { UserMenu } from "@/components/user-menu";
@@ -72,6 +72,7 @@ export function BookmarkApp({
   initialSelectedGroupId?: string | null;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const [bookmarks, setBookmarks] = useState<BookmarkWithGroup[]>(initialBookmarks);
   const [searchResults, setSearchResults] = useState<BookmarkWithGroup[]>(initialBookmarks);
@@ -151,15 +152,17 @@ export function BookmarkApp({
       } catch {
         //
       }
-      const url = new URL(window.location.href);
+      const params = new URLSearchParams(searchParams.toString());
       if (id) {
-        url.searchParams.set("group", id);
+        params.set("group", id);
       } else {
-        url.searchParams.delete("group");
+        params.delete("group");
       }
-      router.replace(url.pathname + url.search);
+      const query = params.toString();
+      const targetUrl = query ? `${pathname}?${query}` : pathname;
+      setTimeout(() => router.replace(targetUrl), 0);
     },
-    [router]
+    [router, pathname, searchParams]
   );
 
   useEffect(() => {

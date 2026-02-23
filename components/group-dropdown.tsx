@@ -161,8 +161,9 @@ export function GroupDropdown({
       const newGroup = await createGroup(name, newColor);
       setNewName("");
       setCreateOpen(false);
-      onGroupsChange();
+      setDropdownOpen(false);
       onSelectGroupId(newGroup.id);
+      onGroupsChange();
       toast.success("Group created");
     } catch {
       toast.error("Failed to create group");
