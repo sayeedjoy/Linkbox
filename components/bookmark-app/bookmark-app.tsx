@@ -83,6 +83,7 @@ export function BookmarkApp({
             setSortOrder(order);
           }}
           onBookmarksChange={handleBookmarksChange}
+          onGroupsChange={refreshGroups}
           onBookmarkUpdate={(id, patch) => {
             const upd = (b: BookmarkWithGroup) =>
               b.id === id

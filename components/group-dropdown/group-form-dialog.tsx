@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ColorPicker } from "@/components/color";
 
 export const GROUP_COLORS = [
   "#6b7280",
@@ -63,23 +64,22 @@ export function GroupFormDialog({
             placeholder="Group name"
             onKeyDown={(e) => e.key === "Enter" && onSubmit()}
           />
-          <div className="flex gap-1 flex-wrap items-center">
-            {GROUP_COLORS.map((c) => (
+          <div className="flex flex-wrap items-center gap-2">
+            <Label className="shrink-0">Color</Label>
+            {GROUP_COLORS.slice(0, 6).map((hex) => (
               <button
-                key={c}
+                key={hex}
                 type="button"
-                className="size-6 rounded-full border-2 border-transparent hover:border-foreground"
-                style={{ backgroundColor: c }}
-                onClick={() => onColorChange(c)}
-                aria-label={`Color ${c}`}
+                className="size-6 shrink-0 rounded-full border border-border shadow-sm transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                style={{ backgroundColor: hex }}
+                onClick={() => onColorChange(hex)}
+                aria-label={`Color ${hex}`}
               />
             ))}
-            <input
-              type="color"
-              value={color}
-              onChange={(e) => onColorChange(e.target.value)}
-              className="size-6 rounded cursor-pointer border-0 w-6 h-6 p-0 bg-transparent"
-              aria-label="Custom color"
+            <ColorPicker
+              value={color || "#6b7280"}
+              onChange={onColorChange}
+              className="size-6"
             />
           </div>
           <DialogFooter showCloseButton={false}>

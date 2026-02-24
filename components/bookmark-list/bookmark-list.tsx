@@ -22,6 +22,7 @@ export function BookmarkList({
   sortOrder,
   onSortChange,
   onBookmarksChange,
+  onGroupsChange,
   onOpenPreview,
   onBookmarkUpdate,
   focusedIndex,
@@ -34,6 +35,7 @@ export function BookmarkList({
   sortOrder: "asc" | "desc";
   onSortChange: (key: "createdAt" | "title", order: "asc" | "desc") => void;
   onBookmarksChange: () => void;
+  onGroupsChange?: () => void;
   onOpenPreview?: (b: BookmarkWithGroup) => void;
   onBookmarkUpdate?: (
     id: string,
@@ -194,6 +196,7 @@ export function BookmarkList({
               onEditFormChange={setEditForm}
               onSave={handleSaveEdit}
               onCancel={() => setEditingId(null)}
+              onGroupsChange={onGroupsChange}
             />
           ) : (
             <BookmarkRow
