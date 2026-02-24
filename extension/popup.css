@@ -98,6 +98,10 @@ body {
   padding-bottom: 36px;
 }
 
+#connect-screen.hidden {
+  display: none;
+}
+
 .connect-logo {
   width: 56px;
   height: 56px;
