@@ -11,24 +11,61 @@ const pageTitleEl = document.getElementById("page-title");
 const pageFavicon = document.getElementById("page-favicon");
 const titleInput = document.getElementById("title-input");
 const descriptionInput = document.getElementById("description-input");
-const groupSelect = document.getElementById("group-select");
+const groupTrigger = document.getElementById("group-trigger");
+const groupDot = document.getElementById("group-dot");
+const groupTriggerLabel = document.getElementById("group-trigger-label");
+const groupList = document.getElementById("group-list");
 const saveBtn = document.getElementById("save-btn");
+let selectedGroupId = "";
+let groupsList = [];
 const saveStatus = document.getElementById("save-status");
+
+/* ====== Helpers (SVG icons for status) ====== */
+
+const STATUS_ICONS = {
+  success: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  error: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+};
+
+/* ====== Screen Transitions ====== */
 
 function showScreen(connected) {
   connectScreen.classList.toggle("hidden", connected);
   saveScreen.classList.toggle("hidden", !connected);
 }
 
+/* ====== Status Toast ====== */
+
 function showStatus(message, isError) {
-  saveStatus.textContent = message;
-  saveStatus.classList.remove("hidden", "success", "error");
-  saveStatus.classList.add(isError ? "error" : "success");
+  const type = isError ? "error" : "success";
+  saveStatus.innerHTML = STATUS_ICONS[type] + '<span>' + message + '</span>';
+  saveStatus.classList.remove("hidden", "success", "error", "fade-out");
+  saveStatus.classList.add(type);
 }
 
 function hideStatus() {
   saveStatus.classList.add("hidden");
+  saveStatus.classList.remove("fade-out");
 }
+
+function fadeOutStatus() {
+  saveStatus.classList.add("fade-out");
+  setTimeout(hideStatus, 300);
+}
+
+/* ====== Loading spinner for buttons ====== */
+
+function setButtonLoading(btn, loading) {
+  if (loading) {
+    btn.classList.add("loading");
+    btn.disabled = true;
+  } else {
+    btn.classList.remove("loading");
+    btn.disabled = false;
+  }
+}
+
+/* ====== Token Storage ====== */
 
 function getToken() {
   return new Promise((resolve) => {
@@ -37,8 +74,11 @@ function getToken() {
 }
 
 function setToken(token) {
-  return new Promise((resolve) => {
-    chrome.storage.local.set({ [TOKEN_KEY]: token }, resolve);
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.set({ [TOKEN_KEY]: token }, () => {
+      if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+      else resolve();
+    });
   });
 }
 
@@ -47,6 +87,8 @@ function clearToken() {
     chrome.storage.local.remove(TOKEN_KEY, resolve);
   });
 }
+
+/* ====== API ====== */
 
 function getBaseUrl() {
   return typeof BASE_URL !== "undefined" ? BASE_URL : "http://localhost:3000";
@@ -84,6 +126,8 @@ function saveBookmark(payload) {
   );
 }
 
+/* ====== Tab Helpers ====== */
+
 function getCurrentTab() {
   return new Promise((resolve) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => resolve(tabs[0] || null));
@@ -99,6 +143,8 @@ function domainFromUrl(url) {
     return "";
   }
 }
+
+/* ====== Init Save Screen ====== */
 
 function initSaveScreen(tab) {
   const url = tab?.url || "";
@@ -117,29 +163,84 @@ function initSaveScreen(tab) {
   } else {
     pageFavicon.style.backgroundImage = "";
   }
-  groupSelect.innerHTML = '<option value="">No group</option>';
+  selectedGroupId = "";
+  updateGroupTrigger("", "No group", "#6b7280");
+  groupList.innerHTML = "";
+  const noGroupOpt = document.createElement("div");
+  noGroupOpt.className = "group-option";
+  noGroupOpt.setAttribute("role", "option");
+  noGroupOpt.dataset.groupId = "";
+  noGroupOpt.tabIndex = 0;
+  noGroupOpt.innerHTML = '<span class="group-dot group-dot-muted"></span>No group';
+  groupList.appendChild(noGroupOpt);
   fetchGroups()
     .then((groups) => {
+      groupsList = groups;
       groups.forEach((g) => {
-        const opt = document.createElement("option");
-        opt.value = g.id;
-        opt.textContent = g.name;
-        groupSelect.appendChild(opt);
+        const opt = document.createElement("div");
+        opt.className = "group-option";
+        opt.setAttribute("role", "option");
+        opt.dataset.groupId = g.id;
+        opt.tabIndex = 0;
+        const dot = document.createElement("span");
+        dot.className = "group-dot";
+        dot.style.backgroundColor = g.color || "#6b7280";
+        opt.appendChild(dot);
+        opt.appendChild(document.createTextNode(g.name));
+        groupList.appendChild(opt);
       });
+      updateGroupTrigger("", "No group", "#6b7280");
     })
     .catch(() => {});
 }
 
-connectBtn.addEventListener("click", () => {
+/* ====== Group Dropdown ====== */
+
+function updateGroupTrigger(id, label, color) {
+  selectedGroupId = id;
+  groupTriggerLabel.textContent = label;
+  groupDot.style.backgroundColor = color || "#6b7280";
+  groupDot.classList.toggle("group-dot-muted", !color || color === "#6b7280");
+  groupList.querySelectorAll(".group-option").forEach((el) => {
+    el.setAttribute("aria-selected", el.dataset.groupId === id);
+  });
+}
+
+function openGroupList() {
+  groupList.classList.remove("hidden");
+  groupTrigger.setAttribute("aria-expanded", "true");
+}
+
+function closeGroupList() {
+  groupList.classList.add("hidden");
+  groupTrigger.setAttribute("aria-expanded", "false");
+}
+
+/* ====== Event Listeners ====== */
+
+function doConnect() {
   const token = tokenInput.value.trim();
   if (!token) return;
-  connectBtn.disabled = true;
-  setToken(token).then(() => {
-    showScreen(true);
-    getCurrentTab().then(initSaveScreen);
-    connectBtn.disabled = false;
-    tokenInput.value = "";
-  });
+  setButtonLoading(connectBtn, true);
+  setToken(token)
+    .then(() => getToken())
+    .then((t) => {
+      if (t) showScreen(true);
+      tokenInput.value = "";
+      requestAnimationFrame(() => {
+        getCurrentTab().then(initSaveScreen).catch(() => {});
+        setButtonLoading(connectBtn, false);
+      });
+    })
+    .catch(() => {
+      setButtonLoading(connectBtn, false);
+    });
+}
+
+connectBtn.addEventListener("click", doConnect);
+
+tokenInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") doConnect();
 });
 
 getTokenLink.addEventListener("click", (e) => {
@@ -153,6 +254,26 @@ signoutBtn.addEventListener("click", () => {
   });
 });
 
+groupTrigger.addEventListener("click", () => {
+  if (groupList.classList.contains("hidden")) openGroupList();
+  else closeGroupList();
+});
+
+document.addEventListener("click", (e) => {
+  if (groupList.classList.contains("hidden")) return;
+  if (!groupTrigger.contains(e.target) && !groupList.contains(e.target)) closeGroupList();
+});
+
+groupList.addEventListener("click", (e) => {
+  const opt = e.target.closest(".group-option");
+  if (!opt) return;
+  const id = opt.dataset.groupId || "";
+  const label = id ? (groupsList.find((g) => g.id === id)?.name ?? "No group") : "No group";
+  const color = id ? (groupsList.find((g) => g.id === id)?.color || "#6b7280") : "#6b7280";
+  updateGroupTrigger(id, label, color);
+  closeGroupList();
+});
+
 saveBtn.addEventListener("click", () => {
   getCurrentTab().then((tab) => {
     const url = tab?.url || "";
@@ -162,20 +283,25 @@ saveBtn.addEventListener("click", () => {
     }
     const title = titleInput.value.trim();
     const description = descriptionInput.value.trim();
-    const groupId = groupSelect.value || null;
-    saveBtn.disabled = true;
+    const groupId = selectedGroupId || null;
+    setButtonLoading(saveBtn, true);
     hideStatus();
     saveBookmark({ url, title: title || undefined, description: description || undefined, groupId })
       .then(() => {
         showStatus("Saved!");
-        setTimeout(() => window.close(), 1500);
+        setTimeout(() => {
+          fadeOutStatus();
+          setTimeout(() => window.close(), 400);
+        }, 1000);
       })
       .catch((err) => {
         showStatus(err.message || "Failed to save bookmark.", true);
-        saveBtn.disabled = false;
+        setButtonLoading(saveBtn, false);
       });
   });
 });
+
+/* ====== Init ====== */
 
 getToken().then((token) => {
   if (token) {
