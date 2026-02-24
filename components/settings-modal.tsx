@@ -96,7 +96,8 @@ export function SettingsModal({
       }
       setDeleteConfirmOpen(false);
       onOpenChange(false);
-      await signOut({ callbackUrl: "/sign-in" });
+      await signOut({ redirect: false });
+      window.location.href = "/sign-in";
     } catch {
       toast.error("Failed to delete account");
     } finally {

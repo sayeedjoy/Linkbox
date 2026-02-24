@@ -57,7 +57,10 @@ export function UserMenu() {
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
-            onSelect={() => signOut()}
+            onSelect={async () => {
+              await signOut({ redirect: false });
+              window.location.href = "/sign-in";
+            }}
           >
             <LogOutIcon className="size-4" />
             Log out
