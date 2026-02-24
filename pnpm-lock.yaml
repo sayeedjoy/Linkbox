@@ -52,7 +52,7 @@ importers:
         version: 4.24.13(next@16.1.6(@babel/core@7.29.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       openai:
         specifier: ^6.22.0
-        version: 6.24.0(zod@3.25.76)
+        version: 6.24.0(zod@4.3.6)
       pg:
         specifier: ^8.18.0
         version: 8.18.0
@@ -8224,9 +8224,9 @@ snapshots:
       powershell-utils: 0.1.0
       wsl-utils: 0.3.1
 
-  openai@6.24.0(zod@3.25.76):
+  openai@6.24.0(zod@4.3.6):
     optionalDependencies:
-      zod: 3.25.76
+      zod: 4.3.6
 
   openid-client@5.7.1:
     dependencies:
