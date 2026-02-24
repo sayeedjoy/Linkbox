@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   const userId = await userIdFromBearerToken(request.headers.get("Authorization"));
   if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders(request) });
-  let body: { url?: string; title?: string; description?: string; groupId?: string | null };
+  let body: { url?: string; title?: string; description?: string; groupId?: string | null; faviconUrl?: string | null };
   try {
     body = await request.json();
   } catch {
@@ -25,11 +25,12 @@ export async function POST(request: Request) {
   const title = typeof body.title === "string" ? body.title : undefined;
   const description = typeof body.description === "string" ? body.description : undefined;
   const groupId = body.groupId === null || body.groupId === undefined ? undefined : (typeof body.groupId === "string" ? body.groupId : undefined);
+  const faviconUrl = typeof body.faviconUrl === "string" && body.faviconUrl.trim().startsWith("http") ? body.faviconUrl.trim() : null;
   try {
     const bookmark = await createBookmarkFromMetadataForUser(
       userId,
       url,
-      { title: title ?? null, description: description ?? null, faviconUrl: null, previewImageUrl: null },
+      { title: title ?? null, description: description ?? null, faviconUrl, previewImageUrl: null },
       groupId ?? null
     );
     return NextResponse.json(bookmark, { status: 200, headers: corsHeaders(request) });

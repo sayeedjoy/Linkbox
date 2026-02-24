@@ -479,10 +479,10 @@ body {
 /* Dropdown List */
 .group-list {
   position: absolute;
-  top: calc(100% + 6px);
+  bottom: calc(100% + 6px);
   left: 0;
   right: 0;
-  max-height: 220px;
+  max-height: 200px;
   overflow-y: auto;
   background: var(--popover);
   border: 1px solid var(--border);
@@ -502,7 +502,7 @@ body {
 @keyframes dropdownSlide {
   from {
     opacity: 0;
-    transform: translateY(-6px);
+    transform: translateY(-8px);
   }
   to {
     opacity: 1;

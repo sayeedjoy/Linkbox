@@ -144,6 +144,12 @@ function domainFromUrl(url) {
   }
 }
 
+function getFaviconUrl(url) {
+  const hostname = domainFromUrl(url);
+  if (!hostname) return null;
+  return "https://www.google.com/s2/favicons?domain=" + encodeURIComponent(hostname) + "&sz=32";
+}
+
 /* ====== Init Save Screen ====== */
 
 function initSaveScreen(tab) {
@@ -284,15 +290,13 @@ saveBtn.addEventListener("click", () => {
     const title = titleInput.value.trim();
     const description = descriptionInput.value.trim();
     const groupId = selectedGroupId || null;
+    const faviconUrl = getFaviconUrl(url) || undefined;
     setButtonLoading(saveBtn, true);
     hideStatus();
-    saveBookmark({ url, title: title || undefined, description: description || undefined, groupId })
+    saveBookmark({ url, title: title || undefined, description: description || undefined, groupId, faviconUrl })
       .then(() => {
         showStatus("Saved!");
-        setTimeout(() => {
-          fadeOutStatus();
-          setTimeout(() => window.close(), 400);
-        }, 1000);
+        setTimeout(() => window.close(), 100);
       })
       .catch((err) => {
         showStatus(err.message || "Failed to save bookmark.", true);
