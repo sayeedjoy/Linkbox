@@ -1,1 +1,1 @@
-const BASE_URL = "https://link.sayeedjoy.com";
+const BASE_URL = "http://localhost:3000";
