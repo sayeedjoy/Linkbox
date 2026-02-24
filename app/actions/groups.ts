@@ -4,16 +4,20 @@ import { prisma } from "@/lib/prisma";
 import { currentUserId } from "@/lib/auth";
 import type { Group } from "@/app/generated/prisma/client";
 
-export async function getGroups(): Promise<
-  (Group & { _count: { bookmarks: number } })[]
-> {
-  const userId = await currentUserId();
+export type GroupWithCount = Group & { _count: { bookmarks: number } };
+
+export async function getGroupsForUser(userId: string): Promise<GroupWithCount[]> {
   const list = await prisma.group.findMany({
     where: { userId },
     orderBy: { order: "asc" },
     include: { _count: { select: { bookmarks: true } } },
   });
-  return list as (Group & { _count: { bookmarks: number } })[];
+  return list as GroupWithCount[];
+}
+
+export async function getGroups(): Promise<GroupWithCount[]> {
+  const userId = await currentUserId();
+  return getGroupsForUser(userId);
 }
 
 export async function createGroup(name: string, color?: string) {

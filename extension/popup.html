@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LinkBox</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div id="connect-screen" class="screen">
+    <div class="connect-icon"></div>
+    <h1 class="connect-title">Connect to LinkBox</h1>
+    <p class="connect-subtitle">Paste your API token to save bookmarks</p>
+    <input type="password" id="token-input" class="token-input" placeholder="token_xxxxxxxx..." autocomplete="off" />
+    <button type="button" id="connect-btn" class="btn btn-primary">Connect</button>
+    <a href="#" id="get-token-link" class="link">Get your token from settings →</a>
+  </div>
+  <div id="save-screen" class="screen hidden">
+    <header class="save-header">
+      <span class="save-header-title">/ Save</span>
+      <button type="button" id="signout-btn" class="link-btn">Sign out</button>
+    </header>
+    <div class="page-preview" id="page-preview">
+      <div class="page-favicon" id="page-favicon"></div>
+      <div class="page-meta">
+        <span class="page-url" id="page-url"></span>
+        <span class="page-title" id="page-title"></span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="title-input">Title</label>
+      <input type="text" id="title-input" class="input" />
+    </div>
+    <div class="form-group">
+      <label for="description-input">Description</label>
+      <textarea id="description-input" class="textarea" rows="3"></textarea>
+    </div>
+    <div class="form-group">
+      <label for="group-select">Group</label>
+      <select id="group-select" class="select">
+        <option value="">No group</option>
+      </select>
+    </div>
+    <button type="button" id="save-btn" class="btn btn-primary btn-block">Save bookmark</button>
+    <div id="save-status" class="status hidden"></div>
+  </div>
+  <script src="config.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

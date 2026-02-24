@@ -1,6 +1,11 @@
 {
   "version": 1,
   "skills": {
+    "chrome-extension-development": {
+      "source": "mindrally/skills",
+      "sourceType": "github",
+      "computedHash": "879436797b8c35a063dc89a04b4182975114c5baf9dbf692455b7ed164420f9e"
+    },
     "frontend-design": {
       "source": "anthropics/skills",
       "sourceType": "github",

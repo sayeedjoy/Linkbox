@@ -95,7 +95,8 @@ export async function createBookmark(
   return bookmark as BookmarkWithGroup;
 }
 
-export async function createBookmarkFromMetadata(
+export async function createBookmarkFromMetadataForUser(
+  userId: string,
   url: string,
   metadata: {
     title?: string | null;
@@ -105,7 +106,6 @@ export async function createBookmarkFromMetadata(
   },
   groupId?: string | null
 ) {
-  const userId = await currentUserId();
   const normalized = url.trim();
   if (!normalized.startsWith("http")) throw new Error("Invalid URL");
   const gid = groupId ?? null;
@@ -139,6 +139,20 @@ export async function createBookmarkFromMetadata(
     },
   });
   return bookmark as BookmarkWithGroup;
+}
+
+export async function createBookmarkFromMetadata(
+  url: string,
+  metadata: {
+    title?: string | null;
+    description?: string | null;
+    faviconUrl?: string | null;
+    previewImageUrl?: string | null;
+  },
+  groupId?: string | null
+) {
+  const userId = await currentUserId();
+  return createBookmarkFromMetadataForUser(userId, url, metadata, groupId);
 }
 
 export async function createNote(content: string, groupId?: string | null) {
