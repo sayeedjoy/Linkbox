@@ -3,6 +3,7 @@
 import { useRef, useCallback, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Kbd } from "@/components/ui/kbd";
 import { PlusIcon, Loader } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -126,9 +127,7 @@ export function BookmarkHeroInput({
           disabled={disabled}
         />
         <div className="flex items-center gap-1 shrink-0">
-          <kbd className="hidden sm:inline-flex h-6 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-            ⌘F
-          </kbd>
+          <Kbd className="hidden sm:inline-flex">⌘F</Kbd>
         </div>
       </div>
     </form>

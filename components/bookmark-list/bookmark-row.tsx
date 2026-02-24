@@ -8,6 +8,7 @@ import {
   TrashIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Kbd } from "@/components/ui/kbd";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
 import { formatDate, safeHostname } from "./utils";
 
@@ -93,7 +94,7 @@ export const BookmarkRow = forwardRef<HTMLLIElement, {
             onClick={() => onPreview(bookmark)}
             aria-label="Preview"
           >
-            <span className="text-xs">Space</span>
+            <Kbd>Space</Kbd>
           </Button>
           {bookmark.url ? (
             <a
