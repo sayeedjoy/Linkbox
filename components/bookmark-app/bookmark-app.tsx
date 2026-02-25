@@ -39,7 +39,8 @@ export function BookmarkApp({
     setSortOrder,
     handleHeroSubmit,
     handleHeroPaste,
-    handleBookmarksChange,
+    handleBookmarkUpdate,
+    handleBookmarkDelete,
     previewBookmark,
     setPreviewBookmark,
     showShortcuts,
@@ -47,7 +48,6 @@ export function BookmarkApp({
     isSubmitting,
     focusedIndex,
     setFocusedIndex,
-    setBookmarks,
   } = useBookmarkApp({ initialBookmarks, initialGroups, initialSelectedGroupId, initialTotalBookmarkCount });
 
   return (
@@ -82,22 +82,10 @@ export function BookmarkApp({
             setSortKey(key);
             setSortOrder(order);
           }}
-          onBookmarksChange={handleBookmarksChange}
+          onBookmarkUpdate={handleBookmarkUpdate}
+          onBookmarkDelete={handleBookmarkDelete}
           onGroupsChange={refreshGroups}
           focusedIndex={focusedIndex}
-          onBookmarkUpdate={(id, patch) => {
-            const upd = (b: BookmarkWithGroup) =>
-              b.id === id
-                ? {
-                    ...b,
-                    ...patch,
-                    group: patch.groupId
-                      ? groups.find((g) => g.id === patch.groupId!) ?? null
-                      : null,
-                  }
-                : b;
-            setBookmarks((prev) => prev.map(upd));
-          }}
           onFocusChange={setFocusedIndex}
         />
       </main>

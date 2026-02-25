@@ -10,6 +10,13 @@ export type BookmarkWithGroup = Bookmark & {
   group: { id: string; name: string; color: string | null } | null;
 };
 
+function revalidateBookmarkData() {
+  revalidatePath("/");
+  revalidateTag("bookmarks", "max");
+  revalidateTag("bookmark-count", "max");
+  revalidateTag("groups", "max");
+}
+
 async function getBookmarksUncached(
   userId: string,
   options?: {
@@ -107,6 +114,7 @@ export async function createBookmark(
       data,
       include: { group: { select: { id: true, name: true, color: true } } },
     });
+    revalidateBookmarkData();
     return updated as BookmarkWithGroup;
   }
   const bookmark = await prisma.bookmark.create({
@@ -120,7 +128,7 @@ export async function createBookmark(
       group: { select: { id: true, name: true, color: true } },
     },
   });
-  revalidatePath("/");
+  revalidateBookmarkData();
   return bookmark as BookmarkWithGroup;
 }
 
@@ -154,9 +162,7 @@ export async function createBookmarkFromMetadataForUser(
       data,
       include: { group: { select: { id: true, name: true, color: true } } },
     });
-    revalidatePath("/");
-    revalidateTag("bookmarks", "max");
-    revalidateTag("bookmark-count", "max");
+    revalidateBookmarkData();
     return updated as BookmarkWithGroup;
   }
   const bookmark = await prisma.bookmark.create({
@@ -170,9 +176,7 @@ export async function createBookmarkFromMetadataForUser(
       group: { select: { id: true, name: true, color: true } },
     },
   });
-  revalidatePath("/");
-  revalidateTag("bookmarks", "max");
-  revalidateTag("bookmark-count", "max");
+  revalidateBookmarkData();
   return bookmark as BookmarkWithGroup;
 }
 
@@ -188,7 +192,6 @@ export async function createBookmarkFromMetadata(
 ) {
   const userId = await currentUserId();
   const out = await createBookmarkFromMetadataForUser(userId, url, metadata, groupId);
-  revalidatePath("/");
   return out;
 }
 
@@ -212,7 +215,7 @@ export async function createNote(content: string, groupId?: string | null) {
       group: { select: { id: true, name: true, color: true } },
     },
   });
-  revalidatePath("/");
+  revalidateBookmarkData();
   return bookmark as BookmarkWithGroup;
 }
 
@@ -235,13 +238,13 @@ export async function updateBookmark(
     where: { id, userId },
     data: updateData,
   });
-  revalidatePath("/");
+  revalidateBookmarkData();
   return { ok: true };
 }
 
 export async function deleteBookmark(id: string) {
   const userId = await currentUserId();
   await prisma.bookmark.deleteMany({ where: { id, userId } });
-  revalidatePath("/");
+  revalidateBookmarkData();
   return { ok: true };
 }

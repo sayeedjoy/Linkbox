@@ -7,14 +7,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
 import type { GroupWithCount } from "@/lib/types";
-import { getBookmarks, getTotalBookmarkCount, createBookmark, createNote, createBookmarkFromMetadata } from "@/app/actions/bookmarks";
-import { getGroups, createGroup, updateGroup, reorderGroups, deleteGroup } from "@/app/actions/groups";
+import { getBookmarks, getTotalBookmarkCount, createBookmark, createNote, createBookmarkFromMetadata, updateBookmark, deleteBookmark } from "@/app/actions/bookmarks";
+import { getGroups } from "@/app/actions/groups";
 import { parseTextForUrls, parseImageForUrls, unfurlUrl } from "@/app/actions/parse";
 import { filterBookmarks, makeOptimisticBookmark } from "./utils";
 import { groupsKey, bookmarksKey, bookmarkCountKey } from "@/lib/query-keys";
 
 const OPT_PREFIX = "opt-";
 const LAST_GROUP_KEY = "bookmark-last-group";
+type UIBookmark = BookmarkWithGroup & { _clientKey?: string; _optimistic?: boolean };
 
 export function useBookmarkApp({
   initialBookmarks,
@@ -68,8 +69,6 @@ export function useBookmarkApp({
     enabled: !!userId,
     initialData: !userId ? initialBookmarks : undefined,
     staleTime: 5 * 1000,
-    refetchInterval: 10 * 1000,
-    refetchIntervalInBackground: false,
   });
   const bookmarks = useMemo(
     () => bookmarksQuery.data ?? initialBookmarks,
@@ -90,25 +89,44 @@ export function useBookmarkApp({
     [searchMode, bookmarks, deferredSearchQuery]
   );
 
-  const refreshGroups = useCallback(() => {
-    if (userId) queryClient.invalidateQueries({ queryKey: groupsKey(userId) });
+  const invalidateBookmarkCaches = useCallback(() => {
+    if (!userId) return;
+    queryClient.invalidateQueries({ queryKey: groupsKey(userId), refetchType: "none" });
+    queryClient.invalidateQueries({ queryKey: ["bookmarks", userId], refetchType: "none" });
+    queryClient.invalidateQueries({ queryKey: bookmarkCountKey(userId), refetchType: "none" });
   }, [queryClient, userId]);
 
-  const refreshBookmarks = useCallback(() => {
-    if (userId)
-      queryClient.invalidateQueries({
-        queryKey: bookmarksKey(userId, selectedGroupId, sortKey, sortOrder),
+  const adjustCount = useCallback(
+    (delta: number) => {
+      if (!userId) return;
+      const key = bookmarkCountKey(userId);
+      queryClient.setQueryData<number>(key, (old) => {
+        const next = (old ?? 0) + delta;
+        return next < 0 ? 0 : next;
       });
-  }, [queryClient, userId, selectedGroupId, sortKey, sortOrder]);
+    },
+    [queryClient, userId]
+  );
 
-  const handleBookmarksChange = useCallback(async () => {
-    if (userId) {
-      queryClient.invalidateQueries({ queryKey: groupsKey(userId) });
-      queryClient.invalidateQueries({
-        queryKey: ["bookmarks", userId],
-      });
-      queryClient.invalidateQueries({ queryKey: bookmarkCountKey(userId) });
-    }
+  const adjustGroupCount = useCallback(
+    (groupId: string | null | undefined, delta: number) => {
+      if (!userId || !groupId || delta === 0) return;
+      queryClient.setQueryData<GroupWithCount[]>(groupsKey(userId), (old) =>
+        old?.map((group) =>
+          group.id === groupId
+            ? {
+                ...group,
+                _count: { ...group._count, bookmarks: Math.max(0, group._count.bookmarks + delta) },
+              }
+            : group
+        ) ?? old
+      );
+    },
+    [queryClient, userId]
+  );
+
+  const refreshGroups = useCallback(() => {
+    if (userId) queryClient.invalidateQueries({ queryKey: groupsKey(userId) });
   }, [queryClient, userId]);
 
   const createBookmarkMutation = useMutation({
@@ -119,13 +137,7 @@ export function useBookmarkApp({
       url: string;
       options?: { groupId?: string | null; title?: string; description?: string };
     }) => createBookmark(url, options),
-    onSettled: () => {
-      if (userId) {
-        queryClient.invalidateQueries({ queryKey: groupsKey(userId) });
-        queryClient.invalidateQueries({ queryKey: ["bookmarks", userId] });
-        queryClient.invalidateQueries({ queryKey: bookmarkCountKey(userId) });
-      }
-    },
+    onSettled: invalidateBookmarkCaches,
   });
 
   const createNoteMutation = useMutation({
@@ -136,13 +148,7 @@ export function useBookmarkApp({
       content: string;
       groupId?: string | null;
     }) => createNote(content, groupId),
-    onSettled: () => {
-      if (userId) {
-        queryClient.invalidateQueries({ queryKey: groupsKey(userId) });
-        queryClient.invalidateQueries({ queryKey: ["bookmarks", userId] });
-        queryClient.invalidateQueries({ queryKey: bookmarkCountKey(userId) });
-      }
-    },
+    onSettled: invalidateBookmarkCaches,
   });
 
   const createBookmarkFromMetadataMutation = useMutation({
@@ -160,14 +166,104 @@ export function useBookmarkApp({
       };
       groupId?: string | null;
     }) => createBookmarkFromMetadata(url, metadata, groupId),
-    onSettled: () => {
-      if (userId) {
-        queryClient.invalidateQueries({ queryKey: groupsKey(userId) });
-        queryClient.invalidateQueries({ queryKey: ["bookmarks", userId] });
-        queryClient.invalidateQueries({ queryKey: bookmarkCountKey(userId) });
+    onSettled: invalidateBookmarkCaches,
+  });
+
+  const handleBookmarkUpdate = useCallback(
+    async (
+      id: string,
+      patch: Partial<Pick<BookmarkWithGroup, "title" | "description" | "url" | "groupId">>
+    ) => {
+      if (!userId) return;
+
+      const previousLists = queryClient.getQueriesData<UIBookmark[]>({
+        queryKey: ["bookmarks", userId],
+      });
+      const previousGroups = queryClient.getQueryData<GroupWithCount[]>(groupsKey(userId));
+      const previousCount = queryClient.getQueryData<number>(bookmarkCountKey(userId));
+      const current = previousLists
+        .flatMap(([, list]) => list ?? [])
+        .find((bookmark) => bookmark.id === id);
+      const prevGroupId = current?.groupId ?? null;
+      const nextGroupId = patch.groupId === undefined ? prevGroupId : patch.groupId;
+
+      queryClient.setQueriesData<UIBookmark[]>(
+        { queryKey: ["bookmarks", userId] },
+        (old) =>
+          old?.map((bookmark) =>
+            bookmark.id !== id
+              ? bookmark
+              : {
+                  ...bookmark,
+                  ...patch,
+                  group:
+                    patch.groupId === undefined
+                      ? bookmark.group
+                      : patch.groupId
+                        ? groups.find((g) => g.id === patch.groupId) ?? null
+                        : null,
+                }
+          ) ?? old
+      );
+      if (prevGroupId !== nextGroupId) {
+        adjustGroupCount(prevGroupId, -1);
+        adjustGroupCount(nextGroupId, 1);
+      }
+
+      try {
+        await updateBookmark(id, patch);
+      } catch (error) {
+        for (const [key, data] of previousLists) {
+          queryClient.setQueryData(key, data);
+        }
+        queryClient.setQueryData(groupsKey(userId), previousGroups);
+        queryClient.setQueryData(bookmarkCountKey(userId), previousCount);
+        throw error;
+      } finally {
+        invalidateBookmarkCaches();
       }
     },
-  });
+    [adjustGroupCount, groups, invalidateBookmarkCaches, queryClient, userId]
+  );
+
+  const handleBookmarkDelete = useCallback(
+    async (id: string) => {
+      if (!userId) return;
+
+      const previousLists = queryClient.getQueriesData<UIBookmark[]>({
+        queryKey: ["bookmarks", userId],
+      });
+      const previousGroups = queryClient.getQueryData<GroupWithCount[]>(groupsKey(userId));
+      const previousCount = queryClient.getQueryData<number>(bookmarkCountKey(userId));
+      const deleted = previousLists.flatMap(([, list]) => list ?? []).find((bookmark) => bookmark.id === id);
+
+      queryClient.setQueriesData<UIBookmark[]>(
+        { queryKey: ["bookmarks", userId] },
+        (old) => old?.filter((bookmark) => bookmark.id !== id) ?? old
+      );
+
+      if (deleted) {
+        adjustCount(-1);
+        adjustGroupCount(deleted.groupId, -1);
+      }
+
+      try {
+        await deleteBookmark(id);
+      } catch (error) {
+        for (const [key, data] of previousLists) {
+          queryClient.setQueryData(key, data);
+        }
+        queryClient.setQueryData(groupsKey(userId), previousGroups);
+        if (typeof previousCount === "number") {
+          queryClient.setQueryData(bookmarkCountKey(userId), previousCount);
+        }
+        throw error;
+      } finally {
+        invalidateBookmarkCaches();
+      }
+    },
+    [adjustCount, adjustGroupCount, invalidateBookmarkCaches, queryClient, userId]
+  );
 
   useEffect(() => {
     const groupInUrl = searchParams.get("group");
@@ -274,11 +370,17 @@ export function useBookmarkApp({
     const defaultGroupId = selectedGroupId;
     if (raw.startsWith("http://") || raw.startsWith("https://")) {
       const optId = `${OPT_PREFIX}${Date.now()}`;
-      const opt = makeOptimisticBookmark(optId, { url: raw, groupId: defaultGroupId }, groups);
+      const opt: UIBookmark = {
+        ...makeOptimisticBookmark(optId, { url: raw, groupId: defaultGroupId }, groups),
+        _clientKey: optId,
+        _optimistic: true,
+      };
       queryClient.setQueryData(
         userId ? bookmarksKey(userId, defaultGroupId, sortKey, sortOrder) : ["bookmarks", "anon"],
-        (old: BookmarkWithGroup[] | undefined) => [opt, ...(old ?? [])]
+        (old: UIBookmark[] | undefined) => [opt, ...(old ?? [])]
       );
+      adjustCount(1);
+      adjustGroupCount(defaultGroupId, 1);
       try {
         const b = await createBookmarkMutation.mutateAsync({
           url: raw,
@@ -286,15 +388,22 @@ export function useBookmarkApp({
         });
         queryClient.setQueryData(
           userId ? bookmarksKey(userId, defaultGroupId, sortKey, sortOrder) : ["bookmarks", "anon"],
-          (prev: BookmarkWithGroup[] | undefined) =>
-            prev ? [b, ...prev.filter((x) => x.id !== optId && x.id !== b.id)] : [b]
+          (prev: UIBookmark[] | undefined) =>
+            prev
+              ? prev.map((x) =>
+                  x.id === optId
+                    ? { ...b, _clientKey: x._clientKey ?? optId }
+                    : x
+                )
+              : [{ ...b, _clientKey: optId }]
         );
-        refreshGroups();
         toast.success("Saved");
       } catch {
+        adjustCount(-1);
+        adjustGroupCount(defaultGroupId, -1);
         queryClient.setQueryData(
           userId ? bookmarksKey(userId, defaultGroupId, sortKey, sortOrder) : ["bookmarks", "anon"],
-          (prev: BookmarkWithGroup[] | undefined) => prev?.filter((x) => x.id !== optId) ?? []
+          (prev: UIBookmark[] | undefined) => prev?.filter((x) => x.id !== optId) ?? []
         );
         toast.error("Failed to save");
       }
@@ -308,9 +417,19 @@ export function useBookmarkApp({
       );
       queryClient.setQueryData(
         userId ? bookmarksKey(userId, defaultGroupId, sortKey, sortOrder) : ["bookmarks", "anon"],
-        (old: BookmarkWithGroup[] | undefined) => [...optimistic, ...(old ?? [])]
+        (old: UIBookmark[] | undefined) => [
+          ...optimistic.map((bookmark, idx) => ({
+            ...bookmark,
+            _clientKey: optIds[idx],
+            _optimistic: true,
+          })),
+          ...(old ?? []),
+        ]
       );
-      setIsSubmitting(true);
+      if (optimistic.length > 0) {
+        adjustCount(optimistic.length);
+        adjustGroupCount(defaultGroupId, optimistic.length);
+      }
       const created: BookmarkWithGroup[] = [];
       let failed = 0;
       for (let i = 0; i < urls.length; i++) {
@@ -329,38 +448,43 @@ export function useBookmarkApp({
           created.push(b);
           queryClient.setQueryData(
             userId ? bookmarksKey(userId, defaultGroupId, sortKey, sortOrder) : ["bookmarks", "anon"],
-            (prev: BookmarkWithGroup[] | undefined) =>
+            (prev: UIBookmark[] | undefined) =>
               prev
-                ? prev.filter((x) => x.id !== b.id || x.id === optIds[i]).map((x) => (x.id === optIds[i] ? b : x))
-                : [b]
+                ? prev.map((x) => (x.id === optIds[i] ? { ...b, _clientKey: x._clientKey ?? optIds[i] } : x))
+                : [{ ...b, _clientKey: optIds[i] }]
           );
         } catch {
           failed++;
+          adjustCount(-1);
+          adjustGroupCount(defaultGroupId, -1);
           queryClient.setQueryData(
             userId ? bookmarksKey(userId, defaultGroupId, sortKey, sortOrder) : ["bookmarks", "anon"],
-            (prev: BookmarkWithGroup[] | undefined) => prev?.filter((x) => x.id !== optIds[i]) ?? []
+            (prev: UIBookmark[] | undefined) => prev?.filter((x) => x.id !== optIds[i]) ?? []
           );
         }
       }
       if (failed > 0) toast.error(failed === urls.length ? "Failed to save" : `${failed} of ${urls.length} failed`);
       else toast.success(created.length === 1 ? "Saved" : `${created.length} links saved`);
-      if (created.length > 0) refreshGroups();
-      setIsSubmitting(false);
       return;
     }
     const optId = `${OPT_PREFIX}note-${Date.now()}`;
     const lines = raw.split(/\r?\n/);
-    const opt = makeOptimisticBookmark(
-      optId,
-      { url: null, title: lines[0]?.slice(0, 500) ?? "Note", groupId: defaultGroupId },
-      groups
-    );
+    const opt: UIBookmark = {
+      ...makeOptimisticBookmark(
+        optId,
+        { url: null, title: lines[0]?.slice(0, 500) ?? "Note", groupId: defaultGroupId },
+        groups
+      ),
+      _clientKey: optId,
+      _optimistic: true,
+    };
     opt.description = raw;
     queryClient.setQueryData(
       userId ? bookmarksKey(userId, defaultGroupId, sortKey, sortOrder) : ["bookmarks", "anon"],
-      (old: BookmarkWithGroup[] | undefined) => [opt, ...(old ?? [])]
+      (old: UIBookmark[] | undefined) => [opt, ...(old ?? [])]
     );
-    setIsSubmitting(true);
+    adjustCount(1);
+    adjustGroupCount(defaultGroupId, 1);
     try {
       const note = await createNoteMutation.mutateAsync({
         content: raw,
@@ -368,19 +492,22 @@ export function useBookmarkApp({
       });
       queryClient.setQueryData(
         userId ? bookmarksKey(userId, defaultGroupId, sortKey, sortOrder) : ["bookmarks", "anon"],
-        (prev: BookmarkWithGroup[] | undefined) =>
-          prev ? prev.map((x) => (x.id === optId ? note : x)) : [note]
+        (prev: UIBookmark[] | undefined) =>
+          prev
+            ? prev.map((x) =>
+                x.id === optId ? { ...note, _clientKey: x._clientKey ?? optId } : x
+              )
+            : [{ ...note, _clientKey: optId }]
       );
       toast.success("Note saved");
-      refreshGroups();
     } catch {
+      adjustCount(-1);
+      adjustGroupCount(defaultGroupId, -1);
       queryClient.setQueryData(
         userId ? bookmarksKey(userId, defaultGroupId, sortKey, sortOrder) : ["bookmarks", "anon"],
-        (prev: BookmarkWithGroup[] | undefined) => prev?.filter((x) => x.id !== optId) ?? []
+        (prev: UIBookmark[] | undefined) => prev?.filter((x) => x.id !== optId) ?? []
       );
       toast.error("Failed to save");
-    } finally {
-      setIsSubmitting(false);
     }
   }, [
     inputValue,
@@ -391,10 +518,11 @@ export function useBookmarkApp({
     sortKey,
     sortOrder,
     queryClient,
+    adjustCount,
+    adjustGroupCount,
     createBookmarkMutation,
     createNoteMutation,
     createBookmarkFromMetadataMutation,
-    refreshGroups,
   ]);
 
   const handleHeroPaste = useCallback(
@@ -456,18 +584,6 @@ export function useBookmarkApp({
     [selectedGroupId, userId, queryClient, createBookmarkFromMetadataMutation, refreshGroups]
   );
 
-  const setBookmarks = useCallback(
-    (updater: (prev: BookmarkWithGroup[]) => BookmarkWithGroup[]) => {
-      if (userId) {
-        queryClient.setQueryData(
-          bookmarksKey(userId, selectedGroupId, sortKey, sortOrder),
-          (old: BookmarkWithGroup[] | undefined) => (old ? updater(old) : old)
-        );
-      }
-    },
-    [queryClient, userId, selectedGroupId, sortKey, sortOrder]
-  );
-
   const clampedFocus =
     displayedBookmarks.length === 0
       ? -1
@@ -493,7 +609,8 @@ export function useBookmarkApp({
     setSortOrder,
     handleHeroSubmit,
     handleHeroPaste,
-    handleBookmarksChange,
+    handleBookmarkUpdate,
+    handleBookmarkDelete,
     previewBookmark,
     setPreviewBookmark,
     showShortcuts,
@@ -501,6 +618,5 @@ export function useBookmarkApp({
     isSubmitting,
     focusedIndex: clampedFocus,
     setFocusedIndex,
-    setBookmarks,
   };
 }

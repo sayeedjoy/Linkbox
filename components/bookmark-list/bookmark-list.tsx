@@ -3,7 +3,6 @@
 import { toast } from "sonner";
 import { useCallback, useState, useEffect, useRef } from "react";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
-import { deleteBookmark, updateBookmark } from "@/app/actions/bookmarks";
 import { BookmarkSortHeader } from "./bookmark-sort-header";
 import { BookmarkEditCard } from "./bookmark-edit-card";
 import { BookmarkRow } from "./bookmark-row";
@@ -14,6 +13,7 @@ type EditForm = {
   url: string;
   groupId: string | null;
 };
+type BookmarkListItem = BookmarkWithGroup & { _clientKey?: string };
 
 export function BookmarkList({
   bookmarks,
@@ -21,26 +21,26 @@ export function BookmarkList({
   sortKey,
   sortOrder,
   onSortChange,
-  onBookmarksChange,
   onGroupsChange,
   onBookmarkUpdate,
+  onBookmarkDelete,
   focusedIndex,
   onFocusChange,
   openEditId,
 }: {
-  bookmarks: BookmarkWithGroup[];
+  bookmarks: BookmarkListItem[];
   groups: { id: string; name: string; color: string | null }[];
   sortKey: "createdAt" | "title";
   sortOrder: "asc" | "desc";
   onSortChange: (key: "createdAt" | "title", order: "asc" | "desc") => void;
-  onBookmarksChange: () => void;
   onGroupsChange?: () => void;
   onBookmarkUpdate?: (
     id: string,
     patch: Partial<
       Pick<BookmarkWithGroup, "title" | "description" | "url" | "groupId">
     >,
-  ) => void;
+  ) => Promise<void> | void;
+  onBookmarkDelete?: (id: string) => Promise<void> | void;
   focusedIndex?: number;
   onFocusChange?: (index: number) => void;
   openEditId?: string | null;
@@ -74,16 +74,15 @@ export function BookmarkList({
 
   const handleDelete = useCallback(
     async (id: string) => {
+      if (!onBookmarkDelete) return;
       try {
-        await deleteBookmark(id);
-        onBookmarksChange();
+        await onBookmarkDelete(id);
         toast.success("Deleted");
       } catch {
-        onBookmarksChange();
         toast.error("Failed to delete");
       }
     },
-    [onBookmarksChange],
+    [onBookmarkDelete],
   );
 
   const handleSaveEdit = useCallback(async () => {
@@ -94,15 +93,13 @@ export function BookmarkList({
       url: editForm.url.trim() || null,
       groupId: editForm.groupId || null,
     };
-    onBookmarkUpdate?.(editingId, patch);
     setEditingId(null);
     try {
-      await updateBookmark(editingId, patch);
-      onBookmarksChange();
+      await onBookmarkUpdate?.(editingId, patch);
     } catch {
-      onBookmarksChange();
+      toast.error("Failed to save");
     }
-  }, [editingId, editing, editForm, onBookmarkUpdate, onBookmarksChange]);
+  }, [editingId, editing, editForm, onBookmarkUpdate]);
 
   useEffect(() => {
     if (editingId) editCardRef.current?.scrollIntoView({ block: "nearest" });
@@ -129,7 +126,7 @@ export function BookmarkList({
         {bookmarks.map((b, index) =>
           b.id === editingId && editing ? (
             <BookmarkEditCard
-              key={b.id}
+              key={b._clientKey ?? b.id}
               ref={editCardRef}
               bookmark={editing}
               groups={groups}
@@ -141,7 +138,7 @@ export function BookmarkList({
             />
           ) : (
             <BookmarkRow
-              key={b.id}
+              key={b._clientKey ?? b.id}
               bookmark={b}
               isFocused={focusedIndex === index}
               onEdit={setEditingId}
