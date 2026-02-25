@@ -44,7 +44,7 @@ export function useBookmarkApp({
   const [inputValue, setInputValue] = useState("");
   const [previewBookmark, setPreviewBookmark] = useState<BookmarkWithGroup | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [focusedIndex, setFocusedIndex] = useState(0);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const deferredSearchQuery = useDeferredValue(searchQuery);
 
@@ -209,7 +209,9 @@ export function useBookmarkApp({
     const clampedFocus =
       displayedBookmarks.length === 0
         ? -1
-        : Math.min(Math.max(0, focusedIndex), displayedBookmarks.length - 1);
+        : focusedIndex < 0
+          ? -1
+          : Math.min(focusedIndex, displayedBookmarks.length - 1);
     const onKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       const inInput = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
@@ -453,7 +455,9 @@ export function useBookmarkApp({
   const clampedFocus =
     displayedBookmarks.length === 0
       ? -1
-      : Math.min(Math.max(0, focusedIndex), displayedBookmarks.length - 1);
+      : focusedIndex < 0
+        ? -1
+        : Math.min(focusedIndex, displayedBookmarks.length - 1);
 
   return {
     groups,
