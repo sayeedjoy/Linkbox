@@ -6,8 +6,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -17,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useSession, signOut } from "next-auth/react";
-import { Sun, Download, Trash2 } from "lucide-react";
+import { Sun, Moon, Monitor, Download, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -31,10 +29,18 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { deleteAccount } from "@/app/actions/auth";
-import { listApiTokens, revokeApiToken } from "@/app/actions/api-tokens";
 
 const THEME_KEY = "bookmark-theme";
 const AUTO_GROUP_KEY = "bookmark-auto-group";
+
+const sectionLabelClass =
+  "text-xs font-medium uppercase tracking-wide text-muted-foreground";
+
+function ThemeIcon({ theme }: { theme: "light" | "dark" | "system" }) {
+  if (theme === "light") return <Sun className="size-4 shrink-0" />;
+  if (theme === "dark") return <Moon className="size-4 shrink-0" />;
+  return <Monitor className="size-4 shrink-0" />;
+}
 
 export function SettingsModal({
   open,
@@ -48,14 +54,6 @@ export function SettingsModal({
   const [autoGroup, setAutoGroup] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [revokeTargetId, setRevokeTargetId] = useState<string | null>(null);
-  const [apiTokens, setApiTokens] = useState<
-    { id: string; name: string; tokenPrefix: string | null; tokenSuffix: string | null; createdAt: Date; lastUsedAt: Date | null }[]
-  >([]);
-
-  useEffect(() => {
-    if (open) listApiTokens().then(setApiTokens);
-  }, [open]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -106,36 +104,21 @@ export function SettingsModal({
     }
   }, [onOpenChange]);
 
-  const handleRevokeToken = useCallback(async (id: string) => {
-    try {
-      const result = await revokeApiToken(id);
-      if ("error" in result) {
-        toast.error(result.error);
-        return;
-      }
-      setApiTokens((prev) => prev.filter((t) => t.id !== id));
-      toast.success("Token revoked");
-      setRevokeTargetId(null);
-    } catch {
-      toast.error("Failed to revoke");
-    }
-  }, []);
-
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-hidden overflow-x-hidden flex flex-col min-w-0">
-          <DialogHeader>
-            <DialogTitle>Settings</DialogTitle>
+        <DialogContent className="max-w-sm rounded-lg border bg-background p-6 shadow-lg [&>button]:top-4 [&>button]:right-4">
+          <DialogHeader className="text-center sm:text-left">
+            <DialogTitle className="text-lg font-semibold leading-none">
+              Settings
+            </DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto overflow-x-hidden min-h-0 flex-1 flex flex-col gap-4 py-2 min-w-0">
-            <div className="rounded-xl border border-border bg-muted/20 p-4 flex flex-col gap-3">
-              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                THEME
-              </span>
+          <div className="flex flex-col space-y-6">
+            <div>
+              <span className={sectionLabelClass}>Theme</span>
               <Select value={theme} onValueChange={handleThemeChange}>
-                <SelectTrigger className="w-full h-8">
-                  <Sun className="size-4 shrink-0" />
+                <SelectTrigger className="mt-2 w-full h-9">
+                  <ThemeIcon theme={theme} />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -145,16 +128,17 @@ export function SettingsModal({
                 </SelectContent>
               </Select>
             </div>
-            <div className="rounded-xl border border-border bg-muted/20 p-4 flex flex-col gap-3">
-              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                ORGANIZATION
-              </span>
-              <div className="flex items-center justify-between gap-4">
-                <div className="space-y-0.5 min-w-0">
-                  <Label htmlFor="auto-group" className="font-medium">
+            <div>
+              <span className={sectionLabelClass}>Organization</span>
+              <div className="mt-2 rounded-lg border border-border px-3 py-2.5 flex flex-row items-center justify-between gap-3">
+                <div className="min-w-0 space-y-0.5">
+                  <span className="text-sm font-medium block">
                     Auto-group new bookmarks
-                  </Label>
-                  <p id="auto-group-desc" className="text-xs text-muted-foreground">
+                  </span>
+                  <p
+                    id="auto-group-desc"
+                    className="text-xs text-muted-foreground"
+                  >
                     When enabled, new bookmarks may be assigned to an existing
                     group (applies across the app + extension).
                   </p>
@@ -164,79 +148,33 @@ export function SettingsModal({
                   checked={autoGroup}
                   onCheckedChange={handleAutoGroupChange}
                   aria-describedby="auto-group-desc"
-                  className="shrink-0"
+                  className="h-[1.15rem] w-8 shrink-0"
                 />
               </div>
             </div>
-            <div className="rounded-xl border border-border bg-muted/20 p-4 flex flex-col gap-3">
-              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                API TOKENS
-              </span>
-              {apiTokens.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No API tokens. Create one from the Generate API Token option in the menu.
-                </p>
-              ) : (
-                <ul className="space-y-2">
-                  {apiTokens.map((t) => (
-                    <li
-                      key={t.id}
-                      className="flex items-start justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2.5"
-                    >
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-sm">{t.name}</span>
-                          {(t.tokenPrefix ?? t.tokenSuffix) && (
-                            <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground">
-                              {[t.tokenPrefix, "…", t.tokenSuffix].filter(Boolean).join("")}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-                          <span>Created: {new Intl.DateTimeFormat("en-US", { month: "numeric", day: "numeric", year: "numeric" }).format(new Date(t.createdAt))}</span>
-                          {t.lastUsedAt != null ? (
-                            <span>Last used: {new Intl.DateTimeFormat("en-US", { month: "numeric", day: "numeric", year: "numeric" }).format(new Date(t.lastUsedAt))}</span>
-                          ) : (
-                            <span>Last used: Never</span>
-                          )}
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive mt-0.5"
-                        onClick={() => setRevokeTargetId(t.id)}
-                        aria-label="Delete token"
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div className="rounded-xl border border-border bg-muted/20 p-4 flex flex-col gap-3">
-              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                ACCOUNT
-              </span>
-              <p className="text-sm text-muted-foreground">
+            <div>
+              <span className={sectionLabelClass}>Account</span>
+              <p className="text-sm text-muted-foreground mt-1">
                 {session?.user?.email ?? "—"}
               </p>
-              <div className="flex flex-col gap-2">
-                <Button variant="outline" size="default" className="h-8 w-full sm:w-auto" onClick={handleExport}>
-                  <Download className="size-4" />
-                  Export bookmarks
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="default"
-                  className="h-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  onClick={() => setDeleteConfirmOpen(true)}
-                >
-                  <Trash2 className="size-4" />
-                  Delete account
-                </Button>
-              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleExport}
+              className="w-full rounded-lg border border-border px-2.5 py-2 text-sm flex items-center gap-2 hover:bg-muted/50 hover:border-primary/15 transition-colors text-left"
+            >
+              <Download className="size-4 text-muted-foreground" />
+              Export bookmarks
+            </button>
+            <div className="border-t border-border pt-4">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmOpen(true)}
+                className="w-full rounded-lg px-2.5 py-2 text-sm text-destructive flex items-center gap-2 hover:bg-destructive/10 transition-colors text-left"
+              >
+                <Trash2 className="size-4" />
+                Delete account
+              </button>
             </div>
           </div>
         </DialogContent>
@@ -261,25 +199,6 @@ export function SettingsModal({
               disabled={isDeleting}
             >
               {isDeleting ? "Deleting…" : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <AlertDialog open={revokeTargetId !== null} onOpenChange={(open) => !open && setRevokeTargetId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this API token?</AlertDialogTitle>
-            <AlertDialogDescription>
-              It will stop working immediately. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => revokeTargetId && handleRevokeToken(revokeTargetId)}
-            >
-              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
