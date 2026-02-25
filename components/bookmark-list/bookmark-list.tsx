@@ -23,7 +23,6 @@ export function BookmarkList({
   onSortChange,
   onBookmarksChange,
   onGroupsChange,
-  onOpenPreview,
   onBookmarkUpdate,
   focusedIndex,
   onFocusChange,
@@ -36,7 +35,6 @@ export function BookmarkList({
   onSortChange: (key: "createdAt" | "title", order: "asc" | "desc") => void;
   onBookmarksChange: () => void;
   onGroupsChange?: () => void;
-  onOpenPreview?: (b: BookmarkWithGroup) => void;
   onBookmarkUpdate?: (
     id: string,
     patch: Partial<
@@ -48,14 +46,13 @@ export function BookmarkList({
   openEditId?: string | null;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<EditForm>({
     title: "",
     description: "",
     url: "",
     groupId: "" as string | null,
   });
-  const listRef = useRef<HTMLDivElement>(null);
-  const rowRefs = useRef<(HTMLLIElement | null)[]>([]);
   const editCardRef = useRef<HTMLLIElement | null>(null);
 
   const editing = editingId ? bookmarks.find((b) => b.id === editingId) : null;
@@ -75,10 +72,6 @@ export function BookmarkList({
     if (openEditId && bookmarks.some((b) => b.id === openEditId))
       setEditingId(openEditId);
   }, [openEditId, bookmarks]);
-
-  useEffect(() => {
-    rowRefs.current = rowRefs.current.slice(0, bookmarks.length);
-  }, [bookmarks.length]);
 
   const handleDelete = useCallback(
     async (id: string) => {
@@ -112,79 +105,34 @@ export function BookmarkList({
     }
   }, [editingId, editing, editForm, onBookmarkUpdate, onBookmarksChange]);
 
-  const idx = focusedIndex ?? -1;
-  const activeId = idx >= 0 && bookmarks[idx] ? bookmarks[idx].id : undefined;
-
-  const handleListKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (bookmarks.length === 0) return;
-      const max = bookmarks.length - 1;
-      const current = focusedIndex ?? -1;
-      if (e.key === "j" || e.key === "ArrowDown") {
-        e.preventDefault();
-        onFocusChange?.(current >= max ? max : current + 1);
-        return;
-      }
-      if (e.key === "k" || e.key === "ArrowUp") {
-        e.preventDefault();
-        onFocusChange?.(current <= 0 ? 0 : current - 1);
-        return;
-      }
-      if (e.key === "Enter" && current >= 0 && bookmarks[current]) {
-        e.preventDefault();
-        const b = bookmarks[current];
-        if (b.url) window.open(b.url, "_blank");
-        else onOpenPreview?.(b);
-        return;
-      }
-      if (e.key === " " && current >= 0 && bookmarks[current]) {
-        e.preventDefault();
-        onOpenPreview?.(bookmarks[current]);
-        return;
-      }
-      if (
-        (e.key === "Backspace" || e.key === "Delete") &&
-        current >= 0 &&
-        bookmarks[current]
-      ) {
-        e.preventDefault();
-        handleDelete(bookmarks[current].id);
-        onFocusChange?.(Math.min(current, max - 1));
-        return;
-      }
-      if (e.key === "e" && current >= 0 && bookmarks[current]) {
-        e.preventDefault();
-        setEditingId(bookmarks[current].id);
-      }
-    },
-    [bookmarks, focusedIndex, onFocusChange, onOpenPreview, handleDelete],
-  );
-
-  useEffect(() => {
-    const i = focusedIndex ?? -1;
-    if (i >= 0 && rowRefs.current[i])
-      rowRefs.current[i]?.scrollIntoView({ block: "nearest" });
-  }, [focusedIndex]);
-
   useEffect(() => {
     if (editingId) editCardRef.current?.scrollIntoView({ block: "nearest" });
   }, [editingId]);
 
+  const activeIndex = hoveredIndex ?? focusedIndex ?? -1;
+
   return (
     <div
-      ref={listRef}
       className="w-full min-w-0 overflow-hidden"
-      tabIndex={0}
-      role="listbox"
-      aria-activedescendant={activeId ? `bookmark-row-${activeId}` : undefined}
-      onKeyDown={handleListKeyDown}
+      onMouseLeave={() => {
+        setHoveredIndex(null);
+        onFocusChange?.(-1);
+      }}
     >
       <BookmarkSortHeader
         sortKey={sortKey}
         sortOrder={sortOrder}
         onSortChange={onSortChange}
       />
-      <ul className="min-w-0 space-y-3 sm:space-y-0">
+      <ul
+        className="min-w-0 space-y-3 sm:space-y-0"
+        onMouseMove={(e) => {
+          if (e.target === e.currentTarget) {
+            setHoveredIndex(null);
+            onFocusChange?.(-1);
+          }
+        }}
+      >
         {bookmarks.map((b, index) =>
           b.id === editingId && editing ? (
             <BookmarkEditCard
@@ -201,15 +149,11 @@ export function BookmarkList({
           ) : (
             <BookmarkRow
               key={b.id}
-              ref={(el) => {
-                rowRefs.current[index] = el;
-              }}
               bookmark={b}
-              index={index}
-              isFocused={focusedIndex === index}
+              isFocused={activeIndex === index}
               onEdit={setEditingId}
-              onPreview={(bm) => onOpenPreview?.(bm)}
               onDelete={handleDelete}
+              onHover={() => setHoveredIndex(index)}
             />
           )
         )}

@@ -97,7 +97,6 @@ export function BookmarkApp({
                 : b;
             setBookmarks((prev) => prev.map(upd));
           }}
-          onOpenPreview={setPreviewBookmark}
           focusedIndex={focusedIndex}
           onFocusChange={setFocusedIndex}
         />

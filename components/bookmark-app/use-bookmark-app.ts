@@ -206,12 +206,6 @@ export function useBookmarkApp({
   );
 
   useEffect(() => {
-    const clampedFocus =
-      displayedBookmarks.length === 0
-        ? -1
-        : focusedIndex < 0
-          ? -1
-          : Math.min(focusedIndex, displayedBookmarks.length - 1);
     const onKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       const inInput = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
@@ -238,17 +232,10 @@ export function useBookmarkApp({
           return;
         }
       }
-      if (e.key === " ") {
-        if (inInput || inDialog) return;
-        if (clampedFocus >= 0 && displayedBookmarks[clampedFocus]) {
-          e.preventDefault();
-          setPreviewBookmark(displayedBookmarks[clampedFocus]);
-        }
-      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [displayedBookmarks, focusedIndex]);
+  }, [displayedBookmarks.length]);
 
   const handleHeroSubmit = useCallback(async () => {
     if (searchMode) return;
