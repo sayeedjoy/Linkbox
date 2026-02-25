@@ -1,6 +1,5 @@
 "use client";
 
-import { toast } from "sonner";
 import { useCallback, useState, useEffect, useRef } from "react";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
 import { BookmarkSortHeader } from "./bookmark-sort-header";
@@ -77,9 +76,7 @@ export function BookmarkList({
       if (!onBookmarkDelete) return;
       try {
         await onBookmarkDelete(id);
-        toast.success("Deleted");
       } catch {
-        toast.error("Failed to delete");
       }
     },
     [onBookmarkDelete],
@@ -97,7 +94,6 @@ export function BookmarkList({
     try {
       await onBookmarkUpdate?.(editingId, patch);
     } catch {
-      toast.error("Failed to save");
     }
   }, [editingId, editing, editForm, onBookmarkUpdate]);
 

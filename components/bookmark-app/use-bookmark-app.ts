@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState, useDeferredValue } from "rea
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
 import type { GroupWithCount } from "@/lib/types";
 import { getBookmarks, getTotalBookmarkCount, createBookmark, createNote, createBookmarkFromMetadata, updateBookmark, deleteBookmark } from "@/app/actions/bookmarks";
@@ -397,7 +396,6 @@ export function useBookmarkApp({
                 )
               : [{ ...b, _clientKey: optId }]
         );
-        toast.success("Saved");
       } catch {
         adjustCount(-1);
         adjustGroupCount(defaultGroupId, -1);
@@ -405,7 +403,6 @@ export function useBookmarkApp({
           userId ? bookmarksKey(userId, defaultGroupId, sortKey, sortOrder) : ["bookmarks", "anon"],
           (prev: UIBookmark[] | undefined) => prev?.filter((x) => x.id !== optId) ?? []
         );
-        toast.error("Failed to save");
       }
       return;
     }
@@ -463,8 +460,6 @@ export function useBookmarkApp({
           );
         }
       }
-      if (failed > 0) toast.error(failed === urls.length ? "Failed to save" : `${failed} of ${urls.length} failed`);
-      else toast.success(created.length === 1 ? "Saved" : `${created.length} links saved`);
       return;
     }
     const optId = `${OPT_PREFIX}note-${Date.now()}`;
@@ -499,7 +494,6 @@ export function useBookmarkApp({
               )
             : [{ ...note, _clientKey: optId }]
       );
-      toast.success("Note saved");
     } catch {
       adjustCount(-1);
       adjustGroupCount(defaultGroupId, -1);
@@ -507,7 +501,6 @@ export function useBookmarkApp({
         userId ? bookmarksKey(userId, defaultGroupId, sortKey, sortOrder) : ["bookmarks", "anon"],
         (prev: UIBookmark[] | undefined) => prev?.filter((x) => x.id !== optId) ?? []
       );
-      toast.error("Failed to save");
     }
   }, [
     inputValue,
@@ -566,12 +559,8 @@ export function useBookmarkApp({
           if (created.length) {
             queryClient.invalidateQueries({ queryKey: userId ? ["bookmarks", userId] : ["bookmarks", "anon"] });
             refreshGroups();
-            toast.success(created.length === 1 ? "Saved" : `${created.length} links saved`);
-          } else {
-            toast.error("No links found in image");
           }
         } catch {
-          toast.error("Failed to save");
         } finally {
           setIsSubmitting(false);
         }
