@@ -24,6 +24,7 @@ export function BookmarkList({
   onBookmarksChange,
   onGroupsChange,
   onBookmarkUpdate,
+  focusedIndex,
   onFocusChange,
   openEditId,
 }: {
@@ -40,6 +41,7 @@ export function BookmarkList({
       Pick<BookmarkWithGroup, "title" | "description" | "url" | "groupId">
     >,
   ) => void;
+  focusedIndex?: number;
   onFocusChange?: (index: number) => void;
   openEditId?: string | null;
 }) {
@@ -124,7 +126,7 @@ export function BookmarkList({
           }
         }}
       >
-        {bookmarks.map((b) =>
+        {bookmarks.map((b, index) =>
           b.id === editingId && editing ? (
             <BookmarkEditCard
               key={b.id}
@@ -141,6 +143,7 @@ export function BookmarkList({
             <BookmarkRow
               key={b.id}
               bookmark={b}
+              isFocused={focusedIndex === index}
               onEdit={setEditingId}
               onDelete={handleDelete}
             />

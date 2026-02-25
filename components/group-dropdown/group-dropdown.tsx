@@ -6,11 +6,10 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
   DropdownMenuItem,
-  DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, Plus, List, Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, Plus, List, Pencil, Trash2, Check } from "lucide-react";
 import { useCallback, useState } from "react";
 import type { DragEndEvent } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
@@ -20,6 +19,7 @@ import { GROUP_COLORS } from "./group-form-dialog";
 import { GroupFormDialog } from "./group-form-dialog";
 import { GroupReorderDialog } from "./group-reorder-dialog";
 import { GroupDeleteDialog } from "./group-delete-dialog";
+import { ColorPicker } from "@/components/color";
 
 export function GroupDropdown({
   groups,
@@ -152,38 +152,59 @@ export function GroupDropdown({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="min-w-[200px]">
-          <DropdownMenuCheckboxItem
-            checked={selectedGroupId === null}
-            onSelect={() => onSelectGroupId(null)}
+          <div
+            role="menuitemcheckbox"
+            aria-checked={selectedGroupId === null}
+            className={`flex items-center gap-2 w-full rounded-lg px-2 py-1.5 transition-colors cursor-pointer outline-none focus:bg-accent hover:bg-accent/50 ${selectedGroupId === null ? "bg-muted" : ""}`}
+            onClick={() => onSelectGroupId(null)}
+            onKeyDown={(e) => e.key === "Enter" && onSelectGroupId(null)}
           >
-            <span
-              className="size-3 rounded-full mr-2 shrink-0"
-              style={{ backgroundColor: "#6b7280" }}
-            />
-            All Bookmarks
-            <span className="ml-auto text-muted-foreground text-xs pl-2">
+            <span className="flex-1 min-w-0 flex items-center gap-2">
+              <span
+                className="h-2.5 w-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: "#6b7280" }}
+              />
+              <span className="truncate text-sm text-left">All Bookmarks</span>
+            </span>
+            {selectedGroupId === null && (
+              <Check className="h-4 w-4 text-muted-foreground shrink-0" />
+            )}
+            <span className="text-xs text-muted-foreground min-w-5 text-right">
               {totalBookmarkCount}
             </span>
-          </DropdownMenuCheckboxItem>
+          </div>
           {groups.length > 0 && <DropdownMenuSeparator />}
           {groups.map((g) => (
-            <DropdownMenuCheckboxItem
+            <div
               key={g.id}
-              checked={selectedGroupId === g.id}
-              onSelect={() => onSelectGroupId(g.id)}
-              className="group/group-row"
+              role="menuitemcheckbox"
+              aria-checked={selectedGroupId === g.id}
+              className={`flex items-center gap-2 w-full rounded-lg px-2 py-1.5 transition-colors cursor-pointer outline-none focus:bg-accent hover:bg-accent/50 group/group-row ${selectedGroupId === g.id ? "bg-muted" : ""}`}
+              onClick={() => onSelectGroupId(g.id)}
+              onKeyDown={(e) => e.key === "Enter" && onSelectGroupId(g.id)}
             >
+              <span className="flex-1 min-w-0 flex items-center gap-2">
+                <span
+                  className="h-2.5 w-2.5 rounded-full shrink-0"
+                  style={{ backgroundColor: g.color ?? "#6b7280" }}
+                />
+                <span className="truncate text-sm text-left">{g.name}</span>
+              </span>
               <span
-                className="size-3 rounded-full mr-2 shrink-0"
-                style={{ backgroundColor: g.color ?? "#6b7280" }}
-              />
-              <span className="truncate flex-1 min-w-0">{g.name}</span>
-              <span className="opacity-0 group-hover/group-row:opacity-100 flex items-center gap-0.5 ml-1 transition-opacity">
+                className="opacity-0 group-hover/group-row:opacity-100 flex items-center gap-0.5 transition-opacity shrink-0"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <button
                   type="button"
                   className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
-                  onClick={(e) => handleEditClick(e, g)}
-                  onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditClick(e, g);
+                  }}
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
                   aria-label="Edit group"
                 >
                   <Pencil className="size-3.5" />
@@ -191,17 +212,40 @@ export function GroupDropdown({
                 <button
                   type="button"
                   className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                  onClick={(e) => handleDeleteClick(e, g)}
-                  onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteClick(e, g);
+                  }}
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
                   aria-label="Delete group"
                 >
                   <Trash2 className="size-3.5" />
                 </button>
               </span>
-              <span className="text-muted-foreground text-xs pl-1">
+              <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                <ColorPicker
+                  value={g.color ?? "#6b7280"}
+                  onChange={() => {}}
+                  onCloseWithValue={async (hex) => {
+                    try {
+                      await updateGroup(g.id, { color: hex });
+                      onGroupsChange();
+                    } catch {
+                      toast.error("Failed to update color");
+                    }
+                  }}
+                />
+              </div>
+              {selectedGroupId === g.id && (
+                <Check className="h-4 w-4 text-muted-foreground shrink-0" />
+              )}
+              <span className="text-xs text-muted-foreground min-w-5 text-right shrink-0">
                 {g._count.bookmarks}
               </span>
-            </DropdownMenuCheckboxItem>
+            </div>
           ))}
           <DropdownMenuSeparator />
           {groups.length > 1 && (

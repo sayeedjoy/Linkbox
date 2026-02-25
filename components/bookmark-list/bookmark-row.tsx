@@ -9,9 +9,10 @@ const COPIED_RESET_MS = 2000;
 
 export const BookmarkRow = forwardRef<HTMLLIElement, {
   bookmark: BookmarkWithGroup;
+  isFocused?: boolean;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
-}>(({ bookmark, onEdit, onDelete }, ref) => {
+}>(({ bookmark, isFocused = false, onEdit, onDelete }, ref) => {
   const [copied, setCopied] = useState(false);
   const imageToken = `${bookmark.id}:${bookmark.faviconUrl ?? ""}:${bookmark.url ?? ""}`;
   const [imageState, setImageState] = useState<{ token: string; broken: string | null }>({
@@ -64,10 +65,13 @@ export const BookmarkRow = forwardRef<HTMLLIElement, {
     <li
       ref={ref}
       id={`bookmark-row-${bookmark.id}`}
+      aria-current={isFocused ? true : undefined}
+      data-focused={isFocused ? "true" : undefined}
       draggable
       className={`
         group relative min-w-0 flex flex-col gap-2 rounded-xl px-3 py-2.5
         cursor-grab active:cursor-grabbing transition-colors hover:bg-muted/50
+        ${isFocused ? "bg-muted/50" : ""}
         sm:grid sm:grid-cols-[1fr_auto] sm:gap-4 sm:items-center sm:px-4
       `}
     >

@@ -45,6 +45,7 @@ export function BookmarkApp({
     showShortcuts,
     setShowShortcuts,
     isSubmitting,
+    focusedIndex,
     setFocusedIndex,
     setBookmarks,
   } = useBookmarkApp({ initialBookmarks, initialGroups, initialSelectedGroupId, initialTotalBookmarkCount });
@@ -83,6 +84,7 @@ export function BookmarkApp({
           }}
           onBookmarksChange={handleBookmarksChange}
           onGroupsChange={refreshGroups}
+          focusedIndex={focusedIndex}
           onBookmarkUpdate={(id, patch) => {
             const upd = (b: BookmarkWithGroup) =>
               b.id === id
