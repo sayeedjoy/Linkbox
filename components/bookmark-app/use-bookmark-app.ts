@@ -53,6 +53,7 @@ export function useBookmarkApp({
     queryFn: () => getGroups(),
     enabled: !!userId,
     initialData: !userId ? initialGroups : undefined,
+    staleTime: 5 * 1000,
   });
   const groups = useMemo(() => groupsQuery.data ?? initialGroups, [groupsQuery.data, initialGroups]);
 
@@ -66,6 +67,9 @@ export function useBookmarkApp({
       }),
     enabled: !!userId,
     initialData: !userId ? initialBookmarks : undefined,
+    staleTime: 5 * 1000,
+    refetchInterval: 10 * 1000,
+    refetchIntervalInBackground: false,
   });
   const bookmarks = useMemo(
     () => bookmarksQuery.data ?? initialBookmarks,
@@ -77,6 +81,7 @@ export function useBookmarkApp({
     queryFn: () => getTotalBookmarkCount(),
     enabled: !!userId,
     initialData: !userId ? initialTotalBookmarkCount : undefined,
+    staleTime: 5 * 1000,
   });
   const totalBookmarkCount = countQuery.data ?? initialTotalBookmarkCount;
 

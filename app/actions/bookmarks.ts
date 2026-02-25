@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, unstable_cache } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { currentUserId } from "@/lib/auth";
 import { unfurlUrl } from "@/app/actions/parse";
@@ -154,6 +154,9 @@ export async function createBookmarkFromMetadataForUser(
       data,
       include: { group: { select: { id: true, name: true, color: true } } },
     });
+    revalidatePath("/");
+    revalidateTag("bookmarks");
+    revalidateTag("bookmark-count");
     return updated as BookmarkWithGroup;
   }
   const bookmark = await prisma.bookmark.create({
@@ -167,6 +170,9 @@ export async function createBookmarkFromMetadataForUser(
       group: { select: { id: true, name: true, color: true } },
     },
   });
+  revalidatePath("/");
+  revalidateTag("bookmarks");
+  revalidateTag("bookmark-count");
   return bookmark as BookmarkWithGroup;
 }
 
