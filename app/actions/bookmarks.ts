@@ -155,8 +155,8 @@ export async function createBookmarkFromMetadataForUser(
       include: { group: { select: { id: true, name: true, color: true } } },
     });
     revalidatePath("/");
-    revalidateTag("bookmarks");
-    revalidateTag("bookmark-count");
+    revalidateTag("bookmarks", "max");
+    revalidateTag("bookmark-count", "max");
     return updated as BookmarkWithGroup;
   }
   const bookmark = await prisma.bookmark.create({
@@ -171,8 +171,8 @@ export async function createBookmarkFromMetadataForUser(
     },
   });
   revalidatePath("/");
-  revalidateTag("bookmarks");
-  revalidateTag("bookmark-count");
+  revalidateTag("bookmarks", "max");
+  revalidateTag("bookmark-count", "max");
   return bookmark as BookmarkWithGroup;
 }
 
