@@ -1,4 +1,5 @@
 const TOKEN_KEY = "token";
+const THEME_KEY = "theme";
 
 const connectScreen = document.getElementById("connect-screen");
 const saveScreen = document.getElementById("save-screen");
@@ -6,6 +7,8 @@ const tokenInput = document.getElementById("token-input");
 const connectBtn = document.getElementById("connect-btn");
 const getTokenLink = document.getElementById("get-token-link");
 const signoutBtn = document.getElementById("signout-btn");
+const themeBtnConnect = document.getElementById("theme-btn-connect");
+const themeBtnSave = document.getElementById("theme-btn-save");
 const pageUrlEl = document.getElementById("page-url");
 const pageTitleEl = document.getElementById("page-title");
 const pageFavicon = document.getElementById("page-favicon");
@@ -85,6 +88,39 @@ function setToken(token) {
 function clearToken() {
   return new Promise((resolve) => {
     chrome.storage.local.remove(TOKEN_KEY, resolve);
+  });
+}
+
+function getStoredTheme() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get([THEME_KEY], (data) => resolve(data[THEME_KEY] || "system"));
+  });
+}
+
+function setStoredTheme(value) {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.set({ [THEME_KEY]: value }, () => {
+      if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+      else resolve();
+    });
+  });
+}
+
+function getEffectiveTheme() {
+  return getStoredTheme().then((stored) => {
+    if (stored === "light" || stored === "dark") return stored;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  });
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+}
+
+function cycleTheme() {
+  getStoredTheme().then((stored) => {
+    const next = stored === "dark" ? "light" : stored === "light" ? "system" : "dark";
+    setStoredTheme(next).then(() => getEffectiveTheme().then(applyTheme));
   });
 }
 
@@ -260,6 +296,9 @@ signoutBtn.addEventListener("click", () => {
   });
 });
 
+themeBtnConnect.addEventListener("click", cycleTheme);
+themeBtnSave.addEventListener("click", cycleTheme);
+
 groupTrigger.addEventListener("click", () => {
   if (groupList.classList.contains("hidden")) openGroupList();
   else closeGroupList();
@@ -305,13 +344,24 @@ saveBtn.addEventListener("click", () => {
   });
 });
 
-/* ====== Init ====== */
+function init() {
+  getEffectiveTheme().then(applyTheme);
+  const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  mediaQuery.addEventListener("change", () => {
+    getStoredTheme().then((stored) => {
+      if (stored === "system" || !stored) {
+        applyTheme(mediaQuery.matches ? "dark" : "light");
+      }
+    });
+  });
+  getToken().then((token) => {
+    if (token) {
+      showScreen(true);
+      getCurrentTab().then(initSaveScreen);
+    } else {
+      showScreen(false);
+    }
+  });
+}
 
-getToken().then((token) => {
-  if (token) {
-    showScreen(true);
-    getCurrentTab().then(initSaveScreen);
-  } else {
-    showScreen(false);
-  }
-});
+init();

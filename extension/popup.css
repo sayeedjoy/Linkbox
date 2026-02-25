@@ -2,8 +2,8 @@
    LinkBox Extension — shadcn-inspired Design Tokens
    ================================================== */
 
-:root {
-  /* Core palette (OKLCH, matching main app dark mode) */
+:root,
+[data-theme="dark"] {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -24,12 +24,32 @@
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.71 0.13 215 / 50%);
   --radius: 0.625rem;
-
-  /* Derived */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+}
+
+[data-theme="light"] {
+  --background: oklch(0.985 0 0);
+  --foreground: oklch(0.2 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0 0);
+  --primary: oklch(0.55 0.16 245);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.96 0.01 286);
+  --secondary-foreground: oklch(0.25 0 0);
+  --muted: oklch(0.96 0 0);
+  --muted-foreground: oklch(0.5 0 0);
+  --accent: oklch(0.93 0 0);
+  --accent-foreground: oklch(0.2 0 0);
+  --destructive: oklch(0.55 0.22 25);
+  --success: oklch(0.55 0.18 155);
+  --border: oklch(0 0 0 / 12%);
+  --input: oklch(0 0 0 / 10%);
+  --ring: oklch(0.55 0.16 245 / 40%);
 }
 
 /* ==================================================
@@ -96,6 +116,62 @@ body {
   text-align: center;
   padding-top: 44px;
   padding-bottom: 36px;
+  position: relative;
+}
+
+.theme-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  color: var(--muted-foreground);
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.theme-btn:hover {
+  color: var(--foreground);
+  background: var(--accent);
+}
+
+.theme-icon {
+  position: absolute;
+}
+
+.theme-icon-sun {
+  display: none;
+}
+
+.theme-icon-moon {
+  display: block;
+}
+
+[data-theme="light"] .theme-icon-sun {
+  display: block;
+}
+
+[data-theme="light"] .theme-icon-moon {
+  display: none;
+}
+
+.save-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.save-header .theme-btn {
+  position: static;
+  width: 32px;
+  height: 32px;
 }
 
 #connect-screen.hidden {
@@ -115,6 +191,12 @@ body {
     0 0 0 1px oklch(1 0 0 / 8%),
     0 4px 20px oklch(0.71 0.13 215 / 25%);
   animation: logoFloat 3s ease-in-out infinite;
+}
+
+[data-theme="light"] .connect-logo {
+  box-shadow:
+    0 0 0 1px oklch(0 0 0 / 8%),
+    0 4px 20px oklch(0.55 0.16 245 / 30%);
 }
 
 .connect-logo img {
@@ -250,6 +332,16 @@ body {
   transform: translateY(-1px);
 }
 
+[data-theme="light"] .btn-primary {
+  background: linear-gradient(135deg, var(--primary), oklch(0.48 0.14 245));
+}
+
+[data-theme="light"] .btn-primary:hover:not(:disabled) {
+  box-shadow:
+    0 4px 16px oklch(0.55 0.16 245 / 30%),
+    0 0 0 1px oklch(0 0 0 / 6%) inset;
+}
+
 .btn-primary svg {
   width: 16px;
   height: 16px;
@@ -326,6 +418,10 @@ body {
   background: oklch(0.704 0.191 22 / 10%);
 }
 
+[data-theme="light"] .link-btn:hover {
+  background: oklch(0.55 0.22 25 / 10%);
+}
+
 .link-btn svg {
   width: 14px;
   height: 14px;
@@ -349,6 +445,10 @@ body {
 
 .page-preview:hover {
   border-color: oklch(1 0 0 / 16%);
+}
+
+[data-theme="light"] .page-preview:hover {
+  border-color: oklch(0 0 0 / 20%);
 }
 
 .page-favicon {
@@ -436,6 +536,10 @@ body {
   border-color: oklch(1 0 0 / 18%);
 }
 
+[data-theme="light"] .group-trigger:hover {
+  border-color: oklch(0 0 0 / 22%);
+}
+
 .group-trigger:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--ring);
@@ -449,6 +553,10 @@ body {
   flex-shrink: 0;
   transition: background-color 0.2s ease;
   box-shadow: 0 0 0 1px oklch(1 0 0 / 10%);
+}
+
+[data-theme="light"] .group-dot {
+  box-shadow: 0 0 0 1px oklch(0 0 0 / 12%);
 }
 
 .group-dot-muted {
@@ -495,6 +603,12 @@ body {
   overscroll-behavior: contain;
 }
 
+[data-theme="light"] .group-list {
+  box-shadow:
+    0 8px 30px oklch(0 0 0 / 15%),
+    0 0 0 1px oklch(0 0 0 / 8%);
+}
+
 .group-list.hidden {
   display: none;
 }
@@ -521,6 +635,10 @@ body {
 .group-list::-webkit-scrollbar-thumb {
   background: oklch(1 0 0 / 12%);
   border-radius: 3px;
+}
+
+[data-theme="light"] .group-list::-webkit-scrollbar-thumb {
+  background: oklch(0 0 0 / 18%);
 }
 
 .group-option {
@@ -551,6 +669,14 @@ body {
 
 .group-option[aria-selected="true"] .group-dot {
   box-shadow: 0 0 0 2px oklch(0.71 0.13 215 / 30%);
+}
+
+[data-theme="light"] .group-option[aria-selected="true"] {
+  background: oklch(0.55 0.16 245 / 12%);
+}
+
+[data-theme="light"] .group-option[aria-selected="true"] .group-dot {
+  box-shadow: 0 0 0 2px oklch(0.55 0.16 245 / 35%);
 }
 
 /* ==================================================
@@ -627,6 +753,16 @@ body {
   border: 1px solid oklch(0.704 0.191 22 / 20%);
 }
 
+[data-theme="light"] .status.success {
+  background: oklch(0.72 0.17 155 / 15%);
+  border-color: oklch(0.72 0.17 155 / 25%);
+}
+
+[data-theme="light"] .status.error {
+  background: oklch(0.55 0.22 25 / 12%);
+  border-color: oklch(0.55 0.22 25 / 25%);
+}
+
 .status.fade-out {
   animation: toastFadeOut 0.3s ease-out forwards;
 }
@@ -668,6 +804,10 @@ body {
 ::-webkit-scrollbar-thumb {
   background: oklch(1 0 0 / 10%);
   border-radius: 3px;
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: oklch(0 0 0 / 18%);
 }
 
 /* ==================================================
