@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CopyIcon, TrashIcon } from "lucide-react";
+import { Clipboard, Trash2, Check } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { createApiToken, listApiTokens, revokeApiToken } from "@/app/actions/api-tokens";
@@ -44,6 +44,7 @@ export function GenerateApiTokenModal({
   const [newTokenName, setNewTokenName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [newlyCreatedToken, setNewlyCreatedToken] = useState<string | null>(null);
+  const [apiKeyCopied, setApiKeyCopied] = useState(false);
   const [revokeTargetId, setRevokeTargetId] = useState<string | null>(null);
 
   const loadTokens = useCallback(() => {
@@ -55,6 +56,7 @@ export function GenerateApiTokenModal({
       loadTokens();
       setNewTokenName("");
       setNewlyCreatedToken(null);
+      setApiKeyCopied(false);
     }
   }, [open, loadTokens]);
 
@@ -81,9 +83,13 @@ export function GenerateApiTokenModal({
     if (!newlyCreatedToken) return;
     navigator.clipboard.writeText(newlyCreatedToken).then(
       () => {
-        toast.success("API key copied to clipboard.");
-        setNewlyCreatedToken(null);
-        onOpenChange(false);
+        setApiKeyCopied(true);
+        setTimeout(() => {
+          toast.success("API key copied to clipboard.");
+          setNewlyCreatedToken(null);
+          setApiKeyCopied(false);
+          onOpenChange(false);
+        }, 1500);
       },
       () => {
         toast.error("Copy failed. Please copy the key manually.");
@@ -161,7 +167,7 @@ export function GenerateApiTokenModal({
                       onClick={() => setRevokeTargetId(t.id)}
                       aria-label="Delete token"
                     >
-                      <TrashIcon className="size-4" />
+                      <Trash2 className="size-4" />
                     </Button>
                   </li>
                 ))}
@@ -211,9 +217,18 @@ export function GenerateApiTokenModal({
               value={newlyCreatedToken}
               className="font-mono text-xs flex-1 min-w-0"
             />
-            <Button size="default" className="shrink-0" onClick={handleCopyAndClose}>
-              <CopyIcon className="size-4 mr-1.5" />
-              Copy
+            <Button size="default" className="shrink-0" onClick={handleCopyAndClose} disabled={apiKeyCopied}>
+              {apiKeyCopied ? (
+                <>
+                  <Check className="size-4 mr-1.5 text-green-600 dark:text-green-500" />
+                  Copied
+                </>
+              ) : (
+                <>
+                  <Clipboard className="size-4 mr-1.5" />
+                  Copy
+                </>
+              )}
             </Button>
           </div>
         ) : null}

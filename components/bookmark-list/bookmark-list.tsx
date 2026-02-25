@@ -173,7 +173,7 @@ export function BookmarkList({
   return (
     <div
       ref={listRef}
-      className="w-full"
+      className="w-full min-w-0 overflow-hidden"
       tabIndex={0}
       role="listbox"
       aria-activedescendant={activeId ? `bookmark-row-${activeId}` : undefined}
@@ -184,7 +184,7 @@ export function BookmarkList({
         sortOrder={sortOrder}
         onSortChange={onSortChange}
       />
-      <ul className="space-y-3 sm:space-y-0 sm:divide-y sm:divide-border/50">
+      <ul className="min-w-0 space-y-3 sm:space-y-0">
         {bookmarks.map((b, index) =>
           b.id === editingId && editing ? (
             <BookmarkEditCard

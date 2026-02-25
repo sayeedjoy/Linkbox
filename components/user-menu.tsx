@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { KeyIcon, SettingsIcon, LogOutIcon } from "lucide-react";
+import { Key, Settings, LogOut } from "lucide-react";
 import { useCallback, useState } from "react";
 import { SettingsModal } from "@/components/settings-modal";
 import { GenerateApiTokenModal } from "@/components/generate-api-token-modal";
@@ -47,11 +47,11 @@ export function UserMenu() {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-[180px]">
           <DropdownMenuItem onClick={openApiTokenModal}>
-            <KeyIcon className="size-4" />
+            <Key className="size-4" />
             Generate API Token
           </DropdownMenuItem>
           <DropdownMenuItem onClick={openSettings}>
-            <SettingsIcon className="size-4" />
+            <Settings className="size-4" />
             Settings
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -62,7 +62,7 @@ export function UserMenu() {
               window.location.href = "/sign-in";
             }}
           >
-            <LogOutIcon className="size-4" />
+            <LogOut className="size-4" />
             Log out
           </DropdownMenuItem>
         </DropdownMenuContent>

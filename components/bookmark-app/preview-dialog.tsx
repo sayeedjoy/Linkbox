@@ -24,7 +24,7 @@ const PreviewBody = memo(function PreviewBody({
   return (
     <>
       <DialogHeader>
-        <DialogTitle className="truncate pr-8">{title}</DialogTitle>
+        <DialogTitle className="break-words pr-8">{title}</DialogTitle>
       </DialogHeader>
       <div
         className="space-y-3 overflow-y-auto min-h-0 flex-1"
@@ -56,7 +56,7 @@ const PreviewBody = memo(function PreviewBody({
               href={bookmark.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-muted-foreground hover:text-foreground truncate block break-all"
+              className="text-xs text-muted-foreground hover:text-foreground block break-all"
             >
               {bookmark.url}
             </a>

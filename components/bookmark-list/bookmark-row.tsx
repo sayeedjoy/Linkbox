@@ -1,16 +1,11 @@
 "use client";
 
-import { forwardRef } from "react";
-import {
-  PencilIcon,
-  CopyIcon,
-  ExternalLinkIcon,
-  TrashIcon,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Kbd } from "@/components/ui/kbd";
+import { forwardRef, useState, useRef, useEffect } from "react";
+import { GripVertical, Pen, Copy, ArrowUpRight, Trash2, Check } from "lucide-react";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
 import { formatDate, safeHostname } from "./utils";
+
+const COPIED_RESET_MS = 2000;
 
 export const BookmarkRow = forwardRef<HTMLLIElement, {
   bookmark: BookmarkWithGroup;
@@ -19,105 +14,168 @@ export const BookmarkRow = forwardRef<HTMLLIElement, {
   onEdit: (id: string) => void;
   onPreview: (b: BookmarkWithGroup) => void;
   onDelete: (id: string) => void;
-}>(({ bookmark, isFocused, onEdit, onPreview, onDelete }, ref) => {
+}>(({ bookmark, isFocused, onEdit, onDelete }, ref) => {
+  const [copied, setCopied] = useState(false);
+  const imageToken = `${bookmark.id}:${bookmark.faviconUrl ?? ""}:${bookmark.url ?? ""}`;
+  const [imageState, setImageState] = useState<{ token: string; broken: string | null }>({
+    token: imageToken,
+    broken: null,
+  });
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hostname = bookmark.url ? safeHostname(bookmark.url) : "";
+  const trimmedTitle = bookmark.title?.trim() ?? "";
+  const trimmedDescription = bookmark.description?.trim() ?? "";
+  const strippedUrl = bookmark.url
+    ? bookmark.url.replace(/^https?:\/\//i, "").replace(/\/$/, "")
+    : "";
+  const displayTitle = trimmedTitle || hostname || strippedUrl || "Untitled";
+  const displaySubtitle = hostname || strippedUrl || trimmedDescription.slice(0, 60) || "Note";
+  const googleFaviconSrc = hostname
+    ? `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(hostname)}`
+    : null;
+  const savedFaviconSrc =
+    typeof bookmark.faviconUrl === "string" && bookmark.faviconUrl.trim()
+      ? bookmark.faviconUrl.trim()
+      : null;
+  const faviconCandidates = [savedFaviconSrc, googleFaviconSrc].filter(
+    (src): src is string => !!src,
+  );
+  const brokenImage = imageState.token === imageToken ? imageState.broken : null;
+  const faviconSrc = faviconCandidates.find((src) => src !== brokenImage) ?? null;
+
+  useEffect(() => () => {
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+  }, []);
+
   const handleCopy = async () => {
-    if (bookmark.url) await navigator.clipboard.writeText(bookmark.url);
-    else {
-      const text = [bookmark.title, bookmark.description].filter(Boolean).join("\n");
-      await navigator.clipboard.writeText(text || "");
-    }
+    try {
+      if (bookmark.url) await navigator.clipboard.writeText(bookmark.url);
+      else {
+        const text = [bookmark.title, bookmark.description].filter(Boolean).join("\n");
+        await navigator.clipboard.writeText(text || "");
+      }
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      setCopied(true);
+      copyTimeoutRef.current = setTimeout(() => {
+        setCopied(false);
+        copyTimeoutRef.current = null;
+      }, COPIED_RESET_MS);
+    } catch {}
   };
 
   return (
     <li
       ref={ref}
       id={`bookmark-row-${bookmark.id}`}
+      draggable
       role="option"
       aria-selected={isFocused}
       className={`
-        flex flex-col gap-1.5 p-3.5 rounded-xl border border-border bg-background
-        sm:grid sm:grid-cols-[1fr_auto] sm:gap-4 sm:items-center sm:p-0 sm:py-3 sm:px-4
-        sm:border-0 sm:rounded-none
-        hover:bg-muted/20 group
-        ${isFocused ? "bg-muted/40" : ""}
+        group relative min-w-0 flex flex-col gap-2 rounded-xl px-3 py-2.5
+        cursor-grab active:cursor-grabbing transition-colors hover:bg-muted/50
+        sm:grid sm:grid-cols-[1fr_auto] sm:gap-4 sm:items-center sm:px-4
+        ${isFocused ? "bg-muted/50" : ""}
       `}
     >
-      <div className="flex items-center gap-2.5 min-w-0 sm:flex-row sm:gap-3">
-        {bookmark.faviconUrl ? (
+      <span className="pointer-events-none absolute -left-6 top-1/2 hidden -translate-y-1/2 text-muted-foreground/50 opacity-0 transition-opacity sm:block sm:group-hover:opacity-100">
+        <GripVertical className="size-4" />
+      </span>
+
+      <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:min-w-0">
+        {faviconSrc ? (
           <img
-            src={bookmark.faviconUrl}
+            src={faviconSrc}
             alt=""
-            className="size-5 shrink-0 rounded"
+            className="size-5 shrink-0 rounded-md"
+            onError={() =>
+              setImageState({ token: imageToken, broken: faviconSrc })
+            }
           />
         ) : (
-          <div className="size-5 shrink-0 rounded bg-muted" />
+          <div className="size-5 shrink-0 rounded-md bg-muted" />
         )}
         <div className="min-w-0 flex-1">
-          <div className="font-medium truncate leading-snug line-clamp-1">
-            {bookmark.title || safeHostname(bookmark.url)}
+          <div className="min-w-0 sm:flex sm:items-center sm:gap-2">
+            {bookmark.url ? (
+              <a
+                href={bookmark.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block truncate text-sm font-medium text-foreground"
+              >
+                {displayTitle}
+              </a>
+            ) : (
+              <span className="block truncate text-sm font-medium text-foreground">
+                {displayTitle}
+              </span>
+            )}
+            <span className="hidden truncate text-xs text-muted-foreground sm:block">
+              {displaySubtitle}
+            </span>
           </div>
-          <div className="text-xs text-muted-foreground truncate mt-0.5">
-            {bookmark.url
-              ? safeHostname(bookmark.url)
-              : (bookmark.description?.slice(0, 60) ?? "Note")}
+          <div className="truncate text-xs text-muted-foreground sm:hidden">
+            {displaySubtitle}
           </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between mt-1 sm:mt-0 sm:relative sm:justify-end">
-        <div className="text-xs text-muted-foreground sm:transition-opacity sm:group-hover:opacity-0">
+      <div className="flex w-full shrink-0 items-center justify-between sm:relative sm:min-w-[10.5rem] sm:justify-end">
+        <div
+          className={`text-xs text-muted-foreground sm:transition-opacity sm:text-sm sm:group-hover:opacity-0 ${isFocused ? "sm:opacity-0" : ""}`}
+        >
           {formatDate(bookmark.createdAt)}
         </div>
-        <div className="flex items-center gap-0.5 sm:gap-1 opacity-100 sm:absolute sm:right-0 sm:inset-y-0 sm:items-center sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8 sm:size-8"
+
+        <div
+          className={`flex items-center gap-1 sm:absolute sm:inset-0 sm:justify-end sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 ${isFocused ? "sm:opacity-100" : ""}`}
+        >
+          <button
+            type="button"
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             onClick={() => onEdit(bookmark.id)}
             aria-label="Edit"
           >
-            <PencilIcon className="size-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8 sm:size-8"
+            <Pen className="size-4" />
+          </button>
+
+          <button
+            type="button"
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             onClick={handleCopy}
-            aria-label={bookmark.url ? "Copy URL" : "Copy note"}
+            aria-label={bookmark.url ? "Copy link" : "Copy note"}
           >
-            <CopyIcon className="size-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="hidden sm:inline-flex sm:size-8"
-            onClick={() => onPreview(bookmark)}
-            aria-label="Preview"
-          >
-            <Kbd>Space</Kbd>
-          </Button>
+            {copied ? (
+              <Check className="size-4 text-green-600 dark:text-green-500" />
+            ) : (
+              <Copy className="size-4" />
+            )}
+          </button>
+
           {bookmark.url ? (
             <a
               href={bookmark.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center size-8 sm:size-8 rounded-md hover:bg-muted"
+              className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               aria-label="Open in new tab"
             >
-              <ExternalLinkIcon className="size-4" />
+              <ArrowUpRight className="size-4" />
             </a>
           ) : null}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8 sm:size-8 text-destructive hover:text-destructive"
+
+          <button
+            type="button"
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
             onClick={() => onDelete(bookmark.id)}
             aria-label="Delete"
           >
-            <TrashIcon className="size-4" />
-          </Button>
+            <Trash2 className="size-4" />
+          </button>
         </div>
       </div>
     </li>
   );
 });
+
+BookmarkRow.displayName = "BookmarkRow";

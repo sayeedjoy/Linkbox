@@ -6,6 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Kbd } from "@/components/ui/kbd";
 
 export function ShortcutsDialog({
   open,
@@ -23,31 +24,37 @@ export function ShortcutsDialog({
         <div className="grid gap-2 text-sm">
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">Search</span>
-            <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">⌘F</kbd>
+            <Kbd>⌘F</Kbd>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">Move down</span>
-            <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">j</kbd> or <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">↓</kbd>
+            <span className="flex items-center gap-1">
+              <Kbd>j</Kbd> or <Kbd>↓</Kbd>
+            </span>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">Move up</span>
-            <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">k</kbd> or <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">↑</kbd>
+            <span className="flex items-center gap-1">
+              <Kbd>k</Kbd> or <Kbd>↑</Kbd>
+            </span>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">Open bookmark</span>
-            <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">Enter</kbd>
+            <Kbd>Enter</Kbd>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">Edit</span>
-            <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">e</kbd>
+            <Kbd>e</Kbd>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">Delete</span>
-            <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">Backspace</kbd> / <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">Delete</kbd>
+            <span className="flex items-center gap-1">
+              <Kbd>Backspace</Kbd> / <Kbd>Delete</Kbd>
+            </span>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">This help</span>
-            <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">?</kbd>
+            <Kbd>?</Kbd>
           </div>
         </div>
       </DialogContent>

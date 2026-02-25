@@ -126,8 +126,9 @@ export function BookmarkHeroInput({
           aria-label={searchMode ? "Search bookmarks" : "Add link, image, or text"}
           disabled={disabled}
         />
-        <div className="flex items-center gap-1 shrink-0">
-          <Kbd className="hidden sm:inline-flex">⌘F</Kbd>
+        <div className="hidden md:flex items-center gap-1 shrink-0">
+          <Kbd>⌘</Kbd>
+          <Kbd>F</Kbd>
         </div>
       </div>
     </form>

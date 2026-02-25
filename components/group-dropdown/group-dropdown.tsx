@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { ChevronDownIcon, PlusIcon, GripVerticalIcon, PencilIcon, TrashIcon } from "lucide-react";
+import { ChevronDown, Plus, List, Pencil, Trash2 } from "lucide-react";
 import { useCallback, useState } from "react";
 import type { DragEndEvent } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
@@ -148,7 +148,7 @@ export function GroupDropdown({
               style={{ backgroundColor: triggerDotColor }}
             />
             <span className="min-w-0 truncate">{label}</span>
-            <ChevronDownIcon className="size-4 opacity-50" />
+            <ChevronDown className="size-4 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="min-w-[200px]">
@@ -186,7 +186,7 @@ export function GroupDropdown({
                   onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
                   aria-label="Edit group"
                 >
-                  <PencilIcon className="size-3.5" />
+                  <Pencil className="size-3.5" />
                 </button>
                 <button
                   type="button"
@@ -195,7 +195,7 @@ export function GroupDropdown({
                   onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
                   aria-label="Delete group"
                 >
-                  <TrashIcon className="size-3.5" />
+                  <Trash2 className="size-3.5" />
                 </button>
               </span>
               <span className="text-muted-foreground text-xs pl-1">
@@ -206,12 +206,12 @@ export function GroupDropdown({
           <DropdownMenuSeparator />
           {groups.length > 1 && (
             <DropdownMenuItem onSelect={() => setReorderOpen(true)}>
-              <GripVerticalIcon className="size-4" />
+              <List className="size-4" />
               Reorder groups
             </DropdownMenuItem>
           )}
           <DropdownMenuItem onSelect={() => setCreateOpen(true)}>
-            <PlusIcon className="size-4" />
+            <Plus className="size-4" />
             New Group
           </DropdownMenuItem>
         </DropdownMenuContent>

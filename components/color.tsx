@@ -11,6 +11,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
+import { Brush, Pipette } from 'lucide-react';
 
 const PRESET_COLORS = [
   '#ff6b4a',
@@ -28,43 +29,6 @@ function normalizeHex(raw: string): string {
   if (s.length >= 6) return '#' + s.slice(0, 6).toLowerCase();
   if (s.length > 0) return '#' + s.padEnd(6, '0').toLowerCase();
   return '#000000';
-}
-
-function BrushIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={cn('size-4', className)}
-    >
-      <path d="m9.06 11.9 8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08" />
-      <path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z" />
-    </svg>
-  );
-}
-
-function EyedropperIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={cn('size-4', className)}
-    >
-      <path d="m2 22 1-1h3l9-9" />
-      <path d="M3 21v-3l9-9" />
-      <path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4" />
-    </svg>
-  );
 }
 
 interface ColorPickerProps {
@@ -122,7 +86,7 @@ const ColorPicker = forwardRef<
             variant="ghost"
             aria-label="Open color picker"
           >
-            <BrushIcon />
+            <Brush className="size-4" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-3" align="start">
@@ -149,7 +113,7 @@ const ColorPicker = forwardRef<
                   onClick={handleEyedropper}
                   aria-label="Pick color from screen"
                 >
-                  <EyedropperIcon />
+                  <Pipette className="size-4" />
                 </Button>
               ) : null}
             </div>

@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useSession, signOut } from "next-auth/react";
-import { SunIcon, DownloadIcon, TrashIcon } from "lucide-react";
+import { Sun, Download, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -135,7 +135,7 @@ export function SettingsModal({
               </span>
               <Select value={theme} onValueChange={handleThemeChange}>
                 <SelectTrigger className="w-full h-8">
-                  <SunIcon className="size-4 shrink-0" />
+                  <Sun className="size-4 shrink-0" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -208,7 +208,7 @@ export function SettingsModal({
                         onClick={() => setRevokeTargetId(t.id)}
                         aria-label="Delete token"
                       >
-                        <TrashIcon className="size-4" />
+                        <Trash2 className="size-4" />
                       </Button>
                     </li>
                   ))}
@@ -224,7 +224,7 @@ export function SettingsModal({
               </p>
               <div className="flex flex-col gap-2">
                 <Button variant="outline" size="default" className="h-8 w-full sm:w-auto" onClick={handleExport}>
-                  <DownloadIcon className="size-4" />
+                  <Download className="size-4" />
                   Export bookmarks
                 </Button>
                 <Button
@@ -233,7 +233,7 @@ export function SettingsModal({
                   className="h-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
                   onClick={() => setDeleteConfirmOpen(true)}
                 >
-                  <TrashIcon className="size-4" />
+                  <Trash2 className="size-4" />
                   Delete account
                 </Button>
               </div>

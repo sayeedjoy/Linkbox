@@ -1,10 +1,7 @@
 "use client";
 
-import { forwardRef, useState, useCallback } from "react";
+import { forwardRef, useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,10 +10,11 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDownIcon, PlusIcon } from "lucide-react";
+import { ChevronDown, Plus } from "lucide-react";
 import { createGroup } from "@/app/actions/groups";
 import { GroupFormDialog, GROUP_COLORS } from "@/components/group-dropdown/group-form-dialog";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
+import { safeHostname } from "./utils";
 
 type EditForm = {
   title: string;
@@ -24,6 +22,18 @@ type EditForm = {
   url: string;
   groupId: string | null;
 };
+
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 640px)");
+    setIsDesktop(mq.matches);
+    const handler = () => setIsDesktop(mq.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isDesktop;
+}
 
 export const BookmarkEditCard = forwardRef<
   HTMLLIElement,
@@ -40,6 +50,7 @@ export const BookmarkEditCard = forwardRef<
   { bookmark, groups, editForm, onEditFormChange, onSave, onCancel, onGroupsChange },
   ref
 ) {
+  const isDesktop = useIsDesktop();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
@@ -71,62 +82,69 @@ export const BookmarkEditCard = forwardRef<
       ? "#6b7280"
       : groups.find((g) => g.id === editForm.groupId)?.color ?? "#6b7280";
 
-  return (
-    <li
-      ref={ref}
-      id={`bookmark-row-${bookmark.id}`}
-      className="rounded-2xl border border-border bg-background overflow-hidden p-4 sm:p-5 flex flex-col gap-4"
-    >
-      <div className="flex items-center gap-3 min-w-0">
-        {bookmark.faviconUrl ? (
+  const linkUrl = (editForm.url?.trim() || bookmark.url) ?? "";
+  const hostname = linkUrl ? safeHostname(linkUrl) : "";
+  const faviconSrc =
+    typeof bookmark.faviconUrl === "string" && bookmark.faviconUrl.trim()
+      ? bookmark.faviconUrl.trim()
+      : hostname
+        ? `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(hostname)}`
+        : null;
+
+  const card = (
+    <div className="w-full rounded-xl border border-border bg-card p-3">
+      <div className="mb-2 flex items-center gap-2 min-w-0">
+        {faviconSrc ? (
           <img
-            src={bookmark.faviconUrl}
+            src={faviconSrc}
             alt=""
-            className="size-6 shrink-0 rounded"
+            className="size-5 shrink-0 rounded-md"
           />
         ) : (
-          <div className="size-6 shrink-0 rounded bg-muted" />
+          <div className="size-5 shrink-0 rounded-md bg-muted" />
         )}
-        <Input
+        <input
+          type="text"
           value={editForm.title}
           onChange={(e) =>
             onEditFormChange({ ...editForm, title: e.target.value })
           }
           placeholder="Title"
-          className="min-w-0 flex-1 border-0 px-0 h-auto text-base font-medium focus-visible:ring-0 focus-visible:ring-offset-0"
+          className="min-w-0 flex-1 bg-transparent text-sm font-medium focus:outline-none"
         />
       </div>
-      <Input
+      <input
+        type="url"
         value={editForm.url}
         onChange={(e) =>
           onEditFormChange({ ...editForm, url: e.target.value })
         }
-        placeholder="URL"
-        className="text-muted-foreground text-sm"
+        placeholder="URL (optional)"
+        className="mb-2 w-full bg-transparent text-sm text-muted-foreground focus:outline-none"
       />
-      <Textarea
+      <textarea
         value={editForm.description}
         onChange={(e) =>
           onEditFormChange({ ...editForm, description: e.target.value })
         }
-        placeholder="Description"
-        rows={3}
-        className="min-h-20 resize-none"
+        placeholder="Add a description..."
+        rows={2}
+        className="mb-3 w-full resize-none bg-transparent text-sm text-muted-foreground focus:outline-none"
       />
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-3">
         <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              className="w-fit bg-muted/50 hover:bg-muted/70 border-0 rounded-full px-3 py-2 h-auto font-normal"
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-md border border-border px-2.5 py-1.5 text-sm text-muted-foreground hover:bg-muted"
             >
               <span
-                className="size-2.5 rounded-full shrink-0 mr-2"
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ backgroundColor: triggerDotColor }}
               />
               {label}
-              <ChevronDownIcon className="size-4 opacity-50 ml-1" />
-            </Button>
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" side="bottom" className="rounded-xl min-w-[200px]">
             <DropdownMenuCheckboxItem
@@ -158,18 +176,37 @@ export const BookmarkEditCard = forwardRef<
             ))}
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => setCreateOpen(true)}>
-              <PlusIcon className="size-4" />
+              <Plus className="size-4" />
               New Group
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button onClick={onSave}>Save</Button>
-        </div>
       </div>
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={onSave}
+          className="rounded-md bg-foreground px-2 py-1 text-xs text-background hover:bg-foreground/90"
+        >
+          Save
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <li
+      ref={ref}
+      id={`bookmark-row-${bookmark.id}`}
+    >
+      {isDesktop ? <div draggable={false}>{card}</div> : card}
       <GroupFormDialog
         mode="create"
         name={newName}
