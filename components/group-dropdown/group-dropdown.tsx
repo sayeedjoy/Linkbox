@@ -19,7 +19,6 @@ import { GROUP_COLORS } from "./group-form-dialog";
 import { GroupFormDialog } from "./group-form-dialog";
 import { GroupReorderDialog } from "./group-reorder-dialog";
 import { GroupDeleteDialog } from "./group-delete-dialog";
-import { ColorPicker } from "@/components/color";
 
 export function GroupDropdown({
   groups,
@@ -225,20 +224,6 @@ export function GroupDropdown({
                   <Trash2 className="size-3.5" />
                 </button>
               </span>
-              <div onClick={(e) => e.stopPropagation()} className="shrink-0">
-                <ColorPicker
-                  value={g.color ?? "#6b7280"}
-                  onChange={() => {}}
-                  onCloseWithValue={async (hex) => {
-                    try {
-                      await updateGroup(g.id, { color: hex });
-                      onGroupsChange();
-                    } catch {
-                      toast.error("Failed to update color");
-                    }
-                  }}
-                />
-              </div>
               {selectedGroupId === g.id && (
                 <Check className="h-4 w-4 text-muted-foreground shrink-0" />
               )}
