@@ -45,7 +45,6 @@ export function BookmarkApp({
     showShortcuts,
     setShowShortcuts,
     isSubmitting,
-    focusedIndex,
     setFocusedIndex,
     setBookmarks,
   } = useBookmarkApp({ initialBookmarks, initialGroups, initialSelectedGroupId, initialTotalBookmarkCount });
@@ -97,7 +96,6 @@ export function BookmarkApp({
                 : b;
             setBookmarks((prev) => prev.map(upd));
           }}
-          focusedIndex={focusedIndex}
           onFocusChange={setFocusedIndex}
         />
       </main>

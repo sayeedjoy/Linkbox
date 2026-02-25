@@ -9,11 +9,9 @@ const COPIED_RESET_MS = 2000;
 
 export const BookmarkRow = forwardRef<HTMLLIElement, {
   bookmark: BookmarkWithGroup;
-  isFocused: boolean;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
-  onHover: () => void;
-}>(({ bookmark, isFocused, onEdit, onDelete, onHover }, ref) => {
+}>(({ bookmark, onEdit, onDelete }, ref) => {
   const [copied, setCopied] = useState(false);
   const imageToken = `${bookmark.id}:${bookmark.faviconUrl ?? ""}:${bookmark.url ?? ""}`;
   const [imageState, setImageState] = useState<{ token: string; broken: string | null }>({
@@ -67,7 +65,6 @@ export const BookmarkRow = forwardRef<HTMLLIElement, {
       ref={ref}
       id={`bookmark-row-${bookmark.id}`}
       draggable
-      onMouseEnter={onHover}
       className={`
         group relative min-w-0 flex flex-col gap-2 rounded-xl px-3 py-2.5
         cursor-grab active:cursor-grabbing transition-colors hover:bg-muted/50
@@ -118,15 +115,11 @@ export const BookmarkRow = forwardRef<HTMLLIElement, {
       </div>
 
       <div className="flex w-full shrink-0 items-center justify-between sm:relative sm:min-w-[10.5rem] sm:justify-end">
-        <div
-          className={`text-xs text-muted-foreground sm:text-sm sm:transition-opacity sm:group-hover:opacity-0 ${isFocused ? "sm:opacity-0" : ""}`}
-        >
+        <div className="text-xs text-muted-foreground sm:text-sm sm:transition-opacity sm:group-hover:opacity-0">
           {formatDate(bookmark.createdAt)}
         </div>
 
-        <div
-          className={`flex items-center gap-1 sm:absolute sm:inset-0 sm:justify-end sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 ${isFocused ? "sm:opacity-100" : ""}`}
-        >
+        <div className="flex items-center gap-1 sm:absolute sm:inset-0 sm:justify-end sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
           <button
             type="button"
             className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"

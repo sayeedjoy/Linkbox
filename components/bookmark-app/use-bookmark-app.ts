@@ -210,6 +210,12 @@ export function useBookmarkApp({
       const target = e.target as HTMLElement;
       const inInput = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
       const inDialog = !!target.closest("[role='dialog']");
+      const selectedIndex =
+        focusedIndex >= 0 && displayedBookmarks.length > 0
+          ? Math.min(focusedIndex, displayedBookmarks.length - 1)
+          : -1;
+      const selectedBookmark =
+        selectedIndex >= 0 ? displayedBookmarks[selectedIndex] : null;
       if ((e.metaKey || e.ctrlKey) && e.key === "f") {
         e.preventDefault();
         setSearchMode((m) => !m);
@@ -232,10 +238,33 @@ export function useBookmarkApp({
           return;
         }
       }
+      if (!inInput && !inDialog && selectedBookmark) {
+        if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+          e.preventDefault();
+          if (selectedBookmark.url) {
+            window.open(selectedBookmark.url, "_blank", "noopener,noreferrer");
+          }
+          return;
+        }
+        if (!e.ctrlKey && !e.metaKey && e.key === "Enter") {
+          e.preventDefault();
+          const text = selectedBookmark.url
+            ? selectedBookmark.url
+            : [selectedBookmark.title, selectedBookmark.description]
+                .filter(Boolean)
+                .join("\n");
+          if (text) void navigator.clipboard.writeText(text);
+          return;
+        }
+        if (!e.ctrlKey && !e.metaKey && (e.key === " " || e.code === "Space")) {
+          e.preventDefault();
+          setPreviewBookmark(selectedBookmark);
+        }
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [displayedBookmarks.length]);
+  }, [displayedBookmarks, focusedIndex]);
 
   const handleHeroSubmit = useCallback(async () => {
     if (searchMode) return;

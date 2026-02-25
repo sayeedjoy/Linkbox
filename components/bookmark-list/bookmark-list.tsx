@@ -24,7 +24,6 @@ export function BookmarkList({
   onBookmarksChange,
   onGroupsChange,
   onBookmarkUpdate,
-  focusedIndex,
   onFocusChange,
   openEditId,
 }: {
@@ -41,12 +40,10 @@ export function BookmarkList({
       Pick<BookmarkWithGroup, "title" | "description" | "url" | "groupId">
     >,
   ) => void;
-  focusedIndex?: number;
   onFocusChange?: (index: number) => void;
   openEditId?: string | null;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<EditForm>({
     title: "",
     description: "",
@@ -109,15 +106,10 @@ export function BookmarkList({
     if (editingId) editCardRef.current?.scrollIntoView({ block: "nearest" });
   }, [editingId]);
 
-  const activeIndex = hoveredIndex ?? focusedIndex ?? -1;
-
   return (
     <div
       className="w-full min-w-0 overflow-hidden"
-      onMouseLeave={() => {
-        setHoveredIndex(null);
-        onFocusChange?.(-1);
-      }}
+      onMouseLeave={() => onFocusChange?.(-1)}
     >
       <BookmarkSortHeader
         sortKey={sortKey}
@@ -128,12 +120,11 @@ export function BookmarkList({
         className="min-w-0 space-y-3 sm:space-y-0"
         onMouseMove={(e) => {
           if (e.target === e.currentTarget) {
-            setHoveredIndex(null);
             onFocusChange?.(-1);
           }
         }}
       >
-        {bookmarks.map((b, index) =>
+        {bookmarks.map((b) =>
           b.id === editingId && editing ? (
             <BookmarkEditCard
               key={b.id}
@@ -150,10 +141,8 @@ export function BookmarkList({
             <BookmarkRow
               key={b.id}
               bookmark={b}
-              isFocused={activeIndex === index}
               onEdit={setEditingId}
               onDelete={handleDelete}
-              onHover={() => setHoveredIndex(index)}
             />
           )
         )}
