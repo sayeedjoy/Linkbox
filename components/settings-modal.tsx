@@ -31,7 +31,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { deleteAccount } from "@/app/actions/auth";
-import { listApiTokens } from "@/app/actions/api-tokens";
+import { listApiTokens, revokeApiToken } from "@/app/actions/api-tokens";
 
 const THEME_KEY = "bookmark-theme";
 const AUTO_GROUP_KEY = "bookmark-auto-group";
@@ -48,6 +48,7 @@ export function SettingsModal({
   const [autoGroup, setAutoGroup] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [revokeTargetId, setRevokeTargetId] = useState<string | null>(null);
   const [apiTokens, setApiTokens] = useState<
     { id: string; name: string; tokenPrefix: string | null; tokenSuffix: string | null; createdAt: Date; lastUsedAt: Date | null }[]
   >([]);
@@ -104,6 +105,21 @@ export function SettingsModal({
       setIsDeleting(false);
     }
   }, [onOpenChange]);
+
+  const handleRevokeToken = useCallback(async (id: string) => {
+    try {
+      const result = await revokeApiToken(id);
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
+      setApiTokens((prev) => prev.filter((t) => t.id !== id));
+      toast.success("Token revoked");
+      setRevokeTargetId(null);
+    } catch {
+      toast.error("Failed to revoke");
+    }
+  }, []);
 
   return (
     <>
@@ -165,7 +181,7 @@ export function SettingsModal({
                   {apiTokens.map((t) => (
                     <li
                       key={t.id}
-                      className="flex items-start gap-3 rounded-lg border border-border bg-background px-3 py-2.5"
+                      className="flex items-start justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2.5"
                     >
                       <div className="min-w-0 flex-1 space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -185,6 +201,15 @@ export function SettingsModal({
                           )}
                         </div>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive mt-0.5"
+                        onClick={() => setRevokeTargetId(t.id)}
+                        aria-label="Delete token"
+                      >
+                        <TrashIcon className="size-4" />
+                      </Button>
                     </li>
                   ))}
                 </ul>
@@ -236,6 +261,25 @@ export function SettingsModal({
               disabled={isDeleting}
             >
               {isDeleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={revokeTargetId !== null} onOpenChange={(open) => !open && setRevokeTargetId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this API token?</AlertDialogTitle>
+            <AlertDialogDescription>
+              It will stop working immediately. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => revokeTargetId && handleRevokeToken(revokeTargetId)}
+            >
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

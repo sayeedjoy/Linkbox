@@ -6,9 +6,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { TrashIcon } from "lucide-react";
+import { CopyIcon, TrashIcon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { createApiToken, listApiTokens, revokeApiToken } from "@/app/actions/api-tokens";
@@ -33,6 +43,8 @@ export function GenerateApiTokenModal({
   >([]);
   const [newTokenName, setNewTokenName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [newlyCreatedToken, setNewlyCreatedToken] = useState<string | null>(null);
+  const [revokeTargetId, setRevokeTargetId] = useState<string | null>(null);
 
   const loadTokens = useCallback(() => {
     if (open) listApiTokens().then(setApiTokens);
@@ -42,6 +54,7 @@ export function GenerateApiTokenModal({
     if (open) {
       loadTokens();
       setNewTokenName("");
+      setNewlyCreatedToken(null);
     }
   }, [open, loadTokens]);
 
@@ -56,18 +69,27 @@ export function GenerateApiTokenModal({
       }
       setNewTokenName("");
       loadTokens();
-      try {
-        await navigator.clipboard.writeText(result.token);
-        toast.success("Token created and copied. Save it now; it won't be shown again.");
-      } catch {
-        toast.success("Token created. Copy failed; please try again in a secure tab.");
-      }
+      setNewlyCreatedToken(result.token);
     } catch {
       toast.error("Failed to create token");
     } finally {
       setIsCreating(false);
     }
   }, [newTokenName, loadTokens]);
+
+  const handleCopyAndClose = useCallback(() => {
+    if (!newlyCreatedToken) return;
+    navigator.clipboard.writeText(newlyCreatedToken).then(
+      () => {
+        toast.success("API key copied to clipboard.");
+        setNewlyCreatedToken(null);
+        onOpenChange(false);
+      },
+      () => {
+        toast.error("Copy failed. Please copy the key manually.");
+      }
+    );
+  }, [newlyCreatedToken, onOpenChange]);
 
   const handleRevoke = useCallback(
     async (id: string) => {
@@ -79,6 +101,7 @@ export function GenerateApiTokenModal({
         }
         setApiTokens((prev) => prev.filter((t) => t.id !== id));
         toast.success("Token revoked");
+        setRevokeTargetId(null);
       } catch {
         toast.error("Failed to revoke");
       }
@@ -87,6 +110,7 @@ export function GenerateApiTokenModal({
   );
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-hidden flex flex-col">
         <DialogHeader>
@@ -134,8 +158,8 @@ export function GenerateApiTokenModal({
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive mt-0.5"
-                      onClick={() => handleRevoke(t.id)}
-                      aria-label="Revoke token"
+                      onClick={() => setRevokeTargetId(t.id)}
+                      aria-label="Delete token"
                     >
                       <TrashIcon className="size-4" />
                     </Button>
@@ -172,5 +196,48 @@ export function GenerateApiTokenModal({
         </div>
       </DialogContent>
     </Dialog>
+    <Dialog open={newlyCreatedToken !== null} onOpenChange={(open) => !open && setNewlyCreatedToken(null)}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Here is your API key</DialogTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            Copy this key now. It won&apos;t be shown again.
+          </p>
+        </DialogHeader>
+        {newlyCreatedToken ? (
+          <div className="flex gap-2 py-2">
+            <Input
+              readOnly
+              value={newlyCreatedToken}
+              className="font-mono text-xs flex-1 min-w-0"
+            />
+            <Button size="default" className="shrink-0" onClick={handleCopyAndClose}>
+              <CopyIcon className="size-4 mr-1.5" />
+              Copy
+            </Button>
+          </div>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+    <AlertDialog open={revokeTargetId !== null} onOpenChange={(open) => !open && setRevokeTargetId(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete this API token?</AlertDialogTitle>
+          <AlertDialogDescription>
+            It will stop working immediately. This cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+            onClick={() => revokeTargetId && handleRevoke(revokeTargetId)}
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
