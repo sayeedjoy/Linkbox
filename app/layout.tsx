@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import { siteMetadata } from "@/lib/metadata";
 import "./globals.css";
 import { ThemeInit } from "@/components/theme-init";
 import { NextAuthSessionProvider } from "@/components/session-provider";
+import { Providers } from "@/app/providers";
 import { Toaster } from "sonner";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -29,9 +31,13 @@ export default function RootLayout({
         className={`${inter.variable} ${geistMono.variable} antialiased`}
       >
         <NextAuthSessionProvider>
-          <ThemeInit />
-          {children}
-          <Toaster richColors position="bottom-right" />
+          <Providers>
+            <ThemeInit />
+            <Suspense fallback={null}>
+              {children}
+            </Suspense>
+            <Toaster richColors position="bottom-right" />
+          </Providers>
         </NextAuthSessionProvider>
       </body>
     </html>

@@ -1,7 +1,13 @@
-import { getBookmarks, getTotalBookmarkCount } from "@/app/actions/bookmarks";
+import {
+  dehydrate,
+  HydrationBoundary,
+  QueryClient,
+} from "@tanstack/react-query";
 import { getGroups } from "@/app/actions/groups";
+import { getBookmarks, getTotalBookmarkCount } from "@/app/actions/bookmarks";
+import { getAuthOptional } from "@/lib/auth";
+import { groupsKey, bookmarksKey, bookmarkCountKey } from "@/lib/query-keys";
 import { BookmarkApp } from "@/components/bookmark-app";
-import { Suspense } from "react";
 
 export default async function Page({
   searchParams,
@@ -17,33 +23,51 @@ export default async function Page({
         ? groupParam[0]
         : null;
 
-  const [initialGroups, initialBookmarks, initialTotalCount] = await Promise.all([
-    getGroups(),
-    getBookmarks({
-      groupId: groupId ?? undefined,
-      sort: "createdAt",
-      order: "desc",
+  const session = await getAuthOptional();
+  if (!session?.user?.id) {
+    return (
+      <BookmarkApp
+        initialBookmarks={[]}
+        initialGroups={[]}
+        initialSelectedGroupId={groupId}
+        initialTotalBookmarkCount={0}
+      />
+    );
+  }
+
+  const userId = session.user.id;
+  const sort: "createdAt" | "title" = "createdAt";
+  const order: "asc" | "desc" = "desc";
+  const queryClient = new QueryClient();
+
+  await Promise.all([
+    queryClient.prefetchQuery({
+      queryKey: groupsKey(userId),
+      queryFn: () => getGroups(),
     }),
-    getTotalBookmarkCount(),
+    queryClient.prefetchQuery({
+      queryKey: bookmarksKey(userId, groupId ?? null, sort, order),
+      queryFn: () =>
+        getBookmarks({
+          groupId: groupId ?? null,
+          sort,
+          order,
+        }),
+    }),
+    queryClient.prefetchQuery({
+      queryKey: bookmarkCountKey(userId),
+      queryFn: () => getTotalBookmarkCount(),
+    }),
   ]);
 
-  const validGroupId =
-    groupId && initialGroups.some((g) => g.id === groupId) ? groupId : null;
-
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-background">
-          Loading…
-        </div>
-      }
-    >
+    <HydrationBoundary state={dehydrate(queryClient)}>
       <BookmarkApp
-        initialBookmarks={initialBookmarks}
-        initialGroups={initialGroups}
-        initialSelectedGroupId={validGroupId}
-        initialTotalBookmarkCount={initialTotalCount}
+        initialBookmarks={[]}
+        initialGroups={[]}
+        initialSelectedGroupId={groupId}
+        initialTotalBookmarkCount={0}
       />
-    </Suspense>
+    </HydrationBoundary>
   );
 }

@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath, unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { currentUserId } from "@/lib/auth";
 import { unfurlUrl } from "@/app/actions/parse";
@@ -9,13 +10,15 @@ export type BookmarkWithGroup = Bookmark & {
   group: { id: string; name: string; color: string | null } | null;
 };
 
-export async function getBookmarks(options?: {
-  groupId?: string | null;
-  search?: string;
-  sort?: "createdAt" | "title";
-  order?: "asc" | "desc";
-}): Promise<BookmarkWithGroup[]> {
-  const userId = await currentUserId();
+async function getBookmarksUncached(
+  userId: string,
+  options?: {
+    groupId?: string | null;
+    search?: string;
+    sort?: "createdAt" | "title";
+    order?: "asc" | "desc";
+  }
+): Promise<BookmarkWithGroup[]> {
   const where: {
     userId: string;
     groupId?: string | null;
@@ -49,9 +52,34 @@ export async function getBookmarks(options?: {
   return list as BookmarkWithGroup[];
 }
 
+export async function getBookmarks(options?: {
+  groupId?: string | null;
+  search?: string;
+  sort?: "createdAt" | "title";
+  order?: "asc" | "desc";
+}): Promise<BookmarkWithGroup[]> {
+  const userId = await currentUserId();
+  const hasSearch = options?.search?.trim();
+  if (hasSearch) {
+    return getBookmarksUncached(userId, options);
+  }
+  const groupId = options?.groupId ?? "all";
+  const sort = options?.sort ?? "createdAt";
+  const order = options?.order ?? "desc";
+  return unstable_cache(
+    () => getBookmarksUncached(userId, options),
+    ["bookmarks", userId, groupId, sort, order],
+    { revalidate: 10, tags: ["bookmarks"] }
+  )();
+}
+
 export async function getTotalBookmarkCount(): Promise<number> {
   const userId = await currentUserId();
-  return prisma.bookmark.count({ where: { userId } });
+  return unstable_cache(
+    () => prisma.bookmark.count({ where: { userId } }),
+    ["bookmark-count", userId],
+    { revalidate: 10, tags: ["bookmark-count"] }
+  )();
 }
 
 export async function createBookmark(
@@ -92,6 +120,7 @@ export async function createBookmark(
       group: { select: { id: true, name: true, color: true } },
     },
   });
+  revalidatePath("/");
   return bookmark as BookmarkWithGroup;
 }
 
@@ -152,7 +181,9 @@ export async function createBookmarkFromMetadata(
   groupId?: string | null
 ) {
   const userId = await currentUserId();
-  return createBookmarkFromMetadataForUser(userId, url, metadata, groupId);
+  const out = await createBookmarkFromMetadataForUser(userId, url, metadata, groupId);
+  revalidatePath("/");
+  return out;
 }
 
 export async function createNote(content: string, groupId?: string | null) {
@@ -175,6 +206,7 @@ export async function createNote(content: string, groupId?: string | null) {
       group: { select: { id: true, name: true, color: true } },
     },
   });
+  revalidatePath("/");
   return bookmark as BookmarkWithGroup;
 }
 
@@ -197,11 +229,13 @@ export async function updateBookmark(
     where: { id, userId },
     data: updateData,
   });
+  revalidatePath("/");
   return { ok: true };
 }
 
 export async function deleteBookmark(id: string) {
   const userId = await currentUserId();
   await prisma.bookmark.deleteMany({ where: { id, userId } });
+  revalidatePath("/");
   return { ok: true };
 }

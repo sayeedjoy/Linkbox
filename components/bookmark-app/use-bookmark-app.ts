@@ -2,15 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useState, useDeferredValue } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
 import type { GroupWithCount } from "@/lib/types";
-import { getBookmarks, getTotalBookmarkCount } from "@/app/actions/bookmarks";
-import { getGroups } from "@/app/actions/groups";
-import { createBookmark, createNote } from "@/app/actions/bookmarks";
+import { getBookmarks, getTotalBookmarkCount, createBookmark, createNote, createBookmarkFromMetadata } from "@/app/actions/bookmarks";
+import { getGroups, createGroup, updateGroup, reorderGroups, deleteGroup } from "@/app/actions/groups";
 import { parseTextForUrls, parseImageForUrls, unfurlUrl } from "@/app/actions/parse";
-import { createBookmarkFromMetadata } from "@/app/actions/bookmarks";
 import { filterBookmarks, makeOptimisticBookmark } from "./utils";
+import { groupsKey, bookmarksKey, bookmarkCountKey } from "@/lib/query-keys";
 
 const OPT_PREFIX = "opt-";
 const LAST_GROUP_KEY = "bookmark-last-group";
@@ -29,8 +30,10 @@ export function useBookmarkApp({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [bookmarks, setBookmarks] = useState<BookmarkWithGroup[]>(initialBookmarks);
-  const [groups, setGroups] = useState<GroupWithCount[]>(initialGroups);
+  const queryClient = useQueryClient();
+  const { data: session } = useSession();
+  const userId = session?.user?.id ?? null;
+
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(
     initialSelectedGroupId ?? null
   );
@@ -45,35 +48,121 @@ export function useBookmarkApp({
   const [showShortcuts, setShowShortcuts] = useState(false);
   const deferredSearchQuery = useDeferredValue(searchQuery);
 
+  const groupsQuery = useQuery({
+    queryKey: userId ? groupsKey(userId) : ["groups", "anon"],
+    queryFn: () => getGroups(),
+    enabled: !!userId,
+    initialData: !userId ? initialGroups : undefined,
+  });
+  const groups = useMemo(() => groupsQuery.data ?? initialGroups, [groupsQuery.data, initialGroups]);
+
+  const bookmarksQuery = useQuery({
+    queryKey: userId ? bookmarksKey(userId, selectedGroupId, sortKey, sortOrder) : ["bookmarks", "anon"],
+    queryFn: () =>
+      getBookmarks({
+        groupId: selectedGroupId,
+        sort: sortKey,
+        order: sortOrder,
+      }),
+    enabled: !!userId,
+    initialData: !userId ? initialBookmarks : undefined,
+  });
+  const bookmarks = useMemo(
+    () => bookmarksQuery.data ?? initialBookmarks,
+    [bookmarksQuery.data, initialBookmarks]
+  );
+
+  const countQuery = useQuery({
+    queryKey: userId ? bookmarkCountKey(userId) : ["bookmark-count", "anon"],
+    queryFn: () => getTotalBookmarkCount(),
+    enabled: !!userId,
+    initialData: !userId ? initialTotalBookmarkCount : undefined,
+  });
+  const totalBookmarkCount = countQuery.data ?? initialTotalBookmarkCount;
+
   const displayedBookmarks = useMemo(
     () => (searchMode ? filterBookmarks(bookmarks, deferredSearchQuery) : bookmarks),
     [searchMode, bookmarks, deferredSearchQuery]
   );
 
-  const refreshBookmarks = useCallback(async () => {
-    const next = await getBookmarks({
-      groupId: selectedGroupId,
-      sort: sortKey,
-      order: sortOrder,
-    });
-    setBookmarks(next);
-  }, [selectedGroupId, sortKey, sortOrder]);
+  const refreshGroups = useCallback(() => {
+    if (userId) queryClient.invalidateQueries({ queryKey: groupsKey(userId) });
+  }, [queryClient, userId]);
 
-  const [totalBookmarkCount, setTotalBookmarkCount] = useState(initialTotalBookmarkCount);
+  const refreshBookmarks = useCallback(() => {
+    if (userId)
+      queryClient.invalidateQueries({
+        queryKey: bookmarksKey(userId, selectedGroupId, sortKey, sortOrder),
+      });
+  }, [queryClient, userId, selectedGroupId, sortKey, sortOrder]);
 
-  const refreshGroups = useCallback(async () => {
-    const [nextGroups, total] = await Promise.all([getGroups(), getTotalBookmarkCount()]);
-    setGroups(nextGroups);
-    setTotalBookmarkCount(total);
-  }, []);
+  const handleBookmarksChange = useCallback(async () => {
+    if (userId) {
+      queryClient.invalidateQueries({ queryKey: groupsKey(userId) });
+      queryClient.invalidateQueries({
+        queryKey: ["bookmarks", userId],
+      });
+      queryClient.invalidateQueries({ queryKey: bookmarkCountKey(userId) });
+    }
+  }, [queryClient, userId]);
 
-  useEffect(() => {
-    refreshBookmarks();
-  }, [refreshBookmarks]);
+  const createBookmarkMutation = useMutation({
+    mutationFn: async ({
+      url,
+      options,
+    }: {
+      url: string;
+      options?: { groupId?: string | null; title?: string; description?: string };
+    }) => createBookmark(url, options),
+    onSettled: () => {
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: groupsKey(userId) });
+        queryClient.invalidateQueries({ queryKey: ["bookmarks", userId] });
+        queryClient.invalidateQueries({ queryKey: bookmarkCountKey(userId) });
+      }
+    },
+  });
 
-  useEffect(() => {
-    refreshGroups();
-  }, [refreshGroups]);
+  const createNoteMutation = useMutation({
+    mutationFn: async ({
+      content,
+      groupId,
+    }: {
+      content: string;
+      groupId?: string | null;
+    }) => createNote(content, groupId),
+    onSettled: () => {
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: groupsKey(userId) });
+        queryClient.invalidateQueries({ queryKey: ["bookmarks", userId] });
+        queryClient.invalidateQueries({ queryKey: bookmarkCountKey(userId) });
+      }
+    },
+  });
+
+  const createBookmarkFromMetadataMutation = useMutation({
+    mutationFn: async ({
+      url,
+      metadata,
+      groupId,
+    }: {
+      url: string;
+      metadata: {
+        title?: string | null;
+        description?: string | null;
+        faviconUrl?: string | null;
+        previewImageUrl?: string | null;
+      };
+      groupId?: string | null;
+    }) => createBookmarkFromMetadata(url, metadata, groupId),
+    onSettled: () => {
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: groupsKey(userId) });
+        queryClient.invalidateQueries({ queryKey: ["bookmarks", userId] });
+        queryClient.invalidateQueries({ queryKey: bookmarkCountKey(userId) });
+      }
+    },
+  });
 
   useEffect(() => {
     const groupInUrl = searchParams.get("group");
@@ -163,14 +252,27 @@ export function useBookmarkApp({
     if (raw.startsWith("http://") || raw.startsWith("https://")) {
       const optId = `${OPT_PREFIX}${Date.now()}`;
       const opt = makeOptimisticBookmark(optId, { url: raw, groupId: defaultGroupId }, groups);
-      setBookmarks((prev) => [opt, ...prev]);
+      queryClient.setQueryData(
+        userId ? bookmarksKey(userId, defaultGroupId, sortKey, sortOrder) : ["bookmarks", "anon"],
+        (old: BookmarkWithGroup[] | undefined) => [opt, ...(old ?? [])]
+      );
       try {
-        const b = await createBookmark(raw, { groupId: defaultGroupId });
-        setBookmarks((prev) => [b, ...prev.filter((x) => x.id !== optId && x.id !== b.id)]);
+        const b = await createBookmarkMutation.mutateAsync({
+          url: raw,
+          options: { groupId: defaultGroupId },
+        });
+        queryClient.setQueryData(
+          userId ? bookmarksKey(userId, defaultGroupId, sortKey, sortOrder) : ["bookmarks", "anon"],
+          (prev: BookmarkWithGroup[] | undefined) =>
+            prev ? [b, ...prev.filter((x) => x.id !== optId && x.id !== b.id)] : [b]
+        );
         refreshGroups();
         toast.success("Saved");
       } catch {
-        setBookmarks((prev) => prev.filter((x) => x.id !== optId));
+        queryClient.setQueryData(
+          userId ? bookmarksKey(userId, defaultGroupId, sortKey, sortOrder) : ["bookmarks", "anon"],
+          (prev: BookmarkWithGroup[] | undefined) => prev?.filter((x) => x.id !== optId) ?? []
+        );
         toast.error("Failed to save");
       }
       return;
@@ -181,30 +283,40 @@ export function useBookmarkApp({
       const optimistic = optIds.map((id, i) =>
         makeOptimisticBookmark(id, { url: urls[i], groupId: defaultGroupId }, groups)
       );
-      setBookmarks((prev) => [...optimistic, ...prev]);
+      queryClient.setQueryData(
+        userId ? bookmarksKey(userId, defaultGroupId, sortKey, sortOrder) : ["bookmarks", "anon"],
+        (old: BookmarkWithGroup[] | undefined) => [...optimistic, ...(old ?? [])]
+      );
       setIsSubmitting(true);
       const created: BookmarkWithGroup[] = [];
       let failed = 0;
       for (let i = 0; i < urls.length; i++) {
         try {
           const meta = await unfurlUrl(urls[i]);
-          const b = await createBookmarkFromMetadata(
-            urls[i],
-            {
+          const b = await createBookmarkFromMetadataMutation.mutateAsync({
+            url: urls[i],
+            metadata: {
               title: meta.title,
               description: meta.description,
               faviconUrl: meta.faviconUrl,
               previewImageUrl: meta.previewImageUrl,
             },
-            defaultGroupId
-          );
+            groupId: defaultGroupId,
+          });
           created.push(b);
-          setBookmarks((prev) =>
-            prev.filter((x) => x.id !== b.id || x.id === optIds[i]).map((x) => (x.id === optIds[i] ? b : x))
+          queryClient.setQueryData(
+            userId ? bookmarksKey(userId, defaultGroupId, sortKey, sortOrder) : ["bookmarks", "anon"],
+            (prev: BookmarkWithGroup[] | undefined) =>
+              prev
+                ? prev.filter((x) => x.id !== b.id || x.id === optIds[i]).map((x) => (x.id === optIds[i] ? b : x))
+                : [b]
           );
         } catch {
           failed++;
-          setBookmarks((prev) => prev.filter((x) => x.id !== optIds[i]));
+          queryClient.setQueryData(
+            userId ? bookmarksKey(userId, defaultGroupId, sortKey, sortOrder) : ["bookmarks", "anon"],
+            (prev: BookmarkWithGroup[] | undefined) => prev?.filter((x) => x.id !== optIds[i]) ?? []
+          );
         }
       }
       if (failed > 0) toast.error(failed === urls.length ? "Failed to save" : `${failed} of ${urls.length} failed`);
@@ -215,31 +327,52 @@ export function useBookmarkApp({
     }
     const optId = `${OPT_PREFIX}note-${Date.now()}`;
     const lines = raw.split(/\r?\n/);
-    const opt = makeOptimisticBookmark(optId, {
-      url: null,
-      title: lines[0]?.slice(0, 500) ?? "Note",
-      groupId: defaultGroupId,
-    }, groups);
+    const opt = makeOptimisticBookmark(
+      optId,
+      { url: null, title: lines[0]?.slice(0, 500) ?? "Note", groupId: defaultGroupId },
+      groups
+    );
     opt.description = raw;
-    setBookmarks((prev) => [opt, ...prev]);
+    queryClient.setQueryData(
+      userId ? bookmarksKey(userId, defaultGroupId, sortKey, sortOrder) : ["bookmarks", "anon"],
+      (old: BookmarkWithGroup[] | undefined) => [opt, ...(old ?? [])]
+    );
     setIsSubmitting(true);
     try {
-      const note = await createNote(raw, defaultGroupId);
-      setBookmarks((prev) => prev.map((x) => (x.id === optId ? note : x)));
+      const note = await createNoteMutation.mutateAsync({
+        content: raw,
+        groupId: defaultGroupId,
+      });
+      queryClient.setQueryData(
+        userId ? bookmarksKey(userId, defaultGroupId, sortKey, sortOrder) : ["bookmarks", "anon"],
+        (prev: BookmarkWithGroup[] | undefined) =>
+          prev ? prev.map((x) => (x.id === optId ? note : x)) : [note]
+      );
       toast.success("Note saved");
       refreshGroups();
     } catch {
-      setBookmarks((prev) => prev.filter((x) => x.id !== optId));
+      queryClient.setQueryData(
+        userId ? bookmarksKey(userId, defaultGroupId, sortKey, sortOrder) : ["bookmarks", "anon"],
+        (prev: BookmarkWithGroup[] | undefined) => prev?.filter((x) => x.id !== optId) ?? []
+      );
       toast.error("Failed to save");
     } finally {
       setIsSubmitting(false);
     }
-  }, [inputValue, selectedGroupId, groups, refreshGroups]);
-
-  const handleBookmarksChange = useCallback(async () => {
-    await refreshBookmarks();
-    await refreshGroups();
-  }, [refreshBookmarks, refreshGroups]);
+  }, [
+    inputValue,
+    searchMode,
+    selectedGroupId,
+    groups,
+    userId,
+    sortKey,
+    sortOrder,
+    queryClient,
+    createBookmarkMutation,
+    createNoteMutation,
+    createBookmarkFromMetadataMutation,
+    refreshGroups,
+  ]);
 
   const handleHeroPaste = useCallback(
     async (text: string, files: FileList | null) => {
@@ -265,22 +398,22 @@ export function useBookmarkApp({
           for (const url of urls) {
             try {
               const meta = await unfurlUrl(url);
-              const b = await createBookmarkFromMetadata(
+              const b = await createBookmarkFromMetadataMutation.mutateAsync({
                 url,
-                {
+                metadata: {
                   title: meta.title,
                   description: meta.description,
                   faviconUrl: meta.faviconUrl,
                   previewImageUrl: meta.previewImageUrl,
                 },
-                defaultGroupId
-              );
+                groupId: defaultGroupId,
+              });
               created.push(b);
             } catch {
             }
           }
           if (created.length) {
-            setBookmarks((prev) => [...created, ...prev]);
+            queryClient.invalidateQueries({ queryKey: userId ? ["bookmarks", userId] : ["bookmarks", "anon"] });
             refreshGroups();
             toast.success(created.length === 1 ? "Saved" : `${created.length} links saved`);
           } else {
@@ -297,7 +430,19 @@ export function useBookmarkApp({
         setInputValue((v) => (v ? v + "\n" + text : text));
       }
     },
-    [selectedGroupId, refreshGroups]
+    [selectedGroupId, userId, queryClient, createBookmarkFromMetadataMutation, refreshGroups]
+  );
+
+  const setBookmarks = useCallback(
+    (updater: (prev: BookmarkWithGroup[]) => BookmarkWithGroup[]) => {
+      if (userId) {
+        queryClient.setQueryData(
+          bookmarksKey(userId, selectedGroupId, sortKey, sortOrder),
+          (old: BookmarkWithGroup[] | undefined) => (old ? updater(old) : old)
+        );
+      }
+    },
+    [queryClient, userId, selectedGroupId, sortKey, sortOrder]
   );
 
   const clampedFocus =

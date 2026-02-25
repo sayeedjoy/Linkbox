@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath, unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { currentUserId } from "@/lib/auth";
 import type { Group } from "@/app/generated/prisma/client";
@@ -17,7 +18,11 @@ export async function getGroupsForUser(userId: string): Promise<GroupWithCount[]
 
 export async function getGroups(): Promise<GroupWithCount[]> {
   const userId = await currentUserId();
-  return getGroupsForUser(userId);
+  return unstable_cache(
+    () => getGroupsForUser(userId),
+    ["groups", userId],
+    { revalidate: 10, tags: ["groups"] }
+  )();
 }
 
 export async function createGroup(name: string, color?: string) {
@@ -36,6 +41,7 @@ export async function createGroup(name: string, color?: string) {
       order: maxOrder + 1,
     },
   });
+  revalidatePath("/");
   return group;
 }
 
@@ -48,6 +54,7 @@ export async function updateGroup(
     where: { id, userId },
     data,
   });
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -61,6 +68,7 @@ export async function reorderGroups(orderedIds: string[]) {
       })
     )
   );
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -71,5 +79,6 @@ export async function deleteGroup(id: string) {
     data: { groupId: null },
   });
   await prisma.group.deleteMany({ where: { id, userId } });
+  revalidatePath("/");
   return { ok: true };
 }
