@@ -1,73 +1,40 @@
-import {
-  dehydrate,
-  HydrationBoundary,
-  QueryClient,
-} from "@tanstack/react-query";
-import { getGroups } from "@/app/actions/groups";
-import { getBookmarks, getTotalBookmarkCount } from "@/app/actions/bookmarks";
-import { getAuthOptional } from "@/lib/auth";
-import { groupsKey, bookmarksKey, bookmarkCountKey } from "@/lib/query-keys";
-import { BookmarkApp } from "@/components/bookmark-app";
+import Link from "next/link";
 
-export default async function Page({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const params = await searchParams;
-  const groupParam = params?.group;
-  const groupId =
-    typeof groupParam === "string"
-      ? groupParam
-      : Array.isArray(groupParam)
-        ? groupParam[0]
-        : null;
-
-  const session = await getAuthOptional();
-  if (!session?.user?.id) {
-    return (
-      <BookmarkApp
-        initialBookmarks={[]}
-        initialGroups={[]}
-        initialSelectedGroupId={groupId}
-        initialTotalBookmarkCount={0}
-      />
-    );
-  }
-
-  const userId = session.user.id;
-  const sort: "createdAt" | "title" = "createdAt";
-  const order: "asc" | "desc" = "desc";
-  const queryClient = new QueryClient();
-
-  await Promise.all([
-    queryClient.prefetchQuery({
-      queryKey: groupsKey(userId),
-      queryFn: () => getGroups(),
-    }),
-    queryClient.prefetchQuery({
-      queryKey: bookmarksKey(userId, groupId ?? null, sort, order),
-      queryFn: () =>
-        getBookmarks({
-          groupId: groupId ?? null,
-          sort,
-          order,
-        }),
-    }),
-    queryClient.prefetchQuery({
-      queryKey: bookmarkCountKey(userId),
-      queryFn: () => getTotalBookmarkCount(),
-    }),
-  ]);
-
+export default function Page() {
   return (
-    <HydrationBoundary state={dehydrate(queryClient)}>
-      <BookmarkApp
-        initialBookmarks={[]}
-        initialGroups={[]}
-        initialSelectedGroupId={groupId}
-        initialTotalBookmarkCount={0}
-      />
-    </HydrationBoundary>
+    <main className="min-h-dvh bg-background">
+      <section className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col items-center justify-center px-6 py-16 text-center">
+        <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+          Linkbox
+        </p>
+        <h1 className="mt-3 text-balance text-4xl font-semibold tracking-tight sm:text-5xl">
+          Save and organize your web bookmarks
+        </h1>
+        <p className="mt-4 max-w-xl text-pretty text-base text-muted-foreground sm:text-lg">
+          The app has moved to your dashboard. Use the links below to sign in,
+          create an account, or open your workspace.
+        </p>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            href="/dashboard"
+            className="rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background"
+          >
+            Open dashboard
+          </Link>
+          <Link
+            href="/sign-in"
+            className="rounded-md border border-border px-4 py-2 text-sm font-medium"
+          >
+            Sign in
+          </Link>
+          <Link
+            href="/sign-up"
+            className="rounded-md border border-border px-4 py-2 text-sm font-medium"
+          >
+            Sign up
+          </Link>
+        </div>
+      </section>
+    </main>
   );
 }

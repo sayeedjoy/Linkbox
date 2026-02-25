@@ -55,14 +55,14 @@ export default function SignUpPage() {
         email,
         password,
         redirect: false,
-        callbackUrl: "/",
+        callbackUrl: "/dashboard",
       });
       if (res?.error) {
         setError("Account created. Please sign in.");
         setLoading(false);
         return;
       }
-      window.location.href = "/";
+      window.location.href = "/dashboard";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setLoading(false);
