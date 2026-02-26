@@ -18,7 +18,7 @@ export function Timeline({ bookmarks, onEdit, onRefresh, onDelete }: TimelinePro
   let globalIndex = 0;
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
+    <div className="w-full">
       {groups.map(({ label, items }) => (
         <section key={label} className="mb-8">
           <div

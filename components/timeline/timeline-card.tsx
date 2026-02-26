@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Star, MoreHorizontal, Pen, Copy, RefreshCw, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pen, Copy, RefreshCw, Trash2 } from "lucide-react";
 import type { Bookmark } from "./types";
 import { safeHostname } from "./utils";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -28,7 +28,6 @@ export function TimelineCard({
   onRefresh?: (id: string) => void;
   onDelete?: (id: string) => void;
 }) {
-  const [isFavorite, setIsFavorite] = useState(bookmark.isFavorite);
   const [faviconError, setFaviconError] = useState(false);
   const domain = safeHostname(bookmark.url);
   const faviconSrc = bookmark.favicon && !faviconError ? bookmark.favicon : null;
@@ -98,17 +97,6 @@ export function TimelineCard({
           </Badge>
         </div>
         <div className="flex shrink-0 items-center gap-0.5 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8"
-            onClick={() => setIsFavorite((f) => !f)}
-            aria-label={isFavorite ? "Unfavorite" : "Favorite"}
-          >
-            <Star
-              className={cn("size-4", isFavorite && "fill-yellow-500 text-yellow-500")}
-            />
-          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="size-8" aria-label="More options">

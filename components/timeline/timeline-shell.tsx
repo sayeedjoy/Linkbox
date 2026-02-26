@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { Timeline } from "./timeline";
 import { TimelineFilters } from "./timeline-filters";
 import { TimelineEditDialog } from "./timeline-edit-dialog";
+import { GroupDropdown } from "@/components/group-dropdown";
+import { UserMenu } from "@/components/user-menu";
 import { bookmarkWithGroupToTimeline } from "./types";
 import type { GroupWithCount } from "@/lib/types";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
@@ -56,7 +58,7 @@ export function TimelineShell({
 
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<TimelineSort>("date-desc");
-  const [categoryId, setCategoryId] = useState("all");
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const deferredSearch = useDeferredValue(search);
   const normalizedSearch = deferredSearch.trim().toLowerCase();
 
@@ -96,17 +98,15 @@ export function TimelineShell({
   );
 
   const bookmarks = useMemo(() => {
-    const categoryFiltered =
-      categoryId === "all"
+    const groupFiltered =
+      selectedGroupId === null
         ? preparedBookmarks
-        : categoryId === "uncategorized"
-          ? preparedBookmarks.filter((entry) => !entry.bookmark.groupId)
-          : preparedBookmarks.filter((entry) => entry.bookmark.groupId === categoryId);
+        : preparedBookmarks.filter((entry) => entry.bookmark.groupId === selectedGroupId);
 
     const filtered =
       normalizedSearch.length > 0
-        ? categoryFiltered.filter((entry) => entry.searchBlob.includes(normalizedSearch))
-        : categoryFiltered;
+        ? groupFiltered.filter((entry) => entry.searchBlob.includes(normalizedSearch))
+        : groupFiltered;
 
     const sorted = [...filtered].sort((a, b) => {
       if (sortBy === "name-asc") {
@@ -116,23 +116,12 @@ export function TimelineShell({
     });
 
     return sorted.map((entry) => bookmarkWithGroupToTimeline(entry.bookmark));
-  }, [categoryId, normalizedSearch, preparedBookmarks, sortBy]);
+  }, [normalizedSearch, preparedBookmarks, selectedGroupId, sortBy]);
   const groups = useMemo(
     () => groupsQuery.data ?? initialGroups,
     [groupsQuery.data, initialGroups]
   );
-  const categoryOptions = useMemo(
-    () => [
-      { value: "all", label: "All categories", color: "#6b7280" },
-      { value: "uncategorized", label: "Uncategorized", color: "#6b7280" },
-      ...groups.map((group) => ({
-        value: group.id,
-        label: group.name,
-        color: group.color ?? "#6b7280",
-      })),
-    ],
-    [groups]
-  );
+  const totalBookmarkCount = bookmarksRaw.length;
 
   useFocusRefetch(userId);
 
@@ -174,14 +163,23 @@ export function TimelineShell({
   );
 
   return (
-    <>
+      <>
+      <header className="mb-6">
+        <div className="flex items-center justify-between gap-2 sm:gap-4 px-4 py-3 sm:px-6 sm:py-4 max-w-4xl w-full mx-auto">
+          <GroupDropdown
+            groups={groups}
+            totalBookmarkCount={totalBookmarkCount}
+            selectedGroupId={selectedGroupId}
+            onSelectGroupId={setSelectedGroupId}
+            onGroupsChange={invalidateTimeline}
+          />
+          <UserMenu />
+        </div>
+      </header>
       <TimelineFilters
         className="mb-6"
         search={search}
         onSearchChange={setSearch}
-        categoryId={categoryId}
-        onCategoryChange={setCategoryId}
-        categoryOptions={categoryOptions}
         sortBy={sortBy}
         onSortChange={setSortBy}
       />
@@ -197,6 +195,7 @@ export function TimelineShell({
         open={!!editBookmarkId}
         onOpenChange={(open) => !open && setEditBookmarkId(null)}
         onSaved={invalidateTimeline}
+        onGroupsChange={invalidateTimeline}
       />
     </>
   );
