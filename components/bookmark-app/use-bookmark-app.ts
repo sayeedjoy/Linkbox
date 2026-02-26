@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useDeferredValue } from "react";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useQueryState } from "nuqs";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
@@ -27,16 +27,12 @@ export function useBookmarkApp({
   initialSelectedGroupId?: string | null;
   initialTotalBookmarkCount?: number;
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { data: session } = useSession();
   const userId = session?.user?.id ?? null;
 
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(
-    initialSelectedGroupId ?? null
-  );
+  const [groupParam, setGroupParam] = useQueryState("group");
+  const selectedGroupId = groupParam ?? null;
   const [searchQuery, setSearchQuery] = useState("");
   const [searchMode, setSearchMode] = useState(false);
   const [sortKey, setSortKey] = useState<"createdAt" | "title">("createdAt");
@@ -265,21 +261,16 @@ export function useBookmarkApp({
   );
 
   useEffect(() => {
-    const groupInUrl = searchParams.get("group");
-    if (groupInUrl != null && groupInUrl !== "") {
-      if (initialSelectedGroupId === null) router.replace("/");
-      return;
-    }
+    if (groupParam != null && groupParam !== "") return;
     try {
       const last = typeof window !== "undefined" ? localStorage.getItem(LAST_GROUP_KEY) : null;
-      if (last) router.replace(`/?group=${encodeURIComponent(last)}`);
+      if (last) setGroupParam(last);
     } catch {
     }
-  }, [searchParams, router, initialSelectedGroupId]);
+  }, [groupParam, setGroupParam]);
 
   const handleSelectGroupId = useCallback(
     (id: string | null) => {
-      setSelectedGroupId(id);
       try {
         if (typeof window !== "undefined") {
           if (id) localStorage.setItem(LAST_GROUP_KEY, id);
@@ -287,17 +278,9 @@ export function useBookmarkApp({
         }
       } catch {
       }
-      const params = new URLSearchParams(searchParams.toString());
-      if (id) {
-        params.set("group", id);
-      } else {
-        params.delete("group");
-      }
-      const query = params.toString();
-      const targetUrl = query ? `${pathname}?${query}` : pathname;
-      setTimeout(() => router.replace(targetUrl), 0);
+      setGroupParam(id);
     },
-    [router, pathname, searchParams]
+    [setGroupParam]
   );
 
   useEffect(() => {
