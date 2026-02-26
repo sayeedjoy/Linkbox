@@ -45,7 +45,7 @@ export function TimelineCard({
   return (
     <Card
       className={cn(
-        "group border bg-card text-card-foreground transition-colors hover:bg-muted/50",
+        "group border border-border/60 bg-card text-card-foreground shadow-none transition-colors hover:bg-muted/50",
         animationDelay !== undefined && "animate-in fade-in slide-in-from-bottom-2 duration-300 [animation-fill-mode:both]"
       )}
       style={
@@ -88,11 +88,16 @@ export function TimelineCard({
               {bookmark.description}
             </CardDescription>
           ) : null}
-          <Badge variant="secondary" className="w-fit text-xs">
+          <Badge variant="secondary" className="mt-1 w-fit gap-1.5 text-xs">
+            <span
+              className="size-2 rounded-full"
+              style={{ backgroundColor: bookmark.categoryColor ?? "#6b7280" }}
+              aria-hidden
+            />
             {bookmark.category}
           </Badge>
         </div>
-        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="flex shrink-0 items-center gap-0.5 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
           <Button
             variant="ghost"
             size="icon"

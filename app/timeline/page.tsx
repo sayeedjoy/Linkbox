@@ -9,6 +9,7 @@ import { getGroups } from "@/app/actions/groups";
 import { getAuthOptional } from "@/lib/auth";
 import { timelineBookmarksKey, groupsKey } from "@/lib/query-keys";
 import { TimelineShell } from "@/components/timeline";
+import { UserMenu } from "@/components/user-menu";
 
 export default async function TimelinePage() {
   const session = await getAuthOptional();
@@ -45,9 +46,10 @@ export default async function TimelinePage() {
     <HydrationBoundary state={dehydrate(queryClient)}>
       <main className="min-h-screen bg-background px-4 py-8">
         <div className="mx-auto max-w-2xl">
-          <h1 className="mb-8 text-2xl font-semibold text-foreground">
-            Bookmarks
-          </h1>
+          <header className="mb-8 flex items-center justify-between gap-3">
+            <h1 className="text-2xl font-semibold text-foreground">Bookmarks</h1>
+            <UserMenu />
+          </header>
           <TimelineShell
             initialBookmarks={initialBookmarks}
             initialGroups={initialGroups}

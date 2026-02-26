@@ -28,12 +28,18 @@ export function TimelineFilters({
   className,
   search,
   onSearchChange,
+  categoryId,
+  onCategoryChange,
+  categoryOptions,
   sortBy,
   onSortChange,
 }: {
   className?: string;
   search: string;
   onSearchChange: (value: string) => void;
+  categoryId: string;
+  onCategoryChange: (value: string) => void;
+  categoryOptions: Array<{ value: string; label: string; color: string }>;
   sortBy: TimelineSort;
   onSortChange: (value: TimelineSort) => void;
 }) {
@@ -76,11 +82,19 @@ export function TimelineFilters({
     },
     [onSortChange]
   );
+  const handleCategoryChange = useCallback(
+    (value: string) => {
+      onCategoryChange(value);
+    },
+    [onCategoryChange]
+  );
+  const selectedCategory =
+    categoryOptions.find((option) => option.value === categoryId) ?? categoryOptions[0];
 
   return (
     <div className={cn("flex flex-col gap-3", className)}>
       <div className="p-0">
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto] md:items-center">
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(160px,200px)_minmax(140px,180px)] md:items-center">
           <div className="flex min-w-0 items-center gap-1 rounded-md border bg-background px-1.5">
             <Button
               type="button"
@@ -153,6 +167,33 @@ export function TimelineFilters({
               </Button>
             ) : null}
           </div>
+
+          <Select value={categoryId} onValueChange={handleCategoryChange}>
+            <SelectTrigger className="w-full md:w-[180px]">
+              <SelectValue placeholder="Category">
+                <span className="flex min-w-0 items-center gap-2">
+                  <span
+                    className="size-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: selectedCategory?.color ?? "#6b7280" }}
+                  />
+                  <span className="truncate">{selectedCategory?.label ?? "Category"}</span>
+                </span>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {categoryOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  <span className="flex items-center gap-2">
+                    <span
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: option.color }}
+                    />
+                    <span>{option.label}</span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           <Select value={sortBy} onValueChange={handleSortChange}>
             <SelectTrigger className="w-full md:w-[160px]">

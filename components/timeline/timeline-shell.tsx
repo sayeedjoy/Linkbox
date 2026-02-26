@@ -56,6 +56,7 @@ export function TimelineShell({
 
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<TimelineSort>("date-desc");
+  const [categoryId, setCategoryId] = useState("all");
   const deferredSearch = useDeferredValue(search);
   const normalizedSearch = deferredSearch.trim().toLowerCase();
 
@@ -95,10 +96,17 @@ export function TimelineShell({
   );
 
   const bookmarks = useMemo(() => {
+    const categoryFiltered =
+      categoryId === "all"
+        ? preparedBookmarks
+        : categoryId === "uncategorized"
+          ? preparedBookmarks.filter((entry) => !entry.bookmark.groupId)
+          : preparedBookmarks.filter((entry) => entry.bookmark.groupId === categoryId);
+
     const filtered =
       normalizedSearch.length > 0
-        ? preparedBookmarks.filter((entry) => entry.searchBlob.includes(normalizedSearch))
-        : preparedBookmarks;
+        ? categoryFiltered.filter((entry) => entry.searchBlob.includes(normalizedSearch))
+        : categoryFiltered;
 
     const sorted = [...filtered].sort((a, b) => {
       if (sortBy === "name-asc") {
@@ -108,10 +116,22 @@ export function TimelineShell({
     });
 
     return sorted.map((entry) => bookmarkWithGroupToTimeline(entry.bookmark));
-  }, [normalizedSearch, preparedBookmarks, sortBy]);
+  }, [categoryId, normalizedSearch, preparedBookmarks, sortBy]);
   const groups = useMemo(
     () => groupsQuery.data ?? initialGroups,
     [groupsQuery.data, initialGroups]
+  );
+  const categoryOptions = useMemo(
+    () => [
+      { value: "all", label: "All categories", color: "#6b7280" },
+      { value: "uncategorized", label: "Uncategorized", color: "#6b7280" },
+      ...groups.map((group) => ({
+        value: group.id,
+        label: group.name,
+        color: group.color ?? "#6b7280",
+      })),
+    ],
+    [groups]
   );
 
   useFocusRefetch(userId);
@@ -159,6 +179,9 @@ export function TimelineShell({
         className="mb-6"
         search={search}
         onSearchChange={setSearch}
+        categoryId={categoryId}
+        onCategoryChange={setCategoryId}
+        categoryOptions={categoryOptions}
         sortBy={sortBy}
         onSortChange={setSortBy}
       />

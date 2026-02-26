@@ -7,6 +7,7 @@ export interface Bookmark {
   url: string | null;
   favicon: string;
   category: string;
+  categoryColor: string | null;
   groupId: string | null;
   createdAt: Date | string;
   isFavorite: boolean;
@@ -31,6 +32,7 @@ export function bookmarkWithGroupToTimeline(b: BookmarkWithGroup): Bookmark {
     url: b.url ?? null,
     favicon: getFaviconUrl(b),
     category: b.group?.name ?? "Uncategorized",
+    categoryColor: b.group?.color ?? null,
     groupId: b.groupId ?? null,
     createdAt: b.createdAt,
     isFavorite: false,

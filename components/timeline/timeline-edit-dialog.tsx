@@ -62,6 +62,10 @@ export function TimelineEditDialog({
     }
   };
 
+  const selectedGroup = groupId ? groups.find((g) => g.id === groupId) : null;
+  const selectedGroupLabel = selectedGroup?.name ?? "No group";
+  const selectedGroupColor = selectedGroup?.color ?? "#6b7280";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md" showCloseButton>
@@ -111,13 +115,35 @@ export function TimelineEditDialog({
               onValueChange={(v) => setGroupId(v === "none" ? null : v)}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="No group" />
+                <SelectValue placeholder="No group">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: selectedGroupColor }}
+                    />
+                    <span className="truncate">{selectedGroupLabel}</span>
+                  </span>
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">No group</SelectItem>
+                <SelectItem value="none">
+                  <span className="flex items-center gap-2">
+                    <span
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: "#6b7280" }}
+                    />
+                    <span>No group</span>
+                  </span>
+                </SelectItem>
                 {groups.map((g) => (
                   <SelectItem key={g.id} value={g.id}>
-                    {g.name}
+                    <span className="flex items-center gap-2">
+                      <span
+                        className="size-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: g.color ?? "#6b7280" }}
+                      />
+                      <span>{g.name}</span>
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>
