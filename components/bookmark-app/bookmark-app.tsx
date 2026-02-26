@@ -43,10 +43,6 @@ export function BookmarkApp({
     setInputValue,
     setSearchQuery,
     displayedBookmarks,
-    sortKey,
-    sortOrder,
-    setSortKey,
-    setSortOrder,
     handleHeroSubmit,
     handleHeroPaste,
     handleBookmarkUpdate,
@@ -59,7 +55,12 @@ export function BookmarkApp({
     isTransitionLoading,
     focusedIndex,
     setFocusedIndex,
-  } = useBookmarkApp({ initialBookmarks, initialGroups, initialSelectedGroupId, initialTotalBookmarkCount });
+  } = useBookmarkApp({
+    initialBookmarks,
+    initialGroups,
+    initialSelectedGroupId,
+    initialTotalBookmarkCount,
+  });
 
   useEffect(() => {
     if (displayedBookmarks.length > 0) {
@@ -94,12 +95,6 @@ export function BookmarkApp({
         <BookmarkList
           bookmarks={displayedBookmarks}
           groups={groups}
-          sortKey={sortKey}
-          sortOrder={sortOrder}
-          onSortChange={(key, order) => {
-            setSortKey(key);
-            setSortOrder(order);
-          }}
           onBookmarkUpdate={handleBookmarkUpdate}
           onBookmarkDelete={handleBookmarkDelete}
           onGroupsChange={refreshGroups}

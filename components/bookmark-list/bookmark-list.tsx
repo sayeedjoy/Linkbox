@@ -2,7 +2,7 @@
 
 import { useCallback, useState, useEffect, useRef } from "react";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
-import { BookmarkSortHeader } from "./bookmark-sort-header";
+import { BookmarkStatusHeader } from "./bookmark-status-header";
 import { BookmarkEditCard } from "./bookmark-edit-card";
 import { BookmarkRow } from "./bookmark-row";
 
@@ -17,9 +17,6 @@ type BookmarkListItem = BookmarkWithGroup & { _clientKey?: string };
 export function BookmarkList({
   bookmarks,
   groups,
-  sortKey,
-  sortOrder,
-  onSortChange,
   onGroupsChange,
   onBookmarkUpdate,
   onBookmarkDelete,
@@ -30,9 +27,6 @@ export function BookmarkList({
 }: {
   bookmarks: BookmarkListItem[];
   groups: { id: string; name: string; color: string | null }[];
-  sortKey: "createdAt" | "title";
-  sortOrder: "asc" | "desc";
-  onSortChange: (key: "createdAt" | "title", order: "asc" | "desc") => void;
   onGroupsChange?: () => void;
   onBookmarkUpdate?: (
     id: string,
@@ -108,11 +102,7 @@ export function BookmarkList({
       className="w-full min-w-0 overflow-hidden"
       onMouseLeave={() => onFocusChange?.(-1)}
     >
-      <BookmarkSortHeader
-        sortKey={sortKey}
-        sortOrder={sortOrder}
-        onSortChange={onSortChange}
-      />
+      <BookmarkStatusHeader />
       {isTransitionLoading && (
         <div className="hidden sm:flex justify-end px-4 pb-1 text-[11px] text-muted-foreground">
           Updating...

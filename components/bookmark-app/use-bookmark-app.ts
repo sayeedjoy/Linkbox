@@ -42,8 +42,8 @@ export function useBookmarkApp({
   const selectedGroupId = groupParam ?? null;
   const [searchQuery, setSearchQuery] = useState("");
   const [searchMode, setSearchMode] = useState(false);
-  const [sortKey, setSortKey] = useState<"createdAt" | "title">("createdAt");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const sortKey: "createdAt" = "createdAt";
+  const sortOrder: "desc" = "desc";
   const [inputValue, setInputValue] = useState("");
   const [previewBookmark, setPreviewBookmark] = useState<BookmarkWithGroup | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -61,7 +61,8 @@ export function useBookmarkApp({
   const groups = useMemo(() => groupsQuery.data ?? initialGroups, [groupsQuery.data, initialGroups]);
 
   const shouldUseInitialBookmarks =
-    initialBookmarks.length > 0 && selectedGroupId === initialSelectedGroupId;
+    initialBookmarks.length > 0 &&
+    selectedGroupId === initialSelectedGroupId;
   const bookmarksQuery = useQuery({
     queryKey: userId ? bookmarksKey(userId, selectedGroupId, sortKey, sortOrder) : ["bookmarks", "anon"],
     queryFn: () =>
@@ -379,15 +380,6 @@ export function useBookmarkApp({
     [adjustCount, adjustGroupCount, invalidateBookmarkCaches, queryClient, userId]
   );
 
-  useEffect(() => {
-    if (groupParam != null && groupParam !== "") return;
-    try {
-      const last = typeof window !== "undefined" ? localStorage.getItem(LAST_GROUP_KEY) : null;
-      if (last) setGroupParam(last);
-    } catch {
-    }
-  }, [groupParam, setGroupParam]);
-
   const handleSelectGroupId = useCallback(
     (id: string | null) => {
       try {
@@ -577,10 +569,6 @@ export function useBookmarkApp({
     setInputValue,
     setSearchQuery,
     displayedBookmarks,
-    sortKey,
-    sortOrder,
-    setSortKey,
-    setSortOrder,
     handleHeroSubmit,
     handleHeroPaste,
     handleBookmarkUpdate,

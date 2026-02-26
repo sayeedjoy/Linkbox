@@ -13,15 +13,17 @@ type DashboardHomeProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
+function firstParam(value: string | string[] | undefined): string | null {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value) && value.length > 0) return value[0] ?? null;
+  return null;
+}
+
 export async function DashboardHome({ searchParams }: DashboardHomeProps) {
   const params = await searchParams;
-  const groupParam = params?.group;
-  const groupId =
-    typeof groupParam === "string"
-      ? groupParam
-      : Array.isArray(groupParam)
-        ? groupParam[0]
-        : null;
+  const groupId = firstParam(params?.group);
+  const sort: "createdAt" = "createdAt";
+  const order: "desc" = "desc";
 
   const session = await getAuthOptional();
   if (!session?.user?.id) {
@@ -36,8 +38,6 @@ export async function DashboardHome({ searchParams }: DashboardHomeProps) {
   }
 
   const userId = session.user.id;
-  const sort: "createdAt" | "title" = "createdAt";
-  const order: "asc" | "desc" = "desc";
   const queryClient = new QueryClient();
 
   await Promise.all([
