@@ -14,7 +14,6 @@ import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
 import { refreshBookmark, deleteBookmark, getBookmarks } from "@/app/actions/bookmarks";
 import { getGroups } from "@/app/actions/groups";
 import { timelineBookmarksKey, groupsKey } from "@/lib/query-keys";
-import { useFocusRefetch } from "@/hooks/use-focus-refetch";
 
 type TimelineSort = "date-desc" | "name-asc";
 
@@ -71,6 +70,7 @@ export function TimelineShell({
     initialData: shouldUseInitialBookmarks ? initialBookmarks : undefined,
     initialDataUpdatedAt: shouldUseInitialBookmarks && mountedAt ? mountedAt : undefined,
     placeholderData: (previousData) => previousData,
+    refetchOnWindowFocus: false,
   });
 
   const groupsQuery = useQuery({
@@ -79,6 +79,7 @@ export function TimelineShell({
     enabled: !!userId,
     initialData: initialGroups.length > 0 ? initialGroups : undefined,
     initialDataUpdatedAt: initialGroups.length > 0 && mountedAt ? mountedAt : undefined,
+    refetchOnWindowFocus: false,
   });
 
   const bookmarksRaw = useMemo(
@@ -121,8 +122,6 @@ export function TimelineShell({
     [groupsQuery.data, initialGroups]
   );
   const totalBookmarkCount = bookmarksRaw.length;
-
-  useFocusRefetch(userId);
 
   const invalidateTimeline = useCallback(() => {
     if (!userId) return;

@@ -99,13 +99,6 @@ export function useBookmarkApp({
     [searchMode, bookmarks, deferredSearchQuery]
   );
 
-  const invalidateBookmarkCaches = useCallback(() => {
-    if (!userId) return;
-    queryClient.invalidateQueries({ queryKey: groupsKey(userId) });
-    queryClient.invalidateQueries({ queryKey: ["bookmarks", userId] });
-    queryClient.invalidateQueries({ queryKey: bookmarkCountKey(userId) });
-  }, [queryClient, userId]);
-
   const adjustCount = useCallback(
     (delta: number) => {
       if (!userId) return;
@@ -196,7 +189,6 @@ export function useBookmarkApp({
           prev?.map((x) => (x.id === context.optId ? { ...data, _clientKey: x._clientKey ?? context.optId } : x)) ?? [data]
       );
     },
-    onSettled: invalidateBookmarkCaches,
   });
 
   const createNoteMutation = useMutation({
@@ -240,7 +232,6 @@ export function useBookmarkApp({
           prev?.map((x) => (x.id === context.optId ? { ...data, _clientKey: x._clientKey ?? context.optId } : x)) ?? [data]
       );
     },
-    onSettled: invalidateBookmarkCaches,
   });
 
   const createBookmarkFromMetadataMutation = useMutation({
@@ -282,7 +273,6 @@ export function useBookmarkApp({
           prev?.map((x) => (x.id === context.optId ? { ...data, _clientKey: x._clientKey ?? context.optId } : x)) ?? [data]
       );
     },
-    onSettled: invalidateBookmarkCaches,
   });
 
   const handleBookmarkUpdate = useCallback(
@@ -337,7 +327,7 @@ export function useBookmarkApp({
         throw error;
       }
     },
-    [adjustGroupCount, groups, invalidateBookmarkCaches, queryClient, userId]
+    [adjustGroupCount, groups, queryClient, userId]
   );
 
   const handleBookmarkDelete = useCallback(
@@ -372,11 +362,9 @@ export function useBookmarkApp({
           queryClient.setQueryData(bookmarkCountKey(userId), previousCount);
         }
         throw error;
-      } finally {
-        invalidateBookmarkCaches();
       }
     },
-    [adjustCount, adjustGroupCount, invalidateBookmarkCaches, queryClient, userId]
+    [adjustCount, adjustGroupCount, queryClient, userId]
   );
 
   const handleBookmarkRefresh = useCallback(
@@ -384,13 +372,12 @@ export function useBookmarkApp({
       if (!userId) return;
       try {
         await refreshBookmark(id);
-        invalidateBookmarkCaches();
         toast.success("Bookmark refreshed");
       } catch {
         toast.error("Failed to refresh");
       }
     },
-    [invalidateBookmarkCaches, userId]
+    [userId]
   );
 
   const handleSelectGroupId = useCallback(
