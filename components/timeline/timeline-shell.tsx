@@ -11,7 +11,7 @@ import { ProfileHeader } from "@/components/profile-header";
 import { bookmarkWithGroupToTimeline } from "./types";
 import type { GroupWithCount } from "@/lib/types";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
-import { refreshBookmark, deleteBookmark, getBookmarks } from "@/app/actions/bookmarks";
+import { refreshBookmark, deleteBookmark, getBookmarks, createBookmark } from "@/app/actions/bookmarks";
 import { getGroups } from "@/app/actions/groups";
 import { timelineBookmarksKey, groupsKey } from "@/lib/query-keys";
 
@@ -57,6 +57,8 @@ export function TimelineShell({
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<TimelineSort>("date-desc");
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [inputValue, setInputValue] = useState("");
+  const [searchMode, setSearchMode] = useState(false);
   const deferredSearch = useDeferredValue(search);
   const normalizedSearch = deferredSearch.trim().toLowerCase();
 
@@ -160,6 +162,30 @@ export function TimelineShell({
     [invalidateTimeline]
   );
 
+  const handleHeroSubmit = useCallback(async () => {
+    if (searchMode) return;
+    const raw = inputValue.trim();
+    if (!raw) return;
+    setInputValue("");
+    try {
+      await createBookmark(raw);
+      invalidateTimeline();
+      toast.success("Bookmark added");
+    } catch {
+      toast.error("Failed to add bookmark");
+    }
+  }, [inputValue, searchMode, invalidateTimeline]);
+
+  const handleHeroPaste = useCallback(
+    async (text: string, files: FileList | null) => {
+      if (files?.length) return;
+      if (text?.trim()) {
+        setInputValue((v) => (v ? v + "\n" + text : text));
+      }
+    },
+    []
+  );
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <ProfileHeader
@@ -171,6 +197,12 @@ export function TimelineShell({
       />
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-4 sm:px-6 sm:py-6 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col gap-6">
         <TimelineFilters
+          inputValue={inputValue}
+          onInputChange={setInputValue}
+          onSubmit={handleHeroSubmit}
+          onPaste={handleHeroPaste}
+          searchMode={searchMode}
+          onSearchModeChange={setSearchMode}
           search={search}
           onSearchChange={setSearch}
           sortBy={sortBy}
