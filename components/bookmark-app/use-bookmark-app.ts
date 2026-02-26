@@ -334,8 +334,6 @@ export function useBookmarkApp({
         queryClient.setQueryData(groupsKey(userId), previousGroups);
         queryClient.setQueryData(bookmarkCountKey(userId), previousCount);
         throw error;
-      } finally {
-        invalidateBookmarkCaches();
       }
     },
     [adjustGroupCount, groups, invalidateBookmarkCaches, queryClient, userId]
