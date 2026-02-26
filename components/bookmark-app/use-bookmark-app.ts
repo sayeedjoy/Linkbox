@@ -12,7 +12,6 @@ import { getGroups } from "@/app/actions/groups";
 import { parseTextForUrls, parseImageForUrls, unfurlUrl } from "@/app/actions/parse";
 import { filterBookmarks, makeOptimisticBookmark } from "./utils";
 import { groupsKey, bookmarksKey, bookmarkCountKey } from "@/lib/query-keys";
-import { useFocusRefetch } from "@/hooks/use-focus-refetch";
 
 const OPT_PREFIX = "opt-";
 const LAST_GROUP_KEY = "bookmark-last-group";
@@ -58,6 +57,7 @@ export function useBookmarkApp({
     enabled: !!userId,
     initialData: initialGroups.length > 0 ? initialGroups : undefined,
     initialDataUpdatedAt: (initialGroups.length > 0 && mountedAt) ? mountedAt : undefined,
+    refetchOnWindowFocus: false,
   });
   const groups = useMemo(() => groupsQuery.data ?? initialGroups, [groupsQuery.data, initialGroups]);
 
@@ -76,6 +76,7 @@ export function useBookmarkApp({
     initialData: shouldUseInitialBookmarks ? initialBookmarks : undefined,
     initialDataUpdatedAt: (shouldUseInitialBookmarks && mountedAt) ? mountedAt : undefined,
     placeholderData: (previousData) => previousData,
+    refetchOnWindowFocus: false,
   });
   const bookmarks = useMemo(
     () => bookmarksQuery.data ?? (shouldUseInitialBookmarks ? initialBookmarks : []),
@@ -89,6 +90,7 @@ export function useBookmarkApp({
     enabled: !!userId,
     initialData: mountedAt ? initialTotalBookmarkCount : undefined,
     initialDataUpdatedAt: mountedAt || undefined,
+    refetchOnWindowFocus: false,
   });
   const totalBookmarkCount = countQuery.data ?? initialTotalBookmarkCount;
 
@@ -96,8 +98,6 @@ export function useBookmarkApp({
     () => (searchMode ? filterBookmarks(bookmarks, deferredSearchQuery) : bookmarks),
     [searchMode, bookmarks, deferredSearchQuery]
   );
-
-  useFocusRefetch(userId);
 
   const invalidateBookmarkCaches = useCallback(() => {
     if (!userId) return;
