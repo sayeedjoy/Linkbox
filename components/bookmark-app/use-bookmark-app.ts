@@ -58,6 +58,7 @@ export function useBookmarkApp({
     initialData: initialGroups.length > 0 ? initialGroups : undefined,
     initialDataUpdatedAt: (initialGroups.length > 0 && mountedAt) ? mountedAt : undefined,
     refetchOnWindowFocus: false,
+    refetchInterval: 3000,
   });
   const groups = useMemo(() => groupsQuery.data ?? initialGroups, [groupsQuery.data, initialGroups]);
 
@@ -77,12 +78,13 @@ export function useBookmarkApp({
     initialDataUpdatedAt: (shouldUseInitialBookmarks && mountedAt) ? mountedAt : undefined,
     placeholderData: (previousData) => previousData,
     refetchOnWindowFocus: false,
+    refetchInterval: 3000,
   });
   const bookmarks = useMemo(
     () => bookmarksQuery.data ?? (shouldUseInitialBookmarks ? initialBookmarks : []),
     [bookmarksQuery.data, initialBookmarks, shouldUseInitialBookmarks]
   );
-  const isTransitionLoading = bookmarksQuery.isFetching && bookmarksQuery.data !== undefined;
+  const isTransitionLoading = false;
 
   const countQuery = useQuery({
     queryKey: userId ? bookmarkCountKey(userId) : ["bookmark-count", "anon"],
@@ -91,6 +93,7 @@ export function useBookmarkApp({
     initialData: mountedAt ? initialTotalBookmarkCount : undefined,
     initialDataUpdatedAt: mountedAt || undefined,
     refetchOnWindowFocus: false,
+    refetchInterval: 3000,
   });
   const totalBookmarkCount = countQuery.data ?? initialTotalBookmarkCount;
 
