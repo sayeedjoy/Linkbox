@@ -44,7 +44,7 @@ export function TimelineCard({
   return (
     <Card
       className={cn(
-        "group border border-border/60 bg-card text-card-foreground shadow-none transition-colors hover:bg-muted/50",
+        "group transition-colors hover:bg-muted/50",
         animationDelay !== undefined && "animate-in fade-in slide-in-from-bottom-2 duration-300 [animation-fill-mode:both]"
       )}
       style={
