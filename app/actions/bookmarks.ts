@@ -12,6 +12,7 @@ export type BookmarkWithGroup = Bookmark & {
 
 function revalidateBookmarkData() {
   revalidatePath("/");
+  revalidatePath("/timeline");
   revalidateTag("bookmarks", "max");
   revalidateTag("bookmark-count", "max");
   revalidateTag("groups", "max");
@@ -247,4 +248,29 @@ export async function deleteBookmark(id: string) {
   await prisma.bookmark.deleteMany({ where: { id, userId } });
   revalidateBookmarkData();
   return { ok: true };
+}
+
+export async function refreshBookmark(id: string): Promise<BookmarkWithGroup | null> {
+  const userId = await currentUserId();
+  const bookmark = await prisma.bookmark.findFirst({
+    where: { id, userId },
+    include: { group: { select: { id: true, name: true, color: true } } },
+  });
+  if (!bookmark?.url?.trim()) return null;
+  const unfurled = await unfurlUrl(bookmark.url.trim());
+  await prisma.bookmark.update({
+    where: { id },
+    data: {
+      title: unfurled.title ?? bookmark.title,
+      description: unfurled.description ?? bookmark.description,
+      faviconUrl: unfurled.faviconUrl ?? bookmark.faviconUrl,
+      previewImageUrl: unfurled.previewImageUrl ?? bookmark.previewImageUrl,
+    },
+  });
+  revalidateBookmarkData();
+  const updated = await prisma.bookmark.findUnique({
+    where: { id },
+    include: { group: { select: { id: true, name: true, color: true } } },
+  });
+  return updated as BookmarkWithGroup;
 }

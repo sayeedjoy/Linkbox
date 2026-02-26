@@ -14,3 +14,9 @@ export function bookmarksKey(
 export function bookmarkCountKey(userId: string) {
   return ["bookmark-count", userId] as const;
 }
+
+export function timelineBookmarksKey(
+  userId: string
+) {
+  return ["bookmarks", userId, "timeline"] as const;
+}
