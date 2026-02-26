@@ -60,13 +60,17 @@ export async function DashboardHome({ searchParams }: DashboardHomeProps) {
     }),
   ]);
 
+  const initialGroups = queryClient.getQueryData<Awaited<ReturnType<typeof getGroups>>>(groupsKey(userId)) ?? [];
+  const initialBookmarks = queryClient.getQueryData<Awaited<ReturnType<typeof getBookmarks>>>(bookmarksKey(userId, groupId ?? null, sort, order)) ?? [];
+  const initialTotalBookmarkCount = queryClient.getQueryData<number>(bookmarkCountKey(userId)) ?? 0;
+
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <BookmarkApp
-        initialBookmarks={[]}
-        initialGroups={[]}
+        initialBookmarks={initialBookmarks}
+        initialGroups={initialGroups}
         initialSelectedGroupId={groupId}
-        initialTotalBookmarkCount={0}
+        initialTotalBookmarkCount={initialTotalBookmarkCount}
       />
     </HydrationBoundary>
   );

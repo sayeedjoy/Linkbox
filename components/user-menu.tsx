@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useSession, signOut } from "next-auth/react";
 import {
   DropdownMenu,
@@ -10,16 +11,32 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Key, Settings, LogOut } from "lucide-react";
-import { useCallback, useState } from "react";
-import { SettingsModal } from "@/components/settings-modal";
-import { GenerateApiTokenModal } from "@/components/generate-api-token-modal";
+import { useCallback, useEffect, useState } from "react";
+
+const SettingsModal = dynamic(
+  () => import("@/components/settings-modal").then((m) => ({ default: m.SettingsModal })),
+  { ssr: false, loading: () => null }
+);
+
+const GenerateApiTokenModal = dynamic(
+  () => import("@/components/generate-api-token-modal").then((m) => ({ default: m.GenerateApiTokenModal })),
+  { ssr: false, loading: () => null }
+);
 
 export function UserMenu() {
   const { data: session, status } = useSession();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [apiTokenModalOpen, setApiTokenModalOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const openSettings = useCallback(() => setSettingsOpen(true), []);
   const openApiTokenModal = useCallback(() => setApiTokenModalOpen(true), []);
+
+  useEffect(() => {
+    if (menuOpen) {
+      import("@/components/settings-modal");
+      import("@/components/generate-api-token-modal");
+    }
+  }, [menuOpen]);
 
   if (status !== "authenticated" || !session?.user) return null;
 
@@ -29,7 +46,7 @@ export function UserMenu() {
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="rounded-full">
             {(user.image || avatarId) ? (

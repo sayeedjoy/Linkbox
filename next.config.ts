@@ -2,7 +2,13 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  allowedDevOrigins: ["*.trycloudflare.com"],
+  skipTrailingSlashRedirect: true,
   cacheComponents: true,
+  serverExternalPackages: ["bcryptjs", "pg", "@prisma/client"],
+  experimental: {
+    optimizePackageImports: ["lucide-react"],
+  },
   turbopack: {
     resolveAlias: {
       "node:buffer": "buffer",

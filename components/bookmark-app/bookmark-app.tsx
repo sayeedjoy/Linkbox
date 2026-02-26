@@ -1,14 +1,24 @@
 "use client";
 
+import dynamic from "next/dynamic";
+import { useEffect } from "react";
 import { GroupDropdown } from "@/components/group-dropdown";
 import { UserMenu } from "@/components/user-menu";
 import { BookmarkHeroInput } from "@/components/bookmark-hero-input";
 import { BookmarkList } from "@/components/bookmark-list";
-import { PreviewDialog } from "./preview-dialog";
-import { ShortcutsDialog } from "./shortcuts-dialog";
 import { useBookmarkApp } from "./use-bookmark-app";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
 import type { GroupWithCount } from "@/lib/types";
+
+const PreviewDialog = dynamic(
+  () => import("./preview-dialog").then((m) => ({ default: m.PreviewDialog })),
+  { ssr: false, loading: () => null }
+);
+
+const ShortcutsDialog = dynamic(
+  () => import("./shortcuts-dialog").then((m) => ({ default: m.ShortcutsDialog })),
+  { ssr: false, loading: () => null }
+);
 
 export function BookmarkApp({
   initialBookmarks,
@@ -46,9 +56,17 @@ export function BookmarkApp({
     showShortcuts,
     setShowShortcuts,
     isSubmitting,
+    isTransitionLoading,
     focusedIndex,
     setFocusedIndex,
   } = useBookmarkApp({ initialBookmarks, initialGroups, initialSelectedGroupId, initialTotalBookmarkCount });
+
+  useEffect(() => {
+    if (displayedBookmarks.length > 0) {
+      import("./preview-dialog");
+      import("./shortcuts-dialog");
+    }
+  }, [displayedBookmarks.length]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -85,6 +103,7 @@ export function BookmarkApp({
           onBookmarkUpdate={handleBookmarkUpdate}
           onBookmarkDelete={handleBookmarkDelete}
           onGroupsChange={refreshGroups}
+          isTransitionLoading={isTransitionLoading}
           focusedIndex={focusedIndex}
           onFocusChange={setFocusedIndex}
         />

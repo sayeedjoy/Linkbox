@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -10,15 +11,27 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, Plus, List, Pencil, Trash2, Check } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { DragEndEvent } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import { createGroup, reorderGroups, updateGroup, deleteGroup } from "@/app/actions/groups";
 import type { GroupWithCount } from "@/lib/types";
 import { GROUP_COLORS } from "./group-form-dialog";
-import { GroupFormDialog } from "./group-form-dialog";
-import { GroupReorderDialog } from "./group-reorder-dialog";
-import { GroupDeleteDialog } from "./group-delete-dialog";
+
+const GroupFormDialog = dynamic(
+  () => import("./group-form-dialog").then((m) => ({ default: m.GroupFormDialog })),
+  { ssr: false, loading: () => null }
+);
+
+const GroupReorderDialog = dynamic(
+  () => import("./group-reorder-dialog").then((m) => ({ default: m.GroupReorderDialog })),
+  { ssr: false, loading: () => null }
+);
+
+const GroupDeleteDialog = dynamic(
+  () => import("./group-delete-dialog").then((m) => ({ default: m.GroupDeleteDialog })),
+  { ssr: false, loading: () => null }
+);
 
 export function GroupDropdown({
   groups,
@@ -42,6 +55,14 @@ export function GroupDropdown({
   const [deleteTarget, setDeleteTarget] = useState<GroupWithCount | null>(null);
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(GROUP_COLORS[0]);
+
+  useEffect(() => {
+    if (dropdownOpen) {
+      import("./group-form-dialog");
+      import("./group-reorder-dialog");
+      import("./group-delete-dialog");
+    }
+  }, [dropdownOpen]);
 
   const handleReorderEnd = useCallback(
     async (event: DragEndEvent) => {

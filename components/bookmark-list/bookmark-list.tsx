@@ -23,6 +23,7 @@ export function BookmarkList({
   onGroupsChange,
   onBookmarkUpdate,
   onBookmarkDelete,
+  isTransitionLoading,
   focusedIndex,
   onFocusChange,
   openEditId,
@@ -40,6 +41,7 @@ export function BookmarkList({
     >,
   ) => Promise<void> | void;
   onBookmarkDelete?: (id: string) => Promise<void> | void;
+  isTransitionLoading?: boolean;
   focusedIndex?: number;
   onFocusChange?: (index: number) => void;
   openEditId?: string | null;
@@ -111,6 +113,11 @@ export function BookmarkList({
         sortOrder={sortOrder}
         onSortChange={onSortChange}
       />
+      {isTransitionLoading && (
+        <div className="hidden sm:flex justify-end px-4 pb-1 text-[11px] text-muted-foreground">
+          Updating...
+        </div>
+      )}
       <ul
         className="min-w-0 space-y-3 sm:space-y-0"
         onMouseMove={(e) => {

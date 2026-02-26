@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { forwardRef, useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import {
@@ -12,9 +13,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Plus } from "lucide-react";
 import { createGroup } from "@/app/actions/groups";
-import { GroupFormDialog, GROUP_COLORS } from "@/components/group-dropdown/group-form-dialog";
+import { GROUP_COLORS } from "@/components/group-dropdown/group-form-dialog";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
 import { safeHostname } from "./utils";
+
+const GroupFormDialog = dynamic(
+  () => import("@/components/group-dropdown/group-form-dialog").then((m) => ({ default: m.GroupFormDialog })),
+  { ssr: false, loading: () => null }
+);
 
 type EditForm = {
   title: string;
