@@ -46,6 +46,7 @@ export function BookmarkApp({
     handleHeroPaste,
     handleBookmarkUpdate,
     handleBookmarkDelete,
+    handleBookmarkRefresh,
     previewBookmark,
     setPreviewBookmark,
     showShortcuts,
@@ -91,6 +92,7 @@ export function BookmarkApp({
           groups={groups}
           onBookmarkUpdate={handleBookmarkUpdate}
           onBookmarkDelete={handleBookmarkDelete}
+          onBookmarkRefresh={handleBookmarkRefresh}
           onGroupsChange={refreshGroups}
           isTransitionLoading={isTransitionLoading}
           focusedIndex={focusedIndex}

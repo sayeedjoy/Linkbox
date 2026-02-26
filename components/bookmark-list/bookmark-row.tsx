@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, useState, useRef, useEffect } from "react";
-import { GripVertical, Pen, Copy, ArrowUpRight, Trash2, Check } from "lucide-react";
+import { GripVertical, Pen, Copy, ArrowUpRight, Trash2, Check, RefreshCw } from "lucide-react";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
 import { formatDate, safeHostname } from "./utils";
 
@@ -12,7 +12,8 @@ export const BookmarkRow = forwardRef<HTMLLIElement, {
   isFocused?: boolean;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
-}>(({ bookmark, isFocused = false, onEdit, onDelete }, ref) => {
+  onRefresh?: (id: string) => void;
+}>(({ bookmark, isFocused = false, onEdit, onDelete, onRefresh }, ref) => {
   const [copied, setCopied] = useState(false);
   const imageToken = `${bookmark.id}:${bookmark.faviconUrl ?? ""}:${bookmark.url ?? ""}`;
   const [imageState, setImageState] = useState<{ token: string; broken: string | null }>({
@@ -156,6 +157,17 @@ export const BookmarkRow = forwardRef<HTMLLIElement, {
             >
               <ArrowUpRight className="size-4" />
             </a>
+          ) : null}
+
+          {bookmark.url ? (
+            <button
+              type="button"
+              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              onClick={() => onRefresh?.(bookmark.id)}
+              aria-label="Refresh"
+            >
+              <RefreshCw className="size-4" />
+            </button>
           ) : null}
 
           <button

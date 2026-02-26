@@ -4,9 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState, useDeferredValue } f
 import { useQueryState } from "nuqs";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
 import type { GroupWithCount } from "@/lib/types";
-import { getBookmarks, getTotalBookmarkCount, createBookmark, createNote, createBookmarkFromMetadata, updateBookmark, deleteBookmark } from "@/app/actions/bookmarks";
+import { getBookmarks, getTotalBookmarkCount, createBookmark, createNote, createBookmarkFromMetadata, updateBookmark, deleteBookmark, refreshBookmark } from "@/app/actions/bookmarks";
 import { getGroups } from "@/app/actions/groups";
 import { parseTextForUrls, parseImageForUrls, unfurlUrl } from "@/app/actions/parse";
 import { filterBookmarks, makeOptimisticBookmark } from "./utils";
@@ -378,6 +379,20 @@ export function useBookmarkApp({
     [adjustCount, adjustGroupCount, invalidateBookmarkCaches, queryClient, userId]
   );
 
+  const handleBookmarkRefresh = useCallback(
+    async (id: string) => {
+      if (!userId) return;
+      try {
+        await refreshBookmark(id);
+        invalidateBookmarkCaches();
+        toast.success("Bookmark refreshed");
+      } catch {
+        toast.error("Failed to refresh");
+      }
+    },
+    [invalidateBookmarkCaches, userId]
+  );
+
   const handleSelectGroupId = useCallback(
     (id: string | null) => {
       try {
@@ -571,6 +586,7 @@ export function useBookmarkApp({
     handleHeroPaste,
     handleBookmarkUpdate,
     handleBookmarkDelete,
+    handleBookmarkRefresh,
     previewBookmark,
     setPreviewBookmark,
     showShortcuts,

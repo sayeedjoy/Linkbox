@@ -20,6 +20,7 @@ export function BookmarkList({
   onGroupsChange,
   onBookmarkUpdate,
   onBookmarkDelete,
+  onBookmarkRefresh,
   isTransitionLoading,
   focusedIndex,
   onFocusChange,
@@ -35,6 +36,7 @@ export function BookmarkList({
     >,
   ) => Promise<void> | void;
   onBookmarkDelete?: (id: string) => Promise<void> | void;
+  onBookmarkRefresh?: (id: string) => Promise<void> | void;
   isTransitionLoading?: boolean;
   focusedIndex?: number;
   onFocusChange?: (index: number) => void;
@@ -76,6 +78,17 @@ export function BookmarkList({
       }
     },
     [onBookmarkDelete],
+  );
+
+  const handleRefresh = useCallback(
+    async (id: string) => {
+      if (!onBookmarkRefresh) return;
+      try {
+        await onBookmarkRefresh(id);
+      } catch {
+      }
+    },
+    [onBookmarkRefresh],
   );
 
   const handleSaveEdit = useCallback(async () => {
@@ -136,6 +149,7 @@ export function BookmarkList({
               isFocused={focusedIndex === index}
               onEdit={setEditingId}
               onDelete={handleDelete}
+              onRefresh={handleRefresh}
             />
           )
         )}
