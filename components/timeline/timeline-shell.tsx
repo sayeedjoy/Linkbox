@@ -7,8 +7,7 @@ import { toast } from "sonner";
 import { Timeline } from "./timeline";
 import { TimelineFilters } from "./timeline-filters";
 import { TimelineEditDialog } from "./timeline-edit-dialog";
-import { GroupDropdown } from "@/components/group-dropdown";
-import { UserMenu } from "@/components/user-menu";
+import { ProfileHeader } from "@/components/profile-header";
 import { bookmarkWithGroupToTimeline } from "./types";
 import type { GroupWithCount } from "@/lib/types";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
@@ -163,32 +162,28 @@ export function TimelineShell({
   );
 
   return (
-      <>
-      <header className="mb-6">
-        <div className="flex items-center justify-between gap-2 sm:gap-4 px-4 py-3 sm:px-6 sm:py-4 max-w-4xl w-full mx-auto">
-          <GroupDropdown
-            groups={groups}
-            totalBookmarkCount={totalBookmarkCount}
-            selectedGroupId={selectedGroupId}
-            onSelectGroupId={setSelectedGroupId}
-            onGroupsChange={invalidateTimeline}
-          />
-          <UserMenu />
-        </div>
-      </header>
-      <TimelineFilters
-        className="mb-6"
-        search={search}
-        onSearchChange={setSearch}
-        sortBy={sortBy}
-        onSortChange={setSortBy}
+    <div className="min-h-screen flex flex-col bg-background">
+      <ProfileHeader
+        groups={groups}
+        totalBookmarkCount={totalBookmarkCount}
+        selectedGroupId={selectedGroupId}
+        onSelectGroupId={setSelectedGroupId}
+        onGroupsChange={invalidateTimeline}
       />
-      <Timeline
-        bookmarks={bookmarks}
-        onEdit={setEditBookmarkId}
-        onRefresh={handleRefresh}
-        onDelete={handleDelete}
-      />
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-4 sm:px-6 sm:py-6 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col gap-6">
+        <TimelineFilters
+          search={search}
+          onSearchChange={setSearch}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
+        />
+        <Timeline
+          bookmarks={bookmarks}
+          onEdit={setEditBookmarkId}
+          onRefresh={handleRefresh}
+          onDelete={handleDelete}
+        />
+      </main>
       <TimelineEditDialog
         bookmark={editBookmark}
         groups={groups}
@@ -197,6 +192,6 @@ export function TimelineShell({
         onSaved={invalidateTimeline}
         onGroupsChange={invalidateTimeline}
       />
-    </>
+    </div>
   );
 }

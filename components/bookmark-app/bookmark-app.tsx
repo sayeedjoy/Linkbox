@@ -2,8 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect } from "react";
-import { GroupDropdown } from "@/components/group-dropdown";
-import { UserMenu } from "@/components/user-menu";
+import { ProfileHeader } from "@/components/profile-header";
 import { BookmarkHeroInput } from "@/components/bookmark-hero-input";
 import { BookmarkList } from "@/components/bookmark-list";
 import { useBookmarkApp } from "./use-bookmark-app";
@@ -71,18 +70,13 @@ export function BookmarkApp({
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <header>
-        <div className="flex items-center justify-between gap-2 sm:gap-4 px-4 py-3 sm:px-6 sm:py-4 max-w-4xl w-full mx-auto">
-          <GroupDropdown
-            groups={groups}
-            totalBookmarkCount={totalBookmarkCount}
-            selectedGroupId={selectedGroupId}
-            onSelectGroupId={handleSelectGroupId}
-            onGroupsChange={refreshGroups}
-          />
-          <UserMenu />
-        </div>
-      </header>
+      <ProfileHeader
+        groups={groups}
+        totalBookmarkCount={totalBookmarkCount}
+        selectedGroupId={selectedGroupId}
+        onSelectGroupId={handleSelectGroupId}
+        onGroupsChange={refreshGroups}
+      />
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-4 sm:px-6 sm:py-6 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col gap-6">
         <BookmarkHeroInput
           value={searchMode ? searchQuery : inputValue}

@@ -43,14 +43,10 @@ export default async function TimelinePage() {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <main className="min-h-screen bg-background px-4">
-        <div className="mx-auto w-full max-w-4xl">
-          <TimelineShell
-            initialBookmarks={initialBookmarks}
-            initialGroups={initialGroups}
-          />
-        </div>
-      </main>
+      <TimelineShell
+        initialBookmarks={initialBookmarks}
+        initialGroups={initialGroups}
+      />
     </HydrationBoundary>
   );
 }
