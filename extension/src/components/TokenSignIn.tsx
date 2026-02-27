@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import { Link2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { setToken } from '@/popup/lib/messaging'
-import { WEB_APP_URL } from '@/lib/constants'
+import { WEB_APP_URL, LOGO_URL } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 
 interface TokenSignInProps {
@@ -36,11 +35,11 @@ export default function TokenSignIn({ onSuccess, className }: TokenSignInProps) 
 
   return (
     <div className={cn('flex flex-col items-center justify-center gap-5 p-6 min-h-[250px]', className)}>
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-        <Link2 className="h-6 w-6" />
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full overflow-hidden bg-primary">
+        <img src={LOGO_URL} alt="" className="h-7 w-7 object-contain" />
       </div>
       <div className="text-center space-y-1">
-        <h1 className="text-lg font-semibold text-foreground">LinkBox</h1>
+        <h1 className="text-lg font-semibold text-foreground">Bookmark</h1>
         <p className="text-sm text-muted-foreground">Welcome, Sign in below.</p>
       </div>
       <form onSubmit={handleSubmit} className="w-full space-y-3 max-w-[280px]">
@@ -64,7 +63,7 @@ export default function TokenSignIn({ onSuccess, className }: TokenSignInProps) 
         rel="noopener noreferrer"
         className="text-xs text-muted-foreground hover:text-foreground transition-colors"
       >
-        Open LinkBox web app to get a token
+        Open Bookmark web app to get a token
       </a>
     </div>
   )

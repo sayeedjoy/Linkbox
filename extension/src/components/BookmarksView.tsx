@@ -1,5 +1,6 @@
 import { startTransition, useState, useEffect, useMemo, useCallback } from 'react'
-import { Copy, Link2, MoreVertical, Plus, RefreshCw, Search, Tags, Trash2 } from 'lucide-react'
+import { Copy, MoreVertical, Plus, RefreshCw, Search, Tags, Trash2 } from 'lucide-react'
+import { LOGO_URL } from '@/lib/constants'
 import { formatDate } from '@/lib/date'
 import { getBookmarksAndGroups, saveBookmark, deleteBookmark, refreshBookmarks, updateBookmarkCategory } from '@/popup/lib/messaging'
 import type { ExportBookmark, Group } from '@/types/data'
@@ -243,11 +244,11 @@ export default function BookmarksView({ onSignOut }: { onSignOut: () => void }) 
       <header className="shrink-0 px-3 py-2 space-y-0.5">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <Link2 className="h-4 w-4" />
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md overflow-hidden">
+              <img src={LOGO_URL} alt="" className="h-5 w-5 object-contain" />
             </div>
             <div className="min-w-0">
-              <p className="font-semibold text-foreground truncate text-sm">LinkBox</p>
+              <p className="font-semibold text-foreground truncate text-sm">Bookmark</p>
               <p className="text-xs text-muted-foreground">
                 {formatDate()}
                 {syncInProgress ? ' • Syncing…' : ''}
