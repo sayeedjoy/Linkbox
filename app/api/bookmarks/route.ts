@@ -1,12 +1,45 @@
 import { NextResponse } from "next/server";
 import { userIdFromBearerToken } from "@/lib/api-auth";
 import { createBookmarkFromMetadataForUser } from "@/app/actions/bookmarks";
+import { prisma } from "@/lib/prisma";
 
 function corsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get("Origin");
   if (origin?.startsWith("chrome-extension://"))
     return { "Access-Control-Allow-Origin": origin };
   return {};
+}
+
+export async function PUT(request: Request) {
+  const userId = await userIdFromBearerToken(request.headers.get("Authorization"));
+  if (!userId)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders(request) });
+  let body: { url?: string; title?: string; description?: string; groupId?: string | null; faviconUrl?: string | null };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400, headers: corsHeaders(request) });
+  }
+  const url = typeof body.url === "string" ? body.url.trim() : "";
+  if (!url || !url.startsWith("http"))
+    return NextResponse.json({ error: "Invalid URL" }, { status: 400, headers: corsHeaders(request) });
+  const existing = await prisma.bookmark.findFirst({
+    where: { url, userId },
+    include: { group: { select: { id: true, name: true, color: true } } },
+  });
+  if (!existing)
+    return NextResponse.json({ error: "Bookmark not found" }, { status: 404, headers: corsHeaders(request) });
+  const updateData: { title?: string; description?: string; groupId?: string | null; faviconUrl?: string | null } = {};
+  if (body.title !== undefined) updateData.title = typeof body.title === "string" ? body.title : null;
+  if (body.description !== undefined) updateData.description = typeof body.description === "string" ? body.description : null;
+  if (body.groupId !== undefined) updateData.groupId = body.groupId === null || body.groupId === undefined ? null : (typeof body.groupId === "string" ? body.groupId : null);
+  if (body.faviconUrl !== undefined) updateData.faviconUrl = body.faviconUrl === null || body.faviconUrl === undefined ? null : (typeof body.faviconUrl === "string" && body.faviconUrl.trim().startsWith("http") ? body.faviconUrl.trim() : null);
+  const updated = await prisma.bookmark.update({
+    where: { id: existing.id },
+    data: updateData,
+    include: { group: { select: { id: true, name: true, color: true } } },
+  });
+  return NextResponse.json(updated, { status: 200, headers: corsHeaders(request) });
 }
 
 export async function POST(request: Request) {
@@ -41,7 +74,7 @@ export async function POST(request: Request) {
 }
 
 export async function OPTIONS(request: Request) {
-  const headers: Record<string, string> = { "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Authorization, Content-Type", "Access-Control-Max-Age": "86400" };
+  const headers: Record<string, string> = { "Access-Control-Allow-Methods": "POST, PUT, OPTIONS", "Access-Control-Allow-Headers": "Authorization, Content-Type", "Access-Control-Max-Age": "86400" };
   const origin = request.headers.get("Origin");
   if (origin?.startsWith("chrome-extension://")) headers["Access-Control-Allow-Origin"] = origin;
   return new NextResponse(null, { status: 204, headers });
