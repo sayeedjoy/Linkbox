@@ -38,11 +38,13 @@ export default function BookmarksView({ onSignOut }: { onSignOut: () => void }) 
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [syncInProgress, setSyncInProgress] = useState(false)
 
   const applyData = useCallback((data: GetBookmarksAndGroupsResponse) => {
     startTransition(() => {
       setBookmarks(data.bookmarks)
       setGroups(data.groups)
+      setSyncInProgress(Boolean(data.syncInProgress))
     })
   }, [])
 
@@ -59,7 +61,9 @@ export default function BookmarksView({ onSignOut }: { onSignOut: () => void }) 
   }, [applyData, onSignOut])
 
   useEffect(() => {
-    load()
+    queueMicrotask(() => {
+      void load()
+    })
   }, [load])
 
   useEffect(() => {
@@ -235,7 +239,10 @@ export default function BookmarksView({ onSignOut }: { onSignOut: () => void }) 
             </div>
             <div className="min-w-0">
               <p className="font-semibold text-foreground truncate text-sm">LinkBox</p>
-              <p className="text-xs text-muted-foreground">{formatDate()}</p>
+              <p className="text-xs text-muted-foreground">
+                {formatDate()}
+                {syncInProgress ? ' • Syncing…' : ''}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-0.5 shrink-0">

@@ -40,7 +40,7 @@ model ApiToken {
   userId      String
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   name        String
-  tokenHash   String
+  tokenHash   String    @unique
   tokenPrefix String?
   tokenSuffix String?
   lastUsedAt  DateTime?

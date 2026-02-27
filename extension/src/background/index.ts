@@ -11,9 +11,34 @@ import type {
 import { API_BASE_URL, BOOKMARKS_CACHE_TTL_MS, GROUPS_CACHE_TTL_MS, STORAGE_KEYS } from '../lib/constants'
 
 type FetchListResult<T> = { data: T; unauthorized: boolean }
+type FetchAllResult = {
+  bookmarks: ExportBookmark[]
+  groups: Group[]
+  unauthorized: boolean
+  syncInProgress?: boolean
+}
+type SyncApiPayload = {
+  bookmarks?: ExportBookmark[]
+  groups?: Group[]
+  partial?: boolean
+  hasMore?: boolean
+  nextCursor?: string | null
+}
+type SyncFetchResult = {
+  bookmarks: ExportBookmark[]
+  groups: Group[]
+  hasMore: boolean
+  nextCursor: string | null
+  unauthorized: boolean
+}
+
+const INITIAL_SYNC_LIMIT = 150
+const PROGRESSIVE_SYNC_LIMIT = 300
 
 let bookmarksInFlight: Promise<FetchListResult<ExportBookmark[]>> | null = null
 let groupsInFlight: Promise<FetchListResult<Group[]>> | null = null
+let allInFlight: Promise<FetchAllResult> | null = null
+let progressiveSyncInFlight: Promise<void> | null = null
 
 async function getToken(): Promise<string | null> {
   const out = await chrome.storage.local.get(STORAGE_KEYS.apiToken)
@@ -82,19 +107,20 @@ function getArrayValue<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : []
 }
 
+function normalizeBookmarks(value: unknown): ExportBookmark[] {
+  const rows = getArrayValue<ExportBookmark>(value)
+  return rows.map((row) => ({
+    ...row,
+    id: typeof row?.id === 'string' ? row.id : '',
+  })) as ExportBookmark[]
+}
+
 async function fetchBookmarks(): Promise<FetchListResult<ExportBookmark[]>> {
   const result = await fetchWithAuth<ExportBookmark[]>(`/api/export`)
   if (!result.ok) {
     return { data: [], unauthorized: result.status === 401 }
   }
-  const rows = Array.isArray(result.data) ? result.data : []
-  return {
-    data: rows.map((row) => ({
-      ...row,
-      id: typeof row?.id === 'string' ? row.id : '',
-    })) as ExportBookmark[],
-    unauthorized: false,
-  }
+  return { data: normalizeBookmarks(result.data), unauthorized: false }
 }
 
 async function fetchGroups(): Promise<FetchListResult<Group[]>> {
@@ -103,6 +129,86 @@ async function fetchGroups(): Promise<FetchListResult<Group[]>> {
     return { data: [], unauthorized: result.status === 401 }
   }
   return { data: Array.isArray(result.data) ? result.data : [], unauthorized: false }
+}
+
+async function fetchSyncPage(options?: {
+  mode?: 'initial' | 'full'
+  cursor?: string | null
+  limit?: number
+}): Promise<SyncFetchResult> {
+  const params = new URLSearchParams()
+  if (options?.mode) params.set('mode', options.mode)
+  if (typeof options?.limit === 'number' && options.limit > 0) params.set('limit', String(options.limit))
+  if (options?.cursor) params.set('cursor', options.cursor)
+  const query = params.toString()
+  const path = query ? `/api/sync?${query}` : '/api/sync'
+  const result = await fetchWithAuth<SyncApiPayload>(path)
+  if (!result.ok) {
+    return { bookmarks: [], groups: [], hasMore: false, nextCursor: null, unauthorized: result.status === 401 }
+  }
+  return {
+    bookmarks: normalizeBookmarks(result.data?.bookmarks),
+    groups: getArrayValue<Group>(result.data?.groups),
+    hasMore: Boolean(result.data?.hasMore ?? result.data?.partial),
+    nextCursor: typeof result.data?.nextCursor === 'string' ? result.data.nextCursor : null,
+    unauthorized: false,
+  }
+}
+
+function bookmarkKey(bookmark: ExportBookmark): string {
+  if (bookmark.id?.trim()) return `id:${bookmark.id}`
+  return `url:${bookmark.url}|createdAt:${bookmark.createdAt}`
+}
+
+function mergeBookmarks(base: ExportBookmark[], incoming: ExportBookmark[]): ExportBookmark[] {
+  if (incoming.length === 0) return base
+  const seen = new Set(base.map(bookmarkKey))
+  const out = [...base]
+  for (const bookmark of incoming) {
+    const key = bookmarkKey(bookmark)
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(bookmark)
+  }
+  return out
+}
+
+async function setCachedData(bookmarks: ExportBookmark[], groups: Group[]): Promise<void> {
+  const now = Date.now()
+  await chrome.storage.local.set({
+    [STORAGE_KEYS.bookmarksCache]: bookmarks,
+    [STORAGE_KEYS.bookmarksCacheTime]: now,
+    [STORAGE_KEYS.groupsCache]: groups,
+    [STORAGE_KEYS.groupsCacheTime]: now,
+  })
+}
+
+async function hydrateRemainingBookmarksAndBroadcast(
+  initialBookmarks: ExportBookmark[],
+  groups: Group[],
+  cursor: string | null
+): Promise<void> {
+  if (!cursor) return
+  let nextCursor: string | null = cursor
+  let merged = initialBookmarks
+
+  while (nextCursor) {
+    const result = await fetchSyncPage({
+      mode: 'initial',
+      cursor: nextCursor,
+      limit: PROGRESSIVE_SYNC_LIMIT,
+    })
+    if (result.unauthorized) return
+
+    merged = mergeBookmarks(merged, result.bookmarks)
+    await setCachedData(merged, groups)
+    await broadcastBookmarksUpdated({
+      bookmarks: merged,
+      groups,
+      syncInProgress: result.hasMore,
+    })
+    nextCursor = result.hasMore ? result.nextCursor : null
+  }
 }
 
 async function revalidateBookmarks(): Promise<FetchListResult<ExportBookmark[]>> {
@@ -140,6 +246,45 @@ async function revalidateGroups(): Promise<FetchListResult<Group[]>> {
     return await groupsInFlight
   } finally {
     groupsInFlight = null
+  }
+}
+
+async function revalidateAll(strategy: 'full' | 'initial' = 'full'): Promise<FetchAllResult> {
+  if (allInFlight) return allInFlight
+  allInFlight = (async () => {
+    const result = await fetchSyncPage({
+      mode: strategy === 'initial' ? 'initial' : 'full',
+      limit: strategy === 'initial' ? INITIAL_SYNC_LIMIT : undefined,
+    })
+    if (result.unauthorized) {
+      return { bookmarks: [], groups: [], unauthorized: true, syncInProgress: false }
+    }
+    await setCachedData(result.bookmarks, result.groups)
+    if (
+      strategy === 'initial' &&
+      result.hasMore &&
+      result.nextCursor &&
+      !progressiveSyncInFlight
+    ) {
+      progressiveSyncInFlight = hydrateRemainingBookmarksAndBroadcast(
+        result.bookmarks,
+        result.groups,
+        result.nextCursor
+      ).finally(() => {
+        progressiveSyncInFlight = null
+      })
+    }
+    return {
+      bookmarks: result.bookmarks,
+      groups: result.groups,
+      unauthorized: result.unauthorized,
+      syncInProgress: strategy === 'initial' ? result.hasMore : false,
+    }
+  })()
+  try {
+    return await allInFlight
+  } finally {
+    allInFlight = null
   }
 }
 
@@ -184,6 +329,17 @@ async function broadcastBookmarksUpdated(data: GetBookmarksAndGroupsResponse): P
 }
 
 async function revalidateStaleCachesAndBroadcast(staleBookmarks: boolean, staleGroups: boolean): Promise<void> {
+  if (staleBookmarks && staleGroups) {
+    const allResult = await revalidateAll('initial')
+    if (allResult.unauthorized) return
+    await broadcastBookmarksUpdated({
+      bookmarks: allResult.bookmarks,
+      groups: allResult.groups,
+      syncInProgress: allResult.syncInProgress,
+    })
+    return
+  }
+
   const tasks: Promise<FetchListResult<unknown>>[] = []
   if (staleBookmarks) tasks.push(revalidateBookmarks())
   if (staleGroups) tasks.push(revalidateGroups())
@@ -193,19 +349,22 @@ async function revalidateStaleCachesAndBroadcast(staleBookmarks: boolean, staleG
   if (results.some((result) => result.unauthorized)) return
 
   const fresh = await readCachedData()
-  await broadcastBookmarksUpdated({ bookmarks: fresh.bookmarks, groups: fresh.groups })
+  await broadcastBookmarksUpdated({ bookmarks: fresh.bookmarks, groups: fresh.groups, syncInProgress: false })
 }
 
 async function getBookmarksAndGroups(invalidateCache = false): Promise<GetBookmarksAndGroupsResponse> {
   const cached = await readCachedData()
 
   if (invalidateCache || !cached.hasBookmarks || !cached.hasGroups) {
-    const [bookmarksResult, groupsResult] = await Promise.all([revalidateBookmarks(), revalidateGroups()])
-    if (bookmarksResult.unauthorized || groupsResult.unauthorized) {
+    const allResult = await revalidateAll('initial')
+    if (allResult.unauthorized) {
       return { bookmarks: [], groups: [], unauthorized: true }
     }
-    const fresh = await readCachedData()
-    const data = { bookmarks: fresh.bookmarks, groups: fresh.groups }
+    const data = {
+      bookmarks: allResult.bookmarks,
+      groups: allResult.groups,
+      syncInProgress: allResult.syncInProgress,
+    }
     await broadcastBookmarksUpdated(data)
     return data
   }
@@ -214,13 +373,19 @@ async function getBookmarksAndGroups(invalidateCache = false): Promise<GetBookma
     void revalidateStaleCachesAndBroadcast(!cached.bookmarksFresh, !cached.groupsFresh)
   }
 
-  return { bookmarks: cached.bookmarks, groups: cached.groups }
+  return { bookmarks: cached.bookmarks, groups: cached.groups, syncInProgress: false }
 }
 
 async function refreshBookmarksAndGroups(): Promise<GetBookmarksAndGroupsResponse> {
   await invalidateBookmarksCache()
   await invalidateGroupsCache()
-  return getBookmarksAndGroups(true)
+  const allResult = await revalidateAll('full')
+  if (allResult.unauthorized) {
+    return { bookmarks: [], groups: [], unauthorized: true }
+  }
+  const data = { bookmarks: allResult.bookmarks, groups: allResult.groups, syncInProgress: false }
+  await broadcastBookmarksUpdated(data)
+  return data
 }
 
 async function refreshBookmarksOnly(): Promise<GetBookmarksAndGroupsResponse> {
@@ -240,7 +405,7 @@ async function refreshBookmarksOnly(): Promise<GetBookmarksAndGroupsResponse> {
     groups = groupsResult.data
   }
 
-  const data = { bookmarks: bookmarksResult.data, groups }
+  const data = { bookmarks: bookmarksResult.data, groups, syncInProgress: false }
   await broadcastBookmarksUpdated(data)
   return data
 }
@@ -316,6 +481,7 @@ chrome.runtime.onMessage.addListener(
           const { token } = (message.payload || {}) as SetTokenPayload
           if (typeof token === 'string' && token.trim()) {
             await setStoredToken(token.trim())
+            void revalidateAll('initial')
             return { success: true }
           }
           return { success: false }

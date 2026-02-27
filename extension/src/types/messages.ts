@@ -50,6 +50,7 @@ export interface GetBookmarksAndGroupsResponse {
   bookmarks: ExportBookmark[]
   groups: Group[]
   unauthorized?: boolean
+  syncInProgress?: boolean
 }
 
 export interface MessagePayloadMap {
