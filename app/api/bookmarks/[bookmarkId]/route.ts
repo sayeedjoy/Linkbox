@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { userIdFromBearerToken } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
+import { publishUserEvent } from "@/lib/realtime";
 
 function corsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get("Origin");
@@ -24,6 +25,11 @@ export async function DELETE(
   });
   if (result.count === 0)
     return NextResponse.json({ error: "Bookmark not found" }, { status: 404, headers: corsHeaders(request) });
+  publishUserEvent(userId, {
+    type: "bookmark.deleted",
+    entity: "bookmark",
+    id: bookmarkId,
+  });
   return new NextResponse(null, { status: 204, headers: corsHeaders(request) });
 }
 

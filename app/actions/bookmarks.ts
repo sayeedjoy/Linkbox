@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { currentUserId } from "@/lib/auth";
 import { unfurlUrl } from "@/app/actions/parse";
 import type { Bookmark } from "@/app/generated/prisma/client";
+import { publishUserEvent, type RealtimeEventType } from "@/lib/realtime";
 
 export type BookmarkWithGroup = Bookmark & {
   group: { id: string; name: string; color: string | null } | null;
@@ -16,6 +17,20 @@ function revalidateBookmarkData() {
   revalidateTag("bookmarks", "max");
   revalidateTag("bookmark-count", "max");
   revalidateTag("groups", "max");
+}
+
+function publishBookmarkEvent(
+  userId: string,
+  type: RealtimeEventType,
+  id: string,
+  data?: Record<string, unknown>
+) {
+  publishUserEvent(userId, {
+    type,
+    entity: "bookmark",
+    id,
+    data,
+  });
 }
 
 async function getBookmarksUncached(
@@ -116,6 +131,7 @@ export async function createBookmark(
       include: { group: { select: { id: true, name: true, color: true } } },
     });
     revalidateBookmarkData();
+    publishBookmarkEvent(userId, "bookmark.updated", updated.id, { groupId: updated.groupId });
     return updated as BookmarkWithGroup;
   }
   const bookmark = await prisma.bookmark.create({
@@ -130,6 +146,7 @@ export async function createBookmark(
     },
   });
   revalidateBookmarkData();
+  publishBookmarkEvent(userId, "bookmark.created", bookmark.id, { groupId: bookmark.groupId });
   return bookmark as BookmarkWithGroup;
 }
 
@@ -164,6 +181,7 @@ export async function createBookmarkFromMetadataForUser(
       include: { group: { select: { id: true, name: true, color: true } } },
     });
     revalidateBookmarkData();
+    publishBookmarkEvent(userId, "bookmark.updated", updated.id, { groupId: updated.groupId });
     return updated as BookmarkWithGroup;
   }
   const bookmark = await prisma.bookmark.create({
@@ -178,6 +196,7 @@ export async function createBookmarkFromMetadataForUser(
     },
   });
   revalidateBookmarkData();
+  publishBookmarkEvent(userId, "bookmark.created", bookmark.id, { groupId: bookmark.groupId });
   return bookmark as BookmarkWithGroup;
 }
 
@@ -217,6 +236,7 @@ export async function createNote(content: string, groupId?: string | null) {
     },
   });
   revalidateBookmarkData();
+  publishBookmarkEvent(userId, "bookmark.created", bookmark.id, { groupId: bookmark.groupId });
   return bookmark as BookmarkWithGroup;
 }
 
@@ -240,6 +260,7 @@ export async function updateBookmark(
     data: updateData,
   });
   revalidateBookmarkData();
+  publishBookmarkEvent(userId, "bookmark.updated", id, { groupId: data.groupId ?? null });
   return { ok: true };
 }
 
@@ -247,6 +268,7 @@ export async function deleteBookmark(id: string) {
   const userId = await currentUserId();
   await prisma.bookmark.deleteMany({ where: { id, userId } });
   revalidateBookmarkData();
+  publishBookmarkEvent(userId, "bookmark.deleted", id);
   return { ok: true };
 }
 
@@ -265,6 +287,7 @@ export async function updateBookmarkCategoryForUser(
     where: { id: bookmarkId, userId },
     include: { group: { select: { id: true, name: true, color: true } } },
   });
+  publishBookmarkEvent(userId, "bookmark.category.updated", bookmarkId, { groupId: groupId ?? null });
   return updated;
 }
 
@@ -286,6 +309,7 @@ export async function refreshBookmark(id: string): Promise<BookmarkWithGroup | n
     },
   });
   revalidateBookmarkData();
+  publishBookmarkEvent(userId, "bookmark.updated", id, { groupId: bookmark.groupId ?? null });
   const updated = await prisma.bookmark.findUnique({
     where: { id },
     include: { group: { select: { id: true, name: true, color: true } } },

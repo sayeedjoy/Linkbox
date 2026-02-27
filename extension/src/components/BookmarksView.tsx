@@ -29,6 +29,11 @@ function hostnameFromUrl(url: string): string {
   }
 }
 
+function bookmarkMenuKey(bookmark: ExportBookmark): string {
+  if (bookmark.id && bookmark.id.trim()) return bookmark.id
+  return `${bookmark.url}-${bookmark.createdAt}`
+}
+
 export default function BookmarksView({ onSignOut }: { onSignOut: () => void }) {
   const [bookmarks, setBookmarks] = useState<ExportBookmark[]>([])
   const [groups, setGroups] = useState<Group[]>([])
@@ -39,6 +44,8 @@ export default function BookmarksView({ onSignOut }: { onSignOut: () => void }) 
   const [saveError, setSaveError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [syncInProgress, setSyncInProgress] = useState(false)
+  const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null)
+  const [openCategoryMenuId, setOpenCategoryMenuId] = useState<string | null>(null)
 
   const applyData = useCallback((data: GetBookmarksAndGroupsResponse) => {
     startTransition(() => {
@@ -191,6 +198,8 @@ export default function BookmarksView({ onSignOut }: { onSignOut: () => void }) 
       setSaveError(result.error ?? 'Failed to update category')
       return
     }
+    setOpenCategoryMenuId(null)
+    setOpenRowMenuId(null)
     void syncBookmarksAfterCategoryUpdate()
   }
 
@@ -324,7 +333,7 @@ export default function BookmarksView({ onSignOut }: { onSignOut: () => void }) 
           ) : (
             <ul className="space-y-0">
               {filteredBookmarks.map((b) => (
-                <li key={b.id || `${b.url}-${b.createdAt}`} className="group">
+                <li key={bookmarkMenuKey(b)} className="group">
                   <a
                     href={b.url}
                     target="_blank"
@@ -348,7 +357,13 @@ export default function BookmarksView({ onSignOut }: { onSignOut: () => void }) 
                       )}
                     </div>
                     <div onClick={(e) => e.preventDefault()} onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}>
-                      <DropdownMenu>
+                      <DropdownMenu
+                        open={openRowMenuId === bookmarkMenuKey(b)}
+                        onOpenChange={(open) => {
+                          setOpenRowMenuId(open ? bookmarkMenuKey(b) : null)
+                          if (!open) setOpenCategoryMenuId(null)
+                        }}
+                      >
                         <DropdownMenuTrigger asChild>
                           <Button
                             variant="ghost"
@@ -365,7 +380,10 @@ export default function BookmarksView({ onSignOut }: { onSignOut: () => void }) 
                             Copy link
                           </DropdownMenuItem>
                           {groups.length > 0 && (
-                            <DropdownMenuSub>
+                            <DropdownMenuSub
+                              open={openCategoryMenuId === bookmarkMenuKey(b)}
+                              onOpenChange={(open) => setOpenCategoryMenuId(open ? bookmarkMenuKey(b) : null)}
+                            >
                               <DropdownMenuSubTrigger>
                                 <Tags className="mr-2 h-4 w-4" />
                                 Edit category

@@ -11,7 +11,8 @@ import { getBookmarks, getTotalBookmarkCount, createBookmark, createNote, create
 import { getGroups } from "@/app/actions/groups";
 import { parseTextForUrls, parseImageForUrls, unfurlUrl } from "@/app/actions/parse";
 import { filterBookmarks, makeOptimisticBookmark } from "./utils";
-import { groupsKey, bookmarksKey, bookmarkCountKey } from "@/lib/query-keys";
+import { groupsKey, bookmarksKey, bookmarkCountKey, timelineBookmarksKey } from "@/lib/query-keys";
+import type { RealtimeEvent } from "@/lib/realtime";
 
 const OPT_PREFIX = "opt-";
 const LAST_GROUP_KEY = "bookmark-last-group";
@@ -42,14 +43,47 @@ export function useBookmarkApp({
   const selectedGroupId = groupParam ?? null;
   const [searchQuery, setSearchQuery] = useState("");
   const [searchMode, setSearchMode] = useState(false);
-  const sortKey: "createdAt" = "createdAt";
-  const sortOrder: "desc" = "desc";
+  const sortKey = "createdAt" as const;
+  const sortOrder = "desc" as const;
   const [inputValue, setInputValue] = useState("");
   const [previewBookmark, setPreviewBookmark] = useState<BookmarkWithGroup | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const deferredSearchQuery = useDeferredValue(searchQuery);
+
+  useEffect(() => {
+    if (!userId) return;
+    const eventSource = new EventSource("/api/realtime/bookmarks");
+    let invalidateTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const scheduleInvalidate = () => {
+      if (invalidateTimer) return;
+      invalidateTimer = setTimeout(() => {
+        invalidateTimer = null;
+        void queryClient.invalidateQueries({ queryKey: ["bookmarks", userId] });
+        void queryClient.invalidateQueries({ queryKey: groupsKey(userId) });
+        void queryClient.invalidateQueries({ queryKey: bookmarkCountKey(userId) });
+        void queryClient.invalidateQueries({ queryKey: timelineBookmarksKey(userId) });
+      }, 120);
+    };
+
+    eventSource.onmessage = (evt) => {
+      if (!evt?.data) return;
+      try {
+        const payload = JSON.parse(evt.data) as RealtimeEvent;
+        if (payload.userId !== userId) return;
+        scheduleInvalidate();
+      } catch {
+        // Ignore malformed events and keep the stream alive.
+      }
+    };
+
+    return () => {
+      if (invalidateTimer) clearTimeout(invalidateTimer);
+      eventSource.close();
+    };
+  }, [queryClient, userId]);
 
   const groupsQuery = useQuery({
     queryKey: userId ? groupsKey(userId) : ["groups", "anon"],
@@ -58,7 +92,7 @@ export function useBookmarkApp({
     initialData: initialGroups.length > 0 ? initialGroups : undefined,
     initialDataUpdatedAt: (initialGroups.length > 0 && mountedAt) ? mountedAt : undefined,
     refetchOnWindowFocus: false,
-    refetchInterval: 3000,
+    refetchInterval: false,
   });
   const groups = useMemo(() => groupsQuery.data ?? initialGroups, [groupsQuery.data, initialGroups]);
 
@@ -78,7 +112,7 @@ export function useBookmarkApp({
     initialDataUpdatedAt: (shouldUseInitialBookmarks && mountedAt) ? mountedAt : undefined,
     placeholderData: (previousData) => previousData,
     refetchOnWindowFocus: false,
-    refetchInterval: 3000,
+    refetchInterval: false,
   });
   const bookmarks = useMemo(
     () => bookmarksQuery.data ?? (shouldUseInitialBookmarks ? initialBookmarks : []),
@@ -93,7 +127,7 @@ export function useBookmarkApp({
     initialData: mountedAt ? initialTotalBookmarkCount : undefined,
     initialDataUpdatedAt: mountedAt || undefined,
     refetchOnWindowFocus: false,
-    refetchInterval: 3000,
+    refetchInterval: false,
   });
   const totalBookmarkCount = countQuery.data ?? initialTotalBookmarkCount;
 

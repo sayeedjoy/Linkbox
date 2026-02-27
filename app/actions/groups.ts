@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { currentUserId } from "@/lib/auth";
 import type { Group } from "@/app/generated/prisma/client";
+import { publishUserEvent } from "@/lib/realtime";
 
 export type GroupWithCount = Group & { _count: { bookmarks: number } };
 
@@ -42,6 +43,7 @@ export async function createGroup(name: string, color?: string) {
     },
   });
   revalidatePath("/");
+  publishUserEvent(userId, { type: "group.created", entity: "group", id: group.id });
   return group;
 }
 
@@ -55,6 +57,7 @@ export async function updateGroup(
     data,
   });
   revalidatePath("/");
+  publishUserEvent(userId, { type: "group.updated", entity: "group", id });
   return { ok: true };
 }
 
@@ -69,6 +72,9 @@ export async function reorderGroups(orderedIds: string[]) {
     )
   );
   revalidatePath("/");
+  for (const id of orderedIds) {
+    publishUserEvent(userId, { type: "group.updated", entity: "group", id });
+  }
   return { ok: true };
 }
 
@@ -81,6 +87,7 @@ export async function deleteGroup(id: string) {
   await prisma.group.deleteMany({ where: { id, userId } });
   revalidatePath("/");
   revalidateTag("groups");
+  publishUserEvent(userId, { type: "group.deleted", entity: "group", id });
   return { ok: true };
 }
 
@@ -101,6 +108,7 @@ export async function createGroupForUser(userId: string, name: string, color?: s
   });
   revalidatePath("/");
   revalidateTag("groups");
+  publishUserEvent(userId, { type: "group.created", entity: "group", id: group.id });
   return group;
 }
 
@@ -120,6 +128,7 @@ export async function updateGroupForUser(
   });
   revalidatePath("/");
   revalidateTag("groups");
+  publishUserEvent(userId, { type: "group.updated", entity: "group", id });
   return { ok: true };
 }
 
@@ -131,5 +140,6 @@ export async function deleteGroupForUser(userId: string, id: string) {
   await prisma.group.deleteMany({ where: { id, userId } });
   revalidatePath("/");
   revalidateTag("groups");
+  publishUserEvent(userId, { type: "group.deleted", entity: "group", id });
   return { ok: true };
 }

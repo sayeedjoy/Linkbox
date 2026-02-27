@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { userIdFromBearerToken } from "@/lib/api-auth";
 import { createBookmarkFromMetadataForUser } from "@/app/actions/bookmarks";
 import { prisma } from "@/lib/prisma";
+import { publishUserEvent } from "@/lib/realtime";
 
 function corsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get("Origin");
@@ -38,6 +39,12 @@ export async function PUT(request: Request) {
     where: { id: existing.id },
     data: updateData,
     include: { group: { select: { id: true, name: true, color: true } } },
+  });
+  publishUserEvent(userId, {
+    type: "bookmark.updated",
+    entity: "bookmark",
+    id: updated.id,
+    data: { groupId: updated.groupId ?? null },
   });
   return NextResponse.json(updated, { status: 200, headers: corsHeaders(request) });
 }
@@ -86,11 +93,22 @@ export async function DELETE(request: Request) {
   const url = typeof body.url === "string" ? body.url.trim() : "";
   if (!url || !url.startsWith("http"))
     return NextResponse.json({ error: "Invalid URL" }, { status: 400, headers: corsHeaders(request) });
+  const toDelete = await prisma.bookmark.findMany({
+    where: { userId, url },
+    select: { id: true },
+  });
   const result = await prisma.bookmark.deleteMany({
     where: { userId, url },
   });
   if (result.count === 0)
     return NextResponse.json({ error: "Bookmark not found" }, { status: 404, headers: corsHeaders(request) });
+  for (const bookmark of toDelete) {
+    publishUserEvent(userId, {
+      type: "bookmark.deleted",
+      entity: "bookmark",
+      id: bookmark.id,
+    });
+  }
   return new NextResponse(null, { status: 204, headers: corsHeaders(request) });
 }
 
