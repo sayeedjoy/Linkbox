@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useSession, signOut } from "next-auth/react";
+import { useTheme } from "next-themes";
 import { Sun, Moon, Monitor, Download, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -30,7 +31,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { deleteAccount } from "@/app/actions/auth";
 
-const THEME_KEY = "bookmark-theme";
 const AUTO_GROUP_KEY = "bookmark-auto-group";
 
 const sectionLabelClass =
@@ -50,31 +50,24 @@ export function SettingsModal({
   onOpenChange: (open: boolean) => void;
 }) {
   const { data: session } = useSession();
-  const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
+  const { theme, setTheme } = useTheme();
   const [autoGroup, setAutoGroup] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setTheme(
-      (localStorage.getItem(THEME_KEY) as "light" | "dark" | "system") ?? "system"
-    );
     setAutoGroup(localStorage.getItem(AUTO_GROUP_KEY) === "true");
   }, [open]);
 
-  const handleThemeChange = useCallback((v: string) => {
-    const next = v as "light" | "dark" | "system";
-    setTheme(next);
-    localStorage.setItem(THEME_KEY, next);
-    if (next === "dark") document.documentElement.classList.add("dark");
-    else if (next === "light") document.documentElement.classList.remove("dark");
-    else {
-      const prefers = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      if (prefers) document.documentElement.classList.add("dark");
-      else document.documentElement.classList.remove("dark");
-    }
-  }, []);
+  const handleThemeChange = useCallback(
+    (v: string) => {
+      setTheme(v as "light" | "dark" | "system");
+    },
+    [setTheme]
+  );
+
+  const displayTheme = (theme ?? "system") as "light" | "dark" | "system";
 
   const handleAutoGroupChange = useCallback((checked: boolean) => {
     setAutoGroup(checked);
@@ -116,9 +109,9 @@ export function SettingsModal({
           <div className="flex flex-col space-y-6">
             <div>
               <span className={sectionLabelClass}>Theme</span>
-              <Select value={theme} onValueChange={handleThemeChange}>
+              <Select value={displayTheme} onValueChange={handleThemeChange}>
                 <SelectTrigger className="mt-2 w-full h-9">
-                  <ThemeIcon theme={theme} />
+                  <ThemeIcon theme={displayTheme} />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
