@@ -73,8 +73,29 @@ export async function POST(request: Request) {
   }
 }
 
+export async function DELETE(request: Request) {
+  const userId = await userIdFromBearerToken(request.headers.get("Authorization"));
+  if (!userId)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders(request) });
+  let body: { url?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400, headers: corsHeaders(request) });
+  }
+  const url = typeof body.url === "string" ? body.url.trim() : "";
+  if (!url || !url.startsWith("http"))
+    return NextResponse.json({ error: "Invalid URL" }, { status: 400, headers: corsHeaders(request) });
+  const result = await prisma.bookmark.deleteMany({
+    where: { userId, url },
+  });
+  if (result.count === 0)
+    return NextResponse.json({ error: "Bookmark not found" }, { status: 404, headers: corsHeaders(request) });
+  return new NextResponse(null, { status: 204, headers: corsHeaders(request) });
+}
+
 export async function OPTIONS(request: Request) {
-  const headers: Record<string, string> = { "Access-Control-Allow-Methods": "POST, PUT, OPTIONS", "Access-Control-Allow-Headers": "Authorization, Content-Type", "Access-Control-Max-Age": "86400" };
+  const headers: Record<string, string> = { "Access-Control-Allow-Methods": "POST, PUT, DELETE, OPTIONS", "Access-Control-Allow-Headers": "Authorization, Content-Type", "Access-Control-Max-Age": "86400" };
   const origin = request.headers.get("Origin");
   if (origin?.startsWith("chrome-extension://")) headers["Access-Control-Allow-Origin"] = origin;
   return new NextResponse(null, { status: 204, headers });
