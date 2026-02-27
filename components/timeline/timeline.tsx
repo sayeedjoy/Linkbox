@@ -25,8 +25,6 @@ interface TimelineProps {
 
 export function Timeline({ bookmarks, onEdit, onRefresh, onDelete, sortBy, onSortChange }: TimelineProps) {
   const groups = groupBookmarksByDate(bookmarks);
-  const disableStaggeredAnimation = bookmarks.length > 200;
-  let globalIndex = 0;
 
   const handleSortChange = useCallback(
     (value: TimelineSort) => {
@@ -70,9 +68,7 @@ export function Timeline({ bookmarks, onEdit, onRefresh, onDelete, sortBy, onSor
               aria-hidden
             />
             {items.map((bookmark) => {
-              const index = globalIndex++;
               const faviconSrc = bookmark.favicon;
-              const animationDelay = disableStaggeredAnimation ? undefined : index * 50;
 
               return (
                 <li
@@ -106,7 +102,6 @@ export function Timeline({ bookmarks, onEdit, onRefresh, onDelete, sortBy, onSor
                   <div className="min-w-0 flex-1 pt-2 pb-4 pl-0 md:pl-2">
                     <TimelineCard
                       bookmark={bookmark}
-                      animationDelay={animationDelay}
                       onEdit={onEdit}
                       onRefresh={onRefresh}
                       onDelete={onDelete}

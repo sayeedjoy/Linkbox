@@ -30,7 +30,7 @@ export async function PUT(request: Request) {
   });
   if (!existing)
     return NextResponse.json({ error: "Bookmark not found" }, { status: 404, headers: corsHeaders(request) });
-  const updateData: { title?: string; description?: string; groupId?: string | null; faviconUrl?: string | null } = {};
+  const updateData: { title?: string | null; description?: string | null; groupId?: string | null; faviconUrl?: string | null } = {};
   if (body.title !== undefined) updateData.title = typeof body.title === "string" ? body.title : null;
   if (body.description !== undefined) updateData.description = typeof body.description === "string" ? body.description : null;
   if (body.groupId !== undefined) updateData.groupId = body.groupId === null || body.groupId === undefined ? null : (typeof body.groupId === "string" ? body.groupId : null);

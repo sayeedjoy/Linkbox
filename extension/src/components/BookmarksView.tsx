@@ -112,7 +112,7 @@ export default function BookmarksView({ onSignOut }: { onSignOut: () => void }) 
       return
     }
     if (result.success) {
-      await load()
+      return
     } else {
       setSaveError(result.error ?? 'Failed to save')
     }

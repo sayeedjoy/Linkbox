@@ -34,11 +34,19 @@ type SyncFetchResult = {
 
 const INITIAL_SYNC_LIMIT = 150
 const PROGRESSIVE_SYNC_LIMIT = 300
+const REALTIME_RECONNECT_BASE_MS = 1000
+const REALTIME_RECONNECT_MAX_MS = 30000
+const REALTIME_SUPPRESS_AFTER_LOCAL_MUTATION_MS = 1500
 
 let bookmarksInFlight: Promise<FetchListResult<ExportBookmark[]>> | null = null
 let groupsInFlight: Promise<FetchListResult<Group[]>> | null = null
 let allInFlight: Promise<FetchAllResult> | null = null
 let progressiveSyncInFlight: Promise<void> | null = null
+let realtimeAbortController: AbortController | null = null
+let realtimeReconnectTimer: ReturnType<typeof setTimeout> | null = null
+let realtimeReconnectAttempt = 0
+let realtimeLastEventId: string | null = null
+let realtimeSuppressedUntil = 0
 
 async function getToken(): Promise<string | null> {
   const out = await chrome.storage.local.get(STORAGE_KEYS.apiToken)
@@ -76,7 +84,6 @@ async function fetchWithAuth<T>(
     },
   })
   if (res.status === 401) {
-    await setStoredToken(null)
     return { ok: false, status: 401 }
   }
   if (!res.ok) {
@@ -113,6 +120,39 @@ function normalizeBookmarks(value: unknown): ExportBookmark[] {
     ...row,
     id: typeof row?.id === 'string' ? row.id : '',
   })) as ExportBookmark[]
+}
+
+function toExportBookmark(bookmark: BookmarkResponse): ExportBookmark {
+  return {
+    id: bookmark.id,
+    url: bookmark.url,
+    title: bookmark.title || '',
+    description: bookmark.description ?? null,
+    faviconUrl: bookmark.faviconUrl ?? null,
+    previewImageUrl: bookmark.previewImageUrl ?? null,
+    createdAt: bookmark.createdAt,
+    group: bookmark.group?.name ?? '',
+    groupColor: bookmark.group?.color ?? null,
+  }
+}
+
+async function optimisticAddBookmarkToCache(bookmark: BookmarkResponse): Promise<GetBookmarksAndGroupsResponse> {
+  const cached = await readCachedData()
+  const nextBookmark = toExportBookmark(bookmark)
+  const existingIndex = cached.bookmarks.findIndex((item) => item.id === nextBookmark.id)
+  const nextBookmarks = [...cached.bookmarks]
+  if (existingIndex >= 0) {
+    nextBookmarks[existingIndex] = nextBookmark
+  } else {
+    nextBookmarks.unshift(nextBookmark)
+  }
+
+  await setCachedData(nextBookmarks, cached.groups)
+  return {
+    bookmarks: nextBookmarks,
+    groups: cached.groups,
+    syncInProgress: false,
+  }
 }
 
 async function fetchBookmarks(): Promise<FetchListResult<ExportBookmark[]>> {
@@ -328,6 +368,132 @@ async function broadcastBookmarksUpdated(data: GetBookmarksAndGroupsResponse): P
   })
 }
 
+function scheduleRealtimeReconnect(): void {
+  if (realtimeReconnectTimer) return
+  const backoff = Math.min(
+    REALTIME_RECONNECT_MAX_MS,
+    REALTIME_RECONNECT_BASE_MS * 2 ** Math.min(realtimeReconnectAttempt, 6)
+  )
+  const jitter = Math.floor(Math.random() * 300)
+  realtimeReconnectTimer = setTimeout(() => {
+    realtimeReconnectTimer = null
+    void startRealtimeSync()
+  }, backoff + jitter)
+  realtimeReconnectAttempt += 1
+}
+
+function stopRealtimeSync(): void {
+  if (realtimeReconnectTimer) {
+    clearTimeout(realtimeReconnectTimer)
+    realtimeReconnectTimer = null
+  }
+  if (realtimeAbortController) {
+    realtimeAbortController.abort()
+    realtimeAbortController = null
+  }
+  realtimeReconnectAttempt = 0
+  realtimeLastEventId = null
+  realtimeSuppressedUntil = 0
+}
+
+async function handleRealtimeMutationEvent(): Promise<void> {
+  if (Date.now() < realtimeSuppressedUntil) return
+  const result = await revalidateAll('initial')
+  if (result.unauthorized) return
+  await broadcastBookmarksUpdated({
+    bookmarks: result.bookmarks,
+    groups: result.groups,
+    syncInProgress: result.syncInProgress,
+  })
+}
+
+async function startRealtimeSync(): Promise<void> {
+  if (realtimeAbortController) return
+  const token = await getToken()
+  if (!token) return
+
+  const urlBase = API_BASE_URL.replace(/\/$/, '')
+  const streamUrl = realtimeLastEventId
+    ? `${urlBase}/api/realtime/bookmarks?lastEventId=${encodeURIComponent(realtimeLastEventId)}`
+    : `${urlBase}/api/realtime/bookmarks`
+  const abortController = new AbortController()
+  realtimeAbortController = abortController
+
+  try {
+    const response = await fetch(streamUrl, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+      signal: abortController.signal,
+      cache: 'no-store',
+    })
+    if (!response.ok || !response.body) {
+      if (response.status === 401) {
+        stopRealtimeSync()
+        return
+      }
+      throw new Error(`Realtime stream failed with status ${response.status}`)
+    }
+
+    realtimeReconnectAttempt = 0
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    let eventId: string | null = null
+    let eventData = ''
+
+    const flushEvent = async () => {
+      if (!eventData.trim()) {
+        eventId = null
+        eventData = ''
+        return
+      }
+      if (eventId) realtimeLastEventId = eventId
+      try {
+        const parsed = JSON.parse(eventData) as { type?: string; id?: string }
+        if (parsed.id && parsed.type && parsed.type.startsWith('bookmark.')) {
+          await handleRealtimeMutationEvent()
+        }
+      } catch {
+        // Ignore malformed stream chunks.
+      }
+      eventId = null
+      eventData = ''
+    }
+
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() ?? ''
+
+      for (const rawLine of lines) {
+        const line = rawLine.replace(/\r$/, '')
+        if (!line) {
+          await flushEvent()
+          continue
+        }
+        if (line.startsWith(':')) continue
+        if (line.startsWith('id:')) {
+          eventId = line.slice(3).trim()
+          continue
+        }
+        if (line.startsWith('data:')) {
+          const payload = line.slice(5).trim()
+          eventData = eventData ? `${eventData}\n${payload}` : payload
+        }
+      }
+    }
+  } catch {
+    // Reconnect below for transient failures.
+  } finally {
+    if (realtimeAbortController === abortController) {
+      realtimeAbortController = null
+      scheduleRealtimeReconnect()
+    }
+  }
+}
+
 async function revalidateStaleCachesAndBroadcast(staleBookmarks: boolean, staleGroups: boolean): Promise<void> {
   if (staleBookmarks && staleGroups) {
     const allResult = await revalidateAll('initial')
@@ -379,33 +545,22 @@ async function getBookmarksAndGroups(invalidateCache = false): Promise<GetBookma
 async function refreshBookmarksAndGroups(): Promise<GetBookmarksAndGroupsResponse> {
   await invalidateBookmarksCache()
   await invalidateGroupsCache()
-  const allResult = await revalidateAll('full')
+  const allResult = await revalidateAll('initial')
   if (allResult.unauthorized) {
     return { bookmarks: [], groups: [], unauthorized: true }
   }
-  const data = { bookmarks: allResult.bookmarks, groups: allResult.groups, syncInProgress: false }
+  const data = { bookmarks: allResult.bookmarks, groups: allResult.groups, syncInProgress: allResult.syncInProgress }
   await broadcastBookmarksUpdated(data)
   return data
 }
 
 async function refreshBookmarksOnly(): Promise<GetBookmarksAndGroupsResponse> {
   await invalidateBookmarksCache()
-  const cached = await readCachedData()
-  const bookmarksResult = await revalidateBookmarks()
-  if (bookmarksResult.unauthorized) {
+  const allResult = await revalidateAll('initial')
+  if (allResult.unauthorized) {
     return { bookmarks: [], groups: [], unauthorized: true }
   }
-
-  let groups = cached.groups
-  if (!cached.hasGroups) {
-    const groupsResult = await revalidateGroups()
-    if (groupsResult.unauthorized) {
-      return { bookmarks: [], groups: [], unauthorized: true }
-    }
-    groups = groupsResult.data
-  }
-
-  const data = { bookmarks: bookmarksResult.data, groups, syncInProgress: false }
+  const data = { bookmarks: allResult.bookmarks, groups: allResult.groups, syncInProgress: allResult.syncInProgress }
   await broadcastBookmarksUpdated(data)
   return data
 }
@@ -482,11 +637,13 @@ chrome.runtime.onMessage.addListener(
           if (typeof token === 'string' && token.trim()) {
             await setStoredToken(token.trim())
             void revalidateAll('initial')
+            void startRealtimeSync()
             return { success: true }
           }
           return { success: false }
         }
         case 'clearToken': {
+          stopRealtimeSync()
           await setStoredToken(null)
           return { success: true }
         }
@@ -525,7 +682,17 @@ chrome.runtime.onMessage.addListener(
             faviconUrl: faviconUrl ?? null,
           })
           if (createResult.ok) {
-            await refreshBookmarksAndGroups()
+            const optimistic = await optimisticAddBookmarkToCache(createResult.data)
+            await broadcastBookmarksUpdated(optimistic)
+            realtimeSuppressedUntil = Date.now() + REALTIME_SUPPRESS_AFTER_LOCAL_MUTATION_MS
+            void revalidateAll('initial').then((allResult) => {
+              if (allResult.unauthorized) return
+              return broadcastBookmarksUpdated({
+                bookmarks: allResult.bookmarks,
+                groups: allResult.groups,
+                syncInProgress: allResult.syncInProgress,
+              })
+            })
             setBadge('OK', '#22c55e')
             setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000)
             return { success: true, data: createResult.data }
@@ -586,6 +753,7 @@ chrome.runtime.onMessage.addListener(
           return { success: true, data }
         }
         case 'forceLogout': {
+          stopRealtimeSync()
           await setStoredToken(null)
           return { success: true }
         }
@@ -660,11 +828,33 @@ chrome.contextMenus.onClicked.addListener(async (_info, tab) => {
     faviconUrl: faviconUrl ?? null,
   })
   if (result.ok) {
-    await refreshBookmarksAndGroups()
+    const optimistic = await optimisticAddBookmarkToCache(result.data)
+    await broadcastBookmarksUpdated(optimistic)
+    realtimeSuppressedUntil = Date.now() + REALTIME_SUPPRESS_AFTER_LOCAL_MUTATION_MS
+    void revalidateAll('initial').then((allResult) => {
+      if (allResult.unauthorized) return
+      return broadcastBookmarksUpdated({
+        bookmarks: allResult.bookmarks,
+        groups: allResult.groups,
+        syncInProgress: allResult.syncInProgress,
+      })
+    })
     setBadge('OK', '#22c55e')
     setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000)
   } else {
     setBadge('!', '#ef4444')
     setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2000)
   }
+})
+
+void getToken().then((token) => {
+  if (!token) return
+  void startRealtimeSync()
+})
+
+chrome.runtime.onStartup.addListener(() => {
+  void getToken().then((token) => {
+    if (!token) return
+    void startRealtimeSync()
+  })
 })

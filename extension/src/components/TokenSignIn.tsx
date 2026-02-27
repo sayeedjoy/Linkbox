@@ -40,7 +40,9 @@ export default function TokenSignIn({ onSuccess, className }: TokenSignInProps) 
       </div>
       <div className="text-center space-y-1">
         <h1 className="text-lg font-semibold text-foreground">Bookmark</h1>
-        <p className="text-sm text-muted-foreground">Welcome, Sign in below.</p>
+        <p className="text-sm text-muted-foreground">
+          Stored only in chrome.storage.local. Token stays valid until revoked.
+        </p>
       </div>
       <form onSubmit={handleSubmit} className="w-full space-y-3 max-w-[280px]">
         <Input
@@ -54,7 +56,7 @@ export default function TokenSignIn({ onSuccess, className }: TokenSignInProps) 
         />
         {error && <p className="text-sm text-destructive text-center">{error}</p>}
         <Button type="submit" disabled={loading} className="w-full">
-          {loading ? 'Saving…' : 'Save token'}
+          {loading ? 'Saving...' : 'Save token'}
         </Button>
       </form>
       <a

@@ -17,13 +17,11 @@ import { cn } from "@/lib/utils";
 
 export function TimelineCard({
   bookmark,
-  animationDelay,
   onEdit,
   onRefresh,
   onDelete,
 }: {
   bookmark: Bookmark;
-  animationDelay?: number;
   onEdit?: (id: string) => void;
   onRefresh?: (id: string) => void;
   onDelete?: (id: string) => void;
@@ -42,17 +40,7 @@ export function TimelineCard({
   };
 
   return (
-    <Card
-      className={cn(
-        "group transition-colors hover:bg-muted/50",
-        animationDelay !== undefined && "animate-in fade-in slide-in-from-bottom-2 duration-300 [animation-fill-mode:both]"
-      )}
-      style={
-        animationDelay !== undefined
-          ? { animationDelay: `${animationDelay}ms` }
-          : undefined
-      }
-    >
+    <Card className={cn("group transition-colors hover:bg-muted/50")}>
       <CardHeader className="flex flex-row items-start gap-3 pb-2">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">

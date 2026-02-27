@@ -86,7 +86,7 @@ export async function deleteGroup(id: string) {
   });
   await prisma.group.deleteMany({ where: { id, userId } });
   revalidatePath("/");
-  revalidateTag("groups");
+  revalidateTag("groups", "max");
   publishUserEvent(userId, { type: "group.deleted", entity: "group", id });
   return { ok: true };
 }
@@ -107,7 +107,7 @@ export async function createGroupForUser(userId: string, name: string, color?: s
     },
   });
   revalidatePath("/");
-  revalidateTag("groups");
+  revalidateTag("groups", "max");
   publishUserEvent(userId, { type: "group.created", entity: "group", id: group.id });
   return group;
 }
@@ -127,7 +127,7 @@ export async function updateGroupForUser(
     data: updatePayload,
   });
   revalidatePath("/");
-  revalidateTag("groups");
+  revalidateTag("groups", "max");
   publishUserEvent(userId, { type: "group.updated", entity: "group", id });
   return { ok: true };
 }
@@ -139,7 +139,7 @@ export async function deleteGroupForUser(userId: string, id: string) {
   });
   await prisma.group.deleteMany({ where: { id, userId } });
   revalidatePath("/");
-  revalidateTag("groups");
+  revalidateTag("groups", "max");
   publishUserEvent(userId, { type: "group.deleted", entity: "group", id });
   return { ok: true };
 }
