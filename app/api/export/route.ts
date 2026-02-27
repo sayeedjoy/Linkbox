@@ -21,6 +21,7 @@ export async function GET(request: Request) {
     },
   });
   const data = bookmarks.map((b) => ({
+    id: b.id,
     url: b.url,
     title: b.title,
     description: b.description,
@@ -29,6 +30,7 @@ export async function GET(request: Request) {
     createdAt: b.createdAt.toISOString(),
     group: b.group?.name ?? null,
     groupColor: b.group?.color ?? null,
+    groupId: b.groupId ?? null,
   }));
   return NextResponse.json(data, {
     headers: {

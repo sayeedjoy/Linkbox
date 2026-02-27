@@ -250,6 +250,24 @@ export async function deleteBookmark(id: string) {
   return { ok: true };
 }
 
+export async function updateBookmarkCategoryForUser(
+  userId: string,
+  bookmarkId: string,
+  categoryId: string | null
+) {
+  const groupId = categoryId === "" ? null : categoryId;
+  await prisma.bookmark.updateMany({
+    where: { id: bookmarkId, userId },
+    data: { groupId },
+  });
+  revalidateBookmarkData();
+  const updated = await prisma.bookmark.findFirst({
+    where: { id: bookmarkId, userId },
+    include: { group: { select: { id: true, name: true, color: true } } },
+  });
+  return updated;
+}
+
 export async function refreshBookmark(id: string): Promise<BookmarkWithGroup | null> {
   const userId = await currentUserId();
   const bookmark = await prisma.bookmark.findFirst({
