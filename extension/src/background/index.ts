@@ -62,6 +62,11 @@ async function setStoredToken(token: string | null): Promise<void> {
   }
 }
 
+async function clearAuthState(): Promise<void> {
+  stopRealtimeSync()
+  await setStoredToken(null)
+}
+
 async function fetchWithAuth<T>(
   path: string,
   options: RequestInit = {}
@@ -80,6 +85,7 @@ async function fetchWithAuth<T>(
     },
   })
   if (res.status === 401) {
+    await clearAuthState()
     return { ok: false, status: 401 }
   }
   if (!res.ok) {
@@ -652,8 +658,7 @@ chrome.runtime.onMessage.addListener(
           return { success: true }
         }
         case 'clearToken': {
-          stopRealtimeSync()
-          await setStoredToken(null)
+          await clearAuthState()
           return { success: true }
         }
         case 'getToken': {

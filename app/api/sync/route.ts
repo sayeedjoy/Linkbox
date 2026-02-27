@@ -14,6 +14,11 @@ function corsHeaders(request: Request): Record<string, string> {
   return {};
 }
 
+function isExtensionRequest(request: Request): boolean {
+  const origin = request.headers.get("Origin");
+  return Boolean(origin?.startsWith("chrome-extension://"));
+}
+
 function parsePositiveInt(value: string | null): number | null {
   if (!value) return null;
   const parsed = Number.parseInt(value, 10);
@@ -29,7 +34,7 @@ export async function GET(request: Request) {
 
   const authHeader = request.headers.get("Authorization");
   let userId = (await userIdFromBearerToken(authHeader)) ?? undefined;
-  if (!userId) {
+  if (!userId && !isExtensionRequest(request)) {
     const session = await getServerSession(authOptions);
     userId = session?.user?.id;
   }

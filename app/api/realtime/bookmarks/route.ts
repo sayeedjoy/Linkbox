@@ -15,6 +15,11 @@ function corsHeaders(request: Request): Record<string, string> {
   return {};
 }
 
+function isExtensionRequest(request: Request): boolean {
+  const origin = request.headers.get("Origin");
+  return Boolean(origin?.startsWith("chrome-extension://"));
+}
+
 function encodeSseEvent(event: RealtimeEvent, eventId: string): Uint8Array {
   const payload = JSON.stringify(event);
   return new TextEncoder().encode(`id: ${eventId}\ndata: ${payload}\n\n`);
@@ -36,7 +41,7 @@ async function getBookmarkSignature(userId: string): Promise<string> {
 export async function GET(request: Request) {
   const authHeader = request.headers.get("Authorization");
   let userId = (await userIdFromBearerToken(authHeader)) ?? undefined;
-  if (!userId) {
+  if (!userId && !isExtensionRequest(request)) {
     const session = await getServerSession(authOptions);
     userId = session?.user?.id;
   }
