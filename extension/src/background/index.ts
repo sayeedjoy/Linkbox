@@ -56,11 +56,7 @@ async function getToken(): Promise<string | null> {
 
 async function setStoredToken(token: string | null): Promise<void> {
   if (token === null) {
-    await chrome.storage.local.remove(STORAGE_KEYS.apiToken)
-    await chrome.storage.local.remove(STORAGE_KEYS.bookmarksCache)
-    await chrome.storage.local.remove(STORAGE_KEYS.bookmarksCacheTime)
-    await chrome.storage.local.remove(STORAGE_KEYS.groupsCache)
-    await chrome.storage.local.remove(STORAGE_KEYS.groupsCacheTime)
+    await chrome.storage.local.remove(Object.values(STORAGE_KEYS))
   } else {
     await chrome.storage.local.set({ [STORAGE_KEYS.apiToken]: token })
   }
@@ -94,6 +90,18 @@ async function fetchWithAuth<T>(
   }
   const data = (await res.json()) as T
   return { ok: true, data }
+}
+
+async function validateToken(token: string): Promise<boolean> {
+  const url = `${API_BASE_URL.replace(/\/$/, '')}/api/sync?mode=initial&limit=1`
+  try {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    return res.ok
+  } catch {
+    return false
+  }
 }
 
 async function invalidateBookmarksCache(): Promise<void> {
@@ -634,13 +642,14 @@ chrome.runtime.onMessage.addListener(
       switch (message.type) {
         case 'setToken': {
           const { token } = (message.payload || {}) as SetTokenPayload
-          if (typeof token === 'string' && token.trim()) {
-            await setStoredToken(token.trim())
-            void revalidateAll('initial')
-            void startRealtimeSync()
-            return { success: true }
-          }
-          return { success: false }
+          const trimmed = typeof token === 'string' ? token.trim() : ''
+          if (!trimmed) return { success: false }
+          const valid = await validateToken(trimmed)
+          if (!valid) return { success: false }
+          await setStoredToken(trimmed)
+          void revalidateAll('initial')
+          void startRealtimeSync()
+          return { success: true }
         }
         case 'clearToken': {
           stopRealtimeSync()

@@ -29,7 +29,7 @@ export default function TokenSignIn({ onSuccess, className }: TokenSignInProps) 
     if (result.success) {
       onSuccess()
     } else {
-      setError('Failed to save token')
+      setError('Invalid token. Check the token or get a new one from the web app.')
     }
   }
 
