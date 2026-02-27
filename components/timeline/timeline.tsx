@@ -1,33 +1,66 @@
 "use client";
 
+import { useCallback } from "react";
 import type { Bookmark } from "./types";
 import { groupBookmarksByDate } from "./utils";
 import { TimelineCard } from "./timeline-card";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+const SORT_OPTIONS: { value: TimelineSort; label: string }[] = [
+  { value: "date-desc", label: "Date" },
+  { value: "name-asc", label: "Name" },
+];
+
+type TimelineSort = "date-desc" | "name-asc";
 
 interface TimelineProps {
   bookmarks: Bookmark[];
   onEdit?: (id: string) => void;
   onRefresh?: (id: string) => void;
   onDelete?: (id: string) => void;
+  sortBy: TimelineSort;
+  onSortChange: (value: TimelineSort) => void;
 }
 
-export function Timeline({ bookmarks, onEdit, onRefresh, onDelete }: TimelineProps) {
+export function Timeline({ bookmarks, onEdit, onRefresh, onDelete, sortBy, onSortChange }: TimelineProps) {
   const groups = groupBookmarksByDate(bookmarks);
   const disableStaggeredAnimation = bookmarks.length > 200;
   let globalIndex = 0;
 
+  const handleSortChange = useCallback(
+    (value: TimelineSort) => {
+      onSortChange(value);
+    },
+    [onSortChange]
+  );
+
   return (
     <div className="w-full">
-      {groups.map(({ label, items }) => (
+      {groups.map(({ label, items }, groupIndex) => (
         <section key={label} className="mb-8">
           <div
             className={cn(
-              "sticky top-0 z-10 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground",
-              "bg-background/80 backdrop-blur-sm"
+              "sticky top-0 z-10 py-2 flex items-center justify-between text-xs font-medium uppercase tracking-wide text-muted-foreground",
+              "bg-background/80 backdrop-blur-sm -mx-4 px-4 sm:-mx-6 sm:px-6"
             )}
           >
-            {label}
+            <span>{label}</span>
+            {groupIndex === 0 && (
+              <div className="flex items-center gap-1">
+                {SORT_OPTIONS.map((option) => (
+                  <Button
+                    key={option.value}
+                    variant={sortBy === option.value ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => handleSortChange(option.value)}
+                    className="text-muted-foreground h-6 px-2 text-xs"
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
           <ul className="relative flex flex-col gap-0">
             <div

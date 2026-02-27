@@ -205,14 +205,14 @@ export function TimelineShell({
           onSearchModeChange={setSearchMode}
           search={search}
           onSearchChange={setSearch}
-          sortBy={sortBy}
-          onSortChange={setSortBy}
         />
         <Timeline
           bookmarks={bookmarks}
           onEdit={setEditBookmarkId}
           onRefresh={handleRefresh}
           onDelete={handleDelete}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
         />
       </main>
       <TimelineEditDialog
