@@ -17,7 +17,7 @@ This README documents the whole application. Extension-specific implementation d
 
 ---
 
-## 📌 Core capabilities
+## Core capabilities
 
 - Save links and notes
 - Auto-unfurl metadata (title, description, favicon, preview image)
@@ -31,7 +31,7 @@ This README documents the whole application. Extension-specific implementation d
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ### Web platform
 - **Next.js 16** App Router (`app/`)
@@ -56,7 +56,7 @@ This README documents the whole application. Extension-specific implementation d
 
 ---
 
-## 🛠️ Tech stack
+## Tech stack
 
 | Category | Technology |
 |----------|------------|
@@ -70,7 +70,7 @@ This README documents the whole application. Extension-specific implementation d
 
 ---
 
-## 📁 Project structure
+## Project structure
 
 ```
 app/                    Next.js routes, actions, APIs
@@ -83,7 +83,7 @@ extension/              Chrome extension project
 
 ---
 
-## 🚀 Getting started
+## Getting started
 
 ### Prerequisites
 
@@ -130,7 +130,7 @@ Open **http://localhost:3000**.
 
 ---
 
-## 📜 Available scripts
+## Available scripts
 
 | Command | Description |
 |---------|-------------|
@@ -141,7 +141,7 @@ Open **http://localhost:3000**.
 
 ---
 
-## 📡 API reference
+## API reference
 
 ### Extension / integration endpoints
 
@@ -165,7 +165,7 @@ Authorization: Bearer <api-token>
 
 ---
 
-## 🔌 Chrome extension
+## Chrome extension
 
 ### Quick start
 
@@ -187,7 +187,7 @@ For full extension docs (permissions, messaging contract, cache strategy, releas
 
 ---
 
-## 📦 Production build
+## Production build
 
 ### Web app
 
@@ -206,7 +206,7 @@ Zip artifact is generated in `extension/release/`.
 
 ---
 
-## 📋 Operational notes
+## Operational notes
 
 - API tokens are persisted in extension `chrome.storage.local`
 - Token validity is controlled server-side (revoke/regenerate from web app)
@@ -214,7 +214,7 @@ Zip artifact is generated in `extension/release/`.
 
 ---
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Build fails with `spawn EPERM` (Windows/sandboxed env)
 Usually an execution-environment permission issue rather than app code. Retry in a normal local terminal with required permissions.
@@ -231,6 +231,6 @@ cmd /c npm run build
 
 ---
 
-## 📄 License
+## License
 
 Private

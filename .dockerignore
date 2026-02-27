@@ -3,3 +3,14 @@ node_modules
 .git
 .env*
 *.md
+extension
+.cursor
+.agents
+agent-transcripts
+mcps
+coverage
+.vercel
+*.log
+.gitignore
+Dockerfile*
+.dockerignore
