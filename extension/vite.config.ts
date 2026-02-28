@@ -15,7 +15,7 @@ export default defineConfig({
   plugins: [
     react(),
     crx({ manifest }),
-    zip({ outDir: 'release', outFileName: `bookmark-extension-${version}.zip` }),
+    zip({ outDir: 'release', outFileName: `linkarena-extension-${version}.zip` }),
   ],
   server: {
     cors: {

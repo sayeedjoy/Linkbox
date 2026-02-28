@@ -824,7 +824,7 @@ chrome.runtime.onMessage.addListener(
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: 'bookmark-save-page',
-    title: 'Save this page to Bookmark',
+    title: 'Save this page to LinkArena',
     contexts: ['page'],
   })
 })

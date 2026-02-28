@@ -7,7 +7,7 @@ export default function App() {
       <div className="sidepanel-branding-icon">
         <img src={LOGO_URL} alt="" className="icon" />
       </div>
-      <h1 className="sidepanel-branding-title">Bookmark</h1>
+      <h1 className="sidepanel-branding-title">LinkArena</h1>
     </div>
   )
 }

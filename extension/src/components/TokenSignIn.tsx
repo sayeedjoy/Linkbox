@@ -39,7 +39,7 @@ export default function TokenSignIn({ onSuccess, className }: TokenSignInProps) 
         <img src={LOGO_URL} alt="" className="h-7 w-7 object-contain" />
       </div>
       <div className="text-center space-y-1">
-        <h1 className="text-lg font-semibold text-foreground">Bookmark</h1>
+        <h1 className="text-lg font-semibold text-foreground">LinkArena</h1>
         <p className="text-sm text-muted-foreground">
           Stored only in chrome.storage.local. Token stays valid until revoked.
         </p>

@@ -248,7 +248,7 @@ export default function BookmarksView({ onSignOut }: { onSignOut: () => void }) 
               <img src={LOGO_URL} alt="" className="h-5 w-5 object-contain" />
             </div>
             <div className="min-w-0">
-              <p className="font-semibold text-foreground truncate text-sm">Bookmark</p>
+              <p className="font-semibold text-foreground truncate text-sm">LinkArena</p>
               <p className="text-xs text-muted-foreground">
                 {formatDate()}
                 {syncInProgress ? ' • Syncing…' : ''}

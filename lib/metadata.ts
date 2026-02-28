@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-export const SITE_TITLE = "LinkBox";
+export const SITE_TITLE = "LinkArena";
 export const SITE_DESCRIPTION = "simple, fast, and minimal bookmark manager.";
 
 export const siteMetadata: Metadata = {

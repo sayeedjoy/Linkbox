@@ -1,6 +1,6 @@
-# LinkBox Chrome Extension
+# LinkArena Chrome Extension
 
-Production-ready Chrome Extension (Manifest V3) for saving, browsing, editing, and syncing bookmarks from your LinkBox account.
+Production-ready Chrome Extension (Manifest V3) for saving, browsing, editing, and syncing bookmarks from your LinkArena account.
 
 This extension uses:
 - React + TypeScript + Vite
@@ -10,7 +10,7 @@ This extension uses:
 
 ## Features
 
-- Save current tab to LinkBox from popup or context menu
+- Save current tab to LinkArena from popup or context menu
 - Browse/search/filter bookmarks by group
 - Edit bookmark category
 - Delete bookmarks
@@ -153,7 +153,7 @@ npm run build
 Outputs:
 - Build artifacts under `dist/`
 - Zip artifact under `release/` named:
-  - `bookmark-extension-<version>.zip`
+  - `linkarena-extension-<version>.zip`
 
 ## Environment Variables
 
@@ -164,7 +164,7 @@ Set in extension environment (for Vite):
 Example:
 
 ```bash
-VITE_BOOKMARK_API_URL=https://your-linkbox-app.com/
+VITE_BOOKMARK_API_URL=https://your-linkarena-app.com/
 ```
 
 If missing, defaults to `http://localhost:3000/`.
@@ -191,4 +191,4 @@ If missing, defaults to `http://localhost:3000/`.
 
 - This extension intentionally keeps account session logic out of Chrome cookies; auth is token-based.
 - Background worker is the source of truth for network and cache behavior; popup is a thin client.
-- Branding note: the current extension manifest display name is still `Bookmark`; rename `name` in `manifest.config.ts` if you want the Chrome UI label to show `LinkBox`.
+- Chrome UI label shows LinkArena via `name` in `manifest.config.ts`.

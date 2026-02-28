@@ -3,7 +3,7 @@ import pkg from './package.json'
 
 export default defineManifest({
   manifest_version: 3,
-  name: 'Bookmark',
+  name: 'LinkArena',
   version: pkg.version,
   icons: {
     16: 'public/icons/bookmark-16.png',
