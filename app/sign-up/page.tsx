@@ -2,14 +2,16 @@
 
 import { signIn } from "next-auth/react";
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { register } from "@/app/actions/auth";
 import { JSX, SVGProps } from "react";
+
+const DEMO_EMAIL = "demo@linkarena.app";
 
 const Logo = (props: JSX.IntrinsicAttributes & SVGProps<SVGSVGElement>) => (
   <svg
@@ -37,6 +39,8 @@ export default function SignUpPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -116,7 +120,7 @@ export default function SignUpPage() {
                   id="email-login-05"
                   name="email"
                   autoComplete="email"
-                  placeholder="ephraim@blocks.so"
+                  placeholder={DEMO_EMAIL}
                   className="mt-2"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -131,17 +135,30 @@ export default function SignUpPage() {
                 >
                   Password
                 </Label>
-                <Input
-                  type="password"
-                  id="password-login-05"
-                  name="password"
-                  autoComplete="new-password"
-                  placeholder="Password"
-                  className="mt-2"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
+                <div className="relative mt-2">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    id="password-login-05"
+                    name="password"
+                    autoComplete="new-password"
+                    placeholder="Password"
+                    className="pr-10"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    className="absolute top-1/2 right-1 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowPassword((value) => !value)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-pressed={showPassword}
+                  >
+                    {showPassword ? <EyeOff /> : <Eye />}
+                  </Button>
+                </div>
               </div>
 
               <div>
@@ -151,29 +168,30 @@ export default function SignUpPage() {
                 >
                   Confirm password
                 </Label>
-                <Input
-                  type="password"
-                  id="confirm-password-login-05"
-                  name="confirm-password"
-                  autoComplete="new-password"
-                  placeholder="Password"
-                  className="mt-2"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="flex items-start">
-                <div className="flex h-6 items-center">
-                  <Checkbox id="newsletter-login-05" name="newsletter" className="size-4" />
+                <div className="relative mt-2">
+                  <Input
+                    type={showConfirmPassword ? "text" : "password"}
+                    id="confirm-password-login-05"
+                    name="confirm-password"
+                    autoComplete="new-password"
+                    placeholder="Password"
+                    className="pr-10"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    className="absolute top-1/2 right-1 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowConfirmPassword((value) => !value)}
+                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                    aria-pressed={showConfirmPassword}
+                  >
+                    {showConfirmPassword ? <EyeOff /> : <Eye />}
+                  </Button>
                 </div>
-                <Label
-                  htmlFor="newsletter-login-05"
-                  className="ml-3 text-sm leading-6 text-muted-foreground dark:text-muted-foreground"
-                >
-                  Sign up to our newsletter
-                </Label>
               </div>
 
               {error && <p className="text-sm text-destructive">{error}</p>}

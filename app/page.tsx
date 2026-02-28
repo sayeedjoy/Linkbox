@@ -3,6 +3,7 @@ import { Header } from "@/components/header";
 import { HeroSection } from "@/components/hero";
 import { FeatureSection } from "@/components/feature-section";
 import { Integrations } from "@/components/integrations";
+import { FaqsSection } from "@/components/faqs-section";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 
@@ -23,6 +24,9 @@ export default function Page() {
           </h2>
           <Integrations />
         </div>
+      </section>
+      <section id="faqs" className="border-t py-16 md:py-24">
+        <FaqsSection />
       </section>
       <section className="border-t py-16 md:py-24">
         <div className="mx-auto flex max-w-3xl flex-col items-center justify-center px-6 text-center">

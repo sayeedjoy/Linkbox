@@ -21,7 +21,7 @@ export function Footer() {
 							<Logo className="h-5" />
 						</Link>
 						<p className="max-w-sm text-balance text-muted-foreground text-sm">
-							Simple, fast, minimal bookmark manager.
+							Full-stack bookmarking platform. Web app + Chrome extension.
 						</p>
 						<div className="flex gap-2">
 							{socialLinks.map((item, index) => (

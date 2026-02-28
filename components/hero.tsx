@@ -1,14 +1,14 @@
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { DecorIcon } from "@/components/ui/decor-icon";
 import { FullWidthDivider } from "@/components/ui/full-width-divider";
 import { Button } from "@/components/ui/button";
-import { ArrowRightIcon, PhoneCallIcon } from "lucide-react";
+import { ArrowRightIcon, LinkIcon } from "lucide-react";
 
 export function HeroSection() {
 	return (
 		<section>
 			<div className="relative flex flex-col items-center justify-center gap-5 px-4 py-12 md:px-4 md:py-24 lg:py-28">
-				{/* X Faded Borders & Shades */}
 				<div
 					aria-hidden="true"
 					className="absolute inset-0 -z-1 size-full overflow-hidden"
@@ -30,13 +30,13 @@ export function HeroSection() {
 						"group mx-auto flex w-fit items-center gap-3 rounded-sm border bg-card p-1 shadow",
 						"fade-in slide-in-from-bottom-10 animate-in fill-mode-backwards transition-all delay-500 duration-500 ease-out"
 					)}
-					href="#link"
+					href="#features"
 				>
 					<div className="rounded-xs border bg-card px-1.5 py-0.5 shadow-sm">
-						<p className="font-mono text-xs">NOW</p>
+						<p className="font-mono text-xs">NEW</p>
 					</div>
 
-					<span className="text-xs">accepting new client projects</span>
+					<span className="text-xs">AI-powered link organization</span>
 					<span className="block h-5 border-l" />
 
 					<div className="pr-1">
@@ -50,7 +50,7 @@ export function HeroSection() {
 						"fade-in slide-in-from-bottom-10 animate-in fill-mode-backwards delay-100 duration-500 ease-out"
 					)}
 				>
-					Building Digital Experiences That Drive Growth
+					Bookmarking Like Never Before
 				</h1>
 
 				<p
@@ -59,18 +59,19 @@ export function HeroSection() {
 						"fade-in slide-in-from-bottom-10 animate-in fill-mode-backwards delay-200 duration-500 ease-out"
 					)}
 				>
-					We help brands scale faster through design, <br /> development and
-					strategic execution.
+					Save links instantly. Organize automatically. Find anything in seconds.
 				</p>
 
 				<div className="fade-in slide-in-from-bottom-10 flex w-fit animate-in items-center justify-center gap-3 fill-mode-backwards pt-2 delay-300 duration-500 ease-out">
-					<Button variant="outline">
-						<PhoneCallIcon data-icon="inline-start" />{" "}
-						Book a Call
+					<Button asChild variant="outline">
+						<Link href="/sign-up">
+							Sign up <ArrowRightIcon data-icon="inline-end" />
+						</Link>
 					</Button>
-					<Button>
-						Get started{" "}
-						<ArrowRightIcon data-icon="inline-end" />
+					<Button asChild>
+						<Link href="/dashboard">
+							<LinkIcon data-icon="inline-start" /> Open dashboard
+						</Link>
 					</Button>
 				</div>
 			</div>
@@ -80,22 +81,24 @@ export function HeroSection() {
 				<DecorIcon className="size-4" position="bottom-left" />
 				<DecorIcon className="size-4" position="bottom-right" />
 
-				<FullWidthDivider className="-top-px" contained position="top" />
-				<div className="overflow-hidden rounded-lg border *:pointer-events-none *:select-none">
+				<FullWidthDivider className="-top-px" />
+				<div className="overflow-hidden *:pointer-events-none *:aspect-video *:select-none">
 					<img
-						alt="light app screen"
-						className="dark:hidden h-auto w-full max-w-full object-contain object-top"
-						src="https://storage.efferd.com/screen/dashboard-light.webp"
-						style={{ aspectRatio: "16/10" }}
+						alt="LinkArena dashboard"
+						className="dark:hidden"
+						height="auto"
+						src="/hero.webp"
+						width="auto"
 					/>
 					<img
-						alt="dark app screen"
-						className="hidden h-auto w-full max-w-full object-contain object-top dark:block"
-						src="https://storage.efferd.com/screen/dashboard-dark.webp"
-						style={{ aspectRatio: "16/10" }}
+						alt="LinkArena dashboard"
+						className="hidden dark:block"
+						height="auto"
+						src="/hero.webp"
+						width="auto"
 					/>
 				</div>
-				<FullWidthDivider className="-bottom-px" contained position="bottom" />
+				<FullWidthDivider className="-bottom-px" />
 			</div>
 		</section>
 	);

@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { requestPasswordReset } from "@/app/actions/auth";
 
+const DEMO_EMAIL = "demo@linkarena.app";
+
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
@@ -75,7 +77,7 @@ export default function ForgotPasswordPage() {
                 id="email-forgot"
                 name="email"
                 autoComplete="email"
-                placeholder="ephraim@blocks.so"
+                placeholder={DEMO_EMAIL}
                 className="mt-2"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import React from "react";
 import { Portal, PortalBackdrop } from "@/components/ui/portal";
@@ -48,10 +49,12 @@ export function MobileNav() {
 							))}
 						</div>
 						<div className="mt-12 flex flex-col gap-2">
-							<Button className="w-full" variant="outline">
-								Sign In
+							<Button asChild className="w-full" variant="outline">
+								<Link href="/sign-in">Sign In</Link>
 							</Button>
-							<Button className="w-full">Get Started</Button>
+							<Button asChild className="w-full">
+								<Link href="/sign-up">Get Started</Link>
+							</Button>
 						</div>
 					</div>
 				</Portal>

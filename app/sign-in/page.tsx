@@ -3,16 +3,20 @@
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { useState, Suspense } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
+
+const DEMO_EMAIL = "demo@linkarena.app";
 
 function SignInForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -62,7 +66,7 @@ function SignInForm() {
                 id="email-login-03"
                 name="email"
                 autoComplete="email"
-                placeholder="ephraim@blocks.so"
+                placeholder={DEMO_EMAIL}
                 className="mt-2"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -84,17 +88,30 @@ function SignInForm() {
                   Forgot password?
                 </Link>
               </div>
-              <Input
-                type="password"
-                id="password-login-03"
-                name="password"
-                autoComplete="password"
-                placeholder="**************"
-                className="mt-2"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              <div className="relative mt-2">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  id="password-login-03"
+                  name="password"
+                  autoComplete="current-password"
+                  placeholder="**************"
+                  className="pr-10"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  className="absolute top-1/2 right-1 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowPassword((value) => !value)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                >
+                  {showPassword ? <EyeOff /> : <Eye />}
+                </Button>
+              </div>
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="mt-4 w-full py-2 font-medium" disabled={loading}>

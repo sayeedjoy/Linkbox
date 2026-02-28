@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/logo";
 import { useScroll } from "@/hooks/use-scroll";
@@ -8,15 +9,11 @@ import { MobileNav } from "@/components/mobile-nav";
 export const navLinks = [
 	{
 		label: "Features",
-		href: "#",
+		href: "#features",
 	},
 	{
-		label: "Pricing",
-		href: "#",
-	},
-	{
-		label: "About",
-		href: "#",
+		label: "FAQs",
+		href: "#faqs",
 	},
 ];
 
@@ -41,12 +38,12 @@ export function Header() {
 					}
 				)}
 			>
-				<a
+				<Link
 					className="rounded-md p-2 hover:bg-muted dark:hover:bg-muted/50"
-					href="#"
+					href="/"
 				>
 					<Logo className="h-4" />
-				</a>
+				</Link>
 				<div className="hidden items-center gap-2 md:flex">
 					<div>
 						{navLinks.map((link) => (
@@ -55,10 +52,12 @@ export function Header() {
 							</Button>
 						))}
 					</div>
-					<Button size="sm" variant="outline">
-						Sign In
+					<Button asChild size="sm" variant="outline">
+						<Link href="/sign-in">Sign In</Link>
 					</Button>
-					<Button size="sm">Get Started</Button>
+					<Button asChild size="sm">
+						<Link href="/sign-up">Get Started</Link>
+					</Button>
 				</div>
 				<MobileNav />
 			</nav>

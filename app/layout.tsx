@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
+import { GeistPixelSquare, GeistPixelGrid, GeistPixelCircle } from "geist/font/pixel";
 import { siteMetadata } from "@/lib/metadata";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -15,7 +18,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={`${GeistSans.variable} ${GeistMono.variable} ${GeistPixelSquare.variable} ${GeistPixelGrid.variable} ${GeistPixelCircle.variable}`}>
       <body className="antialiased">
         <ThemeProvider
           attribute="class"
