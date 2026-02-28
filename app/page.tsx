@@ -2,13 +2,13 @@ import Link from "next/link";
 import { Header } from "@/components/header";
 import { HeroSection } from "@/components/hero";
 import { FeatureSection } from "@/components/feature-section";
-import { LogosSection } from "@/components/logos-section";
 import { Integrations } from "@/components/integrations";
+import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 
 export default function Page() {
   return (
-    <main className="min-h-dvh bg-background">
+    <main className="min-h-dvh overflow-x-hidden bg-background">
       <Header />
       <HeroSection />
       <section className="border-t py-16 md:py-24">
@@ -16,7 +16,6 @@ export default function Page() {
           <FeatureSection />
         </div>
       </section>
-      <LogosSection />
       <section id="integrations" className="border-t py-16 md:py-24">
         <div className="mx-auto max-w-5xl px-4">
           <h2 className="mb-8 text-center font-medium text-2xl md:text-3xl">
@@ -44,6 +43,7 @@ export default function Page() {
           </div>
         </div>
       </section>
+      <Footer />
     </main>
   );
 }

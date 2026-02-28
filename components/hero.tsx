@@ -74,30 +74,28 @@ export function HeroSection() {
 					</Button>
 				</div>
 			</div>
-			<div className="relative">
+			<div className="relative mx-auto w-full max-w-5xl px-4 md:px-6 lg:px-8">
 				<DecorIcon className="size-4" position="top-left" />
 				<DecorIcon className="size-4" position="top-right" />
 				<DecorIcon className="size-4" position="bottom-left" />
 				<DecorIcon className="size-4" position="bottom-right" />
 
-				<FullWidthDivider className="-top-px" />
-				<div className="overflow-hidden *:pointer-events-none *:aspect-video *:select-none">
+				<FullWidthDivider className="-top-px" contained position="top" />
+				<div className="overflow-hidden rounded-lg border *:pointer-events-none *:select-none">
 					<img
 						alt="light app screen"
-						className="dark:hidden"
-						height="auto"
+						className="dark:hidden h-auto w-full max-w-full object-contain object-top"
 						src="https://storage.efferd.com/screen/dashboard-light.webp"
-						width="auto"
+						style={{ aspectRatio: "16/10" }}
 					/>
 					<img
 						alt="dark app screen"
-						className="hidden dark:block"
-						height="auto"
+						className="hidden h-auto w-full max-w-full object-contain object-top dark:block"
 						src="https://storage.efferd.com/screen/dashboard-dark.webp"
-						width="auto"
+						style={{ aspectRatio: "16/10" }}
 					/>
 				</div>
-				<FullWidthDivider className="-bottom-px" />
+				<FullWidthDivider className="-bottom-px" contained position="bottom" />
 			</div>
 		</section>
 	);
