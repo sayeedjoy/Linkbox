@@ -4,14 +4,17 @@ import { useState, useCallback, useMemo, useRef, useDeferredValue } from "react"
 import { useSession } from "next-auth/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { AnimatePresence } from "motion/react";
 import { Timeline } from "./timeline";
 import { TimelineFilters } from "./timeline-filters";
 import { TimelineEditDialog } from "./timeline-edit-dialog";
 import { ProfileHeader } from "@/components/profile-header";
+import { MultiSelectToolbar } from "@/components/multi-select";
+import { MoveToGroupDialog } from "@/components/move-to-group-dialog";
 import { bookmarkWithGroupToTimeline } from "./types";
 import type { GroupWithCount } from "@/lib/types";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
-import { refreshBookmark, deleteBookmark, getBookmarks, createBookmark } from "@/app/actions/bookmarks";
+import { refreshBookmark, deleteBookmark, getBookmarks, createBookmark, updateBookmark } from "@/app/actions/bookmarks";
 import { getGroups } from "@/app/actions/groups";
 import { timelineBookmarksKey, groupsKey } from "@/lib/query-keys";
 
@@ -59,8 +62,27 @@ export function TimelineShell({
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState("");
   const [searchMode, setSearchMode] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const deferredSearch = useDeferredValue(search);
   const normalizedSearch = deferredSearch.trim().toLowerCase();
+
+  const toggleSelection = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+  }, []);
+
+  const handleBulkMove = useCallback(() => setMoveDialogOpen(true), []);
 
   const shouldUseInitialBookmarks = initialBookmarks.length > 0 && !!userId;
 
@@ -130,6 +152,82 @@ export function TimelineShell({
     queryClient.invalidateQueries({ queryKey: ["bookmarks", userId] });
     queryClient.invalidateQueries({ queryKey: groupsKey(userId) });
   }, [queryClient, userId]);
+
+  const selectAll = useCallback(() => {
+    setSelectedIds(new Set(bookmarks.map((b) => b.id)));
+  }, [bookmarks]);
+
+  const handleMoveConfirm = useCallback(
+    async (groupId: string | null) => {
+      const ids = Array.from(selectedIds);
+      for (const id of ids) {
+        await updateBookmark(id, { groupId });
+      }
+      invalidateTimeline();
+      clearSelection();
+      setMoveDialogOpen(false);
+      if (ids.length) toast.success(`Moved ${ids.length} bookmark${ids.length === 1 ? "" : "s"}`);
+    },
+    [selectedIds, invalidateTimeline, clearSelection]
+  );
+
+  const handleBulkCopyUrls = useCallback(async () => {
+    const selected = bookmarks.filter((b) => selectedIds.has(b.id));
+    const lines = selected.map((b) => (b.url?.trim() ? b.url : [b.title, b.description].filter(Boolean).join("\n")));
+    const text = lines.join("\n");
+    if (text) {
+      await navigator.clipboard.writeText(text);
+      toast.success("Copied to clipboard");
+    }
+  }, [bookmarks, selectedIds]);
+
+  const handleBulkExport = useCallback(
+    (format: "csv" | "json") => {
+      const selected = bookmarks.filter((b) => selectedIds.has(b.id));
+      const rows = selected.map((b) => ({
+        title: b.title ?? "",
+        url: b.url ?? "",
+        description: b.description ?? "",
+        group: b.category ?? "",
+        createdAt: b.createdAt,
+      }));
+      if (format === "json") {
+        const blob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "bookmarks.json";
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        const header = "title,url,description,group,createdAt";
+        const escape = (s: string) => {
+          const t = String(s ?? "").replace(/"/g, '""');
+          return t.includes(",") || t.includes('"') || t.includes("\n") ? `"${t}"` : t;
+        };
+        const body = rows.map((r) => [r.title, r.url, r.description, r.group, String(r.createdAt)].map(escape).join(",")).join("\n");
+        const blob = new Blob([header + "\n" + body], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "bookmarks.csv";
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+      toast.success(`Exported as ${format.toUpperCase()}`);
+    },
+    [bookmarks, selectedIds]
+  );
+
+  const handleBulkDelete = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+    for (const id of ids) {
+      await deleteBookmark(id);
+      invalidateTimeline();
+    }
+    clearSelection();
+    if (ids.length) toast.success(`Deleted ${ids.length} bookmark${ids.length === 1 ? "" : "s"}`);
+  }, [selectedIds, invalidateTimeline, clearSelection]);
 
   const [editBookmarkId, setEditBookmarkId] = useState<string | null>(null);
   const editBookmark = editBookmarkId
@@ -213,8 +311,31 @@ export function TimelineShell({
           onDelete={handleDelete}
           sortBy={sortBy}
           onSortChange={setSortBy}
+          selectionMode={selectionMode}
+          selectedIds={selectedIds}
+          onToggleSelect={toggleSelection}
+          onSelectClick={() => setSelectionMode(true)}
         />
       </main>
+      <AnimatePresence>
+        {selectionMode && selectedIds.size > 0 && (
+          <MultiSelectToolbar
+            onSelectAll={selectAll}
+            onMove={handleBulkMove}
+            onCopyUrls={handleBulkCopyUrls}
+            onExport={handleBulkExport}
+            onDelete={handleBulkDelete}
+            onClose={clearSelection}
+            hasUsername={false}
+          />
+        )}
+      </AnimatePresence>
+      <MoveToGroupDialog
+        open={moveDialogOpen}
+        onOpenChange={setMoveDialogOpen}
+        groups={groups}
+        onConfirm={handleMoveConfirm}
+      />
       <TimelineEditDialog
         bookmark={editBookmark}
         groups={groups}

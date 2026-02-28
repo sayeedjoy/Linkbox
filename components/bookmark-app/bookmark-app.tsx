@@ -2,9 +2,12 @@
 
 import dynamic from "next/dynamic";
 import { useEffect } from "react";
+import { AnimatePresence } from "motion/react";
 import { ProfileHeader } from "@/components/profile-header";
 import { BookmarkHeroInput } from "@/components/bookmark-hero-input";
 import { BookmarkList } from "@/components/bookmark-list";
+import { MultiSelectToolbar } from "@/components/multi-select";
+import { MoveToGroupDialog } from "@/components/move-to-group-dialog";
 import { useBookmarkApp } from "./use-bookmark-app";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
 import type { GroupWithCount } from "@/lib/types";
@@ -55,6 +58,19 @@ export function BookmarkApp({
     isTransitionLoading,
     focusedIndex,
     setFocusedIndex,
+    selectionMode,
+    setSelectionMode,
+    selectedIds,
+    toggleSelection,
+    selectAll,
+    clearSelection,
+    moveDialogOpen,
+    setMoveDialogOpen,
+    handleBulkMove,
+    handleMoveConfirm,
+    handleBulkCopyUrls,
+    handleBulkExport,
+    handleBulkDelete,
   } = useBookmarkApp({
     initialBookmarks,
     initialGroups,
@@ -97,8 +113,32 @@ export function BookmarkApp({
           isTransitionLoading={isTransitionLoading}
           focusedIndex={focusedIndex}
           onFocusChange={setFocusedIndex}
+          selectionMode={selectionMode}
+          selectedIds={selectedIds}
+          onToggleSelect={toggleSelection}
+          onSelectClick={() => setSelectionMode(true)}
+          onCancelSelect={clearSelection}
         />
       </main>
+      <AnimatePresence>
+        {selectionMode && selectedIds.size > 0 && (
+          <MultiSelectToolbar
+            onSelectAll={selectAll}
+            onMove={handleBulkMove}
+            onCopyUrls={handleBulkCopyUrls}
+            onExport={handleBulkExport}
+            onDelete={handleBulkDelete}
+            onClose={clearSelection}
+            hasUsername={false}
+          />
+        )}
+      </AnimatePresence>
+      <MoveToGroupDialog
+        open={moveDialogOpen}
+        onOpenChange={setMoveDialogOpen}
+        groups={groups}
+        onConfirm={handleMoveConfirm}
+      />
       <PreviewDialog
         bookmark={previewBookmark}
         open={!!previewBookmark}

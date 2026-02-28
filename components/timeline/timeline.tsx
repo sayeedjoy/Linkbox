@@ -21,9 +21,13 @@ interface TimelineProps {
   onDelete?: (id: string) => void;
   sortBy: TimelineSort;
   onSortChange: (value: TimelineSort) => void;
+  selectionMode?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
+  onSelectClick?: () => void;
 }
 
-export function Timeline({ bookmarks, onEdit, onRefresh, onDelete, sortBy, onSortChange }: TimelineProps) {
+export function Timeline({ bookmarks, onEdit, onRefresh, onDelete, sortBy, onSortChange, selectionMode, selectedIds, onToggleSelect, onSelectClick }: TimelineProps) {
   const groups = groupBookmarksByDate(bookmarks);
 
   const handleSortChange = useCallback(
@@ -105,6 +109,10 @@ export function Timeline({ bookmarks, onEdit, onRefresh, onDelete, sortBy, onSor
                       onEdit={onEdit}
                       onRefresh={onRefresh}
                       onDelete={onDelete}
+                      selectionMode={selectionMode}
+                      isSelected={selectedIds?.has(bookmark.id)}
+                      onToggleSelect={onToggleSelect ? () => onToggleSelect(bookmark.id) : undefined}
+                      onSelectClick={onSelectClick}
                     />
                   </div>
                 </li>

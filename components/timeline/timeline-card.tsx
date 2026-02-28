@@ -3,10 +3,19 @@
 import { useState } from "react";
 import { MoreHorizontal, Pen, Copy, RefreshCw, Trash2 } from "lucide-react";
 import type { Bookmark } from "./types";
+
+function MultiSelectIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" className={className}>
+      <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9v10.4c0 .56 0 .84.109 1.054a1 1 0 0 0 .437.437C3.76 21 4.04 21 4.598 21H15m2-13l-4 4l-2-2m-4 3.8V6.2c0-1.12 0-1.68.218-2.108c.192-.377.497-.682.874-.874C8.52 3 9.08 3 10.2 3h7.6c1.12 0 1.68 0 2.108.218a2 2 0 0 1 .874.874C21 4.52 21 5.08 21 6.2v7.6c0 1.12 0 1.68-.218 2.108a2 2 0 0 1-.874.874c-.428.218-.986.218-2.104.218h-7.607c-1.118 0-1.678 0-2.105-.218a2 2 0 0 1-.874-.874C7 15.48 7 14.92 7 13.8"/>
+    </svg>
+  );
+}
 import { safeHostname } from "./utils";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,11 +29,19 @@ export function TimelineCard({
   onEdit,
   onRefresh,
   onDelete,
+  selectionMode,
+  isSelected,
+  onToggleSelect,
+  onSelectClick,
 }: {
   bookmark: Bookmark;
   onEdit?: (id: string) => void;
   onRefresh?: (id: string) => void;
   onDelete?: (id: string) => void;
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
+  onSelectClick?: () => void;
 }) {
   const [faviconError, setFaviconError] = useState(false);
   const domain = safeHostname(bookmark.url);
@@ -40,9 +57,24 @@ export function TimelineCard({
   };
 
   return (
-    <Card className={cn("group transition-colors hover:bg-muted/50")}>
+    <Card
+      className={cn(
+        "group transition-colors hover:bg-muted/50",
+        selectionMode && "cursor-pointer",
+        selectionMode && isSelected && "ring-1 ring-primary bg-muted/70"
+      )}
+      role={selectionMode ? "button" : undefined}
+      tabIndex={selectionMode ? 0 : undefined}
+      onClick={selectionMode && onToggleSelect ? () => onToggleSelect() : undefined}
+      onKeyDown={selectionMode && onToggleSelect ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggleSelect(); } } : undefined}
+    >
       <CardHeader className="flex flex-row items-start gap-3 pb-2">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
+        {selectionMode && (
+          <div className="flex items-center gap-2 mb-1" onClick={(e) => e.stopPropagation()}>
+            <Checkbox checked={!!isSelected} onCheckedChange={() => onToggleSelect?.()} aria-label={isSelected ? "Deselect" : "Select"} />
+          </div>
+        )}
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             {faviconSrc ? (
               <img
@@ -63,6 +95,7 @@ export function TimelineCard({
                 target="_blank"
                 rel="noopener"
                 className="text-foreground hover:underline"
+                onClick={(e) => e.stopPropagation()}
               >
                 {displayTitle}
               </a>
@@ -84,7 +117,7 @@ export function TimelineCard({
             {bookmark.category}
           </Badge>
         </div>
-        <div className="flex shrink-0 items-center gap-0.5 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+        <div className="flex shrink-0 items-center gap-0.5 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100" onClick={(e) => e.stopPropagation()}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="size-8" aria-label="More options">
@@ -107,6 +140,12 @@ export function TimelineCard({
                     Refresh
                   </DropdownMenuItem>
                 </>
+              )}
+              {onSelectClick && !selectionMode && (
+                <DropdownMenuItem onSelect={() => { onSelectClick(); onToggleSelect?.(); }}>
+                  <MultiSelectIcon className="size-4" />
+                  Select
+                </DropdownMenuItem>
               )}
               <DropdownMenuItem variant="destructive" onSelect={() => onDelete?.(bookmark.id)}>
                 <Trash2 className="size-4" />

@@ -50,7 +50,26 @@ export function useBookmarkApp({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const deferredSearchQuery = useDeferredValue(searchQuery);
+
+  const toggleSelection = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+  }, []);
+
+  const handleBulkMove = useCallback(() => setMoveDialogOpen(true), []);
 
   useEffect(() => {
     if (!userId) return;
@@ -404,6 +423,80 @@ export function useBookmarkApp({
     [adjustCount, adjustGroupCount, queryClient, userId]
   );
 
+  const selectAll = useCallback(() => {
+    setSelectedIds(new Set(displayedBookmarks.map((b) => b.id)));
+  }, [displayedBookmarks]);
+
+  const handleMoveConfirm = useCallback(
+    async (groupId: string | null) => {
+      const ids = Array.from(selectedIds);
+      for (const id of ids) {
+        await handleBookmarkUpdate(id, { groupId });
+      }
+      clearSelection();
+      setMoveDialogOpen(false);
+      if (ids.length) toast.success(`Moved ${ids.length} bookmark${ids.length === 1 ? "" : "s"}`);
+    },
+    [selectedIds, handleBookmarkUpdate, clearSelection]
+  );
+
+  const handleBulkCopyUrls = useCallback(async () => {
+    const selected = displayedBookmarks.filter((b) => selectedIds.has(b.id));
+    const lines = selected.map((b) => (b.url?.trim() ? b.url : [b.title, b.description].filter(Boolean).join("\n")));
+    const text = lines.join("\n");
+    if (text) {
+      await navigator.clipboard.writeText(text);
+      toast.success("Copied to clipboard");
+    }
+  }, [displayedBookmarks, selectedIds]);
+
+  const handleBulkExport = useCallback(
+    (format: "csv" | "json") => {
+      const selected = displayedBookmarks.filter((b) => selectedIds.has(b.id));
+      const rows = selected.map((b) => ({
+        title: b.title ?? "",
+        url: b.url ?? "",
+        description: b.description ?? "",
+        group: b.group?.name ?? "",
+        createdAt: b.createdAt,
+      }));
+      if (format === "json") {
+        const blob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "bookmarks.json";
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        const header = "title,url,description,group,createdAt";
+        const escape = (s: string) => {
+          const t = String(s ?? "").replace(/"/g, '""');
+          return t.includes(",") || t.includes('"') || t.includes("\n") ? `"${t}"` : t;
+        };
+        const body = rows.map((r) => [r.title, r.url, r.description, r.group, String(r.createdAt)].map(escape).join(",")).join("\n");
+        const blob = new Blob([header + "\n" + body], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "bookmarks.csv";
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+      toast.success(`Exported as ${format.toUpperCase()}`);
+    },
+    [displayedBookmarks, selectedIds]
+  );
+
+  const handleBulkDelete = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+    for (const id of ids) {
+      await handleBookmarkDelete(id);
+    }
+    clearSelection();
+    if (ids.length) toast.success(`Deleted ${ids.length} bookmark${ids.length === 1 ? "" : "s"}`);
+  }, [selectedIds, handleBookmarkDelete, clearSelection]);
+
   const handleBookmarkRefresh = useCallback(
     async (id: string) => {
       if (!userId) return;
@@ -619,5 +712,18 @@ export function useBookmarkApp({
     isTransitionLoading,
     focusedIndex: clampedFocus,
     setFocusedIndex,
+    selectionMode,
+    setSelectionMode,
+    selectedIds,
+    toggleSelection,
+    selectAll,
+    clearSelection,
+    moveDialogOpen,
+    setMoveDialogOpen,
+    handleBulkMove,
+    handleMoveConfirm,
+    handleBulkCopyUrls,
+    handleBulkExport,
+    handleBulkDelete,
   };
 }

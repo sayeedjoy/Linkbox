@@ -25,8 +25,10 @@ export function TimelineFilters({
   onSearchChange: (value: string) => void;
 }) {
   return (
-    <div className={cn("w-full", className)}>
-      <BookmarkHeroInput
+    <div className={cn("w-full flex flex-col gap-2", className)}>
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <BookmarkHeroInput
         value={searchMode ? search : inputValue}
         onChange={searchMode ? onSearchChange : onInputChange}
         onSubmit={onSubmit}
@@ -46,6 +48,8 @@ export function TimelineFilters({
         placeholder="Paste a link, image, or text..."
         searchPlaceholder="Search bookmarks..."
       />
+        </div>
+      </div>
     </div>
   );
 }

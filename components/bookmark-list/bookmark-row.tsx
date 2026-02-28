@@ -4,6 +4,8 @@ import { forwardRef, useState, useRef, useEffect } from "react";
 import { GripVertical, Pen, Copy, ArrowUpRight, Trash2, Check, RefreshCw } from "lucide-react";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
 import { formatDate, safeHostname } from "./utils";
+import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 
 const COPIED_RESET_MS = 2000;
 
@@ -13,7 +15,10 @@ export const BookmarkRow = forwardRef<HTMLLIElement, {
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onRefresh?: (id: string) => void;
-}>(({ bookmark, isFocused = false, onEdit, onDelete, onRefresh }, ref) => {
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
+}>(({ bookmark, isFocused = false, onEdit, onDelete, onRefresh, selectionMode, isSelected, onToggleSelect }, ref) => {
   const [copied, setCopied] = useState(false);
   const imageToken = `${bookmark.id}:${bookmark.faviconUrl ?? ""}:${bookmark.url ?? ""}`;
   const [imageState, setImageState] = useState<{ token: string; broken: string | null }>({
@@ -68,19 +73,32 @@ export const BookmarkRow = forwardRef<HTMLLIElement, {
       id={`bookmark-row-${bookmark.id}`}
       aria-current={isFocused ? true : undefined}
       data-focused={isFocused ? "true" : undefined}
-      draggable
-      className={`
-        group relative min-w-0 flex flex-col gap-2 rounded-xl px-3 py-2.5
-        cursor-grab active:cursor-grabbing transition-colors hover:bg-muted/50
-        ${isFocused ? "bg-muted/50" : ""}
-        sm:grid sm:grid-cols-[1fr_auto] sm:gap-4 sm:items-center sm:px-4
-      `}
+      draggable={!selectionMode}
+      role={selectionMode ? "button" : undefined}
+      tabIndex={selectionMode ? 0 : undefined}
+      onClick={selectionMode && onToggleSelect ? () => onToggleSelect() : undefined}
+      onKeyDown={selectionMode && onToggleSelect ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggleSelect(); } } : undefined}
+      className={cn(
+        "group relative min-w-0 flex flex-col gap-2 rounded-xl px-3 py-2.5 transition-colors hover:bg-muted/50",
+        !selectionMode && "cursor-grab active:cursor-grabbing",
+        selectionMode && "cursor-pointer",
+        isFocused && "bg-muted/50",
+        selectionMode && isSelected && "ring-1 ring-primary ring-inset bg-muted/70",
+        "sm:grid sm:grid-cols-[1fr_auto] sm:gap-4 sm:items-center sm:px-4"
+      )}
     >
-      <span className="pointer-events-none absolute -left-6 top-1/2 hidden -translate-y-1/2 text-muted-foreground/50 opacity-0 transition-opacity sm:block sm:group-hover:opacity-100">
-        <GripVertical className="size-4" />
-      </span>
+      {!selectionMode && (
+        <span className="pointer-events-none absolute -left-6 top-1/2 hidden -translate-y-1/2 text-muted-foreground/50 opacity-0 transition-opacity sm:block sm:group-hover:opacity-100">
+          <GripVertical className="size-4" />
+        </span>
+      )}
 
       <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:min-w-0">
+        {selectionMode && (
+          <div className="shrink-0" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+            <Checkbox checked={!!isSelected} onCheckedChange={() => onToggleSelect?.()} aria-label={isSelected ? "Deselect" : "Select"} />
+          </div>
+        )}
         {faviconSrc ? (
           <img
             src={faviconSrc}
@@ -128,7 +146,7 @@ export const BookmarkRow = forwardRef<HTMLLIElement, {
           <button
             type="button"
             className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            onClick={() => onEdit(bookmark.id)}
+            onClick={(e) => { e.stopPropagation(); onEdit(bookmark.id); }}
             aria-label="Edit"
           >
             <Pen className="size-4" />
@@ -137,7 +155,7 @@ export const BookmarkRow = forwardRef<HTMLLIElement, {
           <button
             type="button"
             className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            onClick={handleCopy}
+            onClick={(e) => { e.stopPropagation(); handleCopy(); }}
             aria-label={bookmark.url ? "Copy link" : "Copy note"}
           >
             {copied ? (
@@ -163,7 +181,7 @@ export const BookmarkRow = forwardRef<HTMLLIElement, {
             <button
               type="button"
               className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              onClick={() => onRefresh?.(bookmark.id)}
+              onClick={(e) => { e.stopPropagation(); onRefresh?.(bookmark.id); }}
               aria-label="Refresh"
             >
               <RefreshCw className="size-4" />
@@ -173,7 +191,7 @@ export const BookmarkRow = forwardRef<HTMLLIElement, {
           <button
             type="button"
             className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-            onClick={() => onDelete(bookmark.id)}
+            onClick={(e) => { e.stopPropagation(); onDelete(bookmark.id); }}
             aria-label="Delete"
           >
             <Trash2 className="size-4" />
