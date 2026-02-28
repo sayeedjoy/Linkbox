@@ -31,7 +31,7 @@ export function SortableGroupRow({ group }: { group: GroupWithCount }) {
         {...listeners}
         aria-label="Drag to reorder"
       >
-        <GripVerticalIcon size={16} className="text-muted-foreground shrink-0" />
+        <GripVerticalIcon size={16} className="text-muted-foreground shrink-0" style={{ color: "var(--muted-foreground, #374151)" }} />
       </button>
       <span
         className="size-3 rounded-full shrink-0"

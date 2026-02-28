@@ -60,6 +60,12 @@ export function GroupDropdown({
   const [newColor, setNewColor] = useState(GROUP_COLORS[0]);
 
   useEffect(() => {
+    import("./group-form-dialog");
+    import("./group-reorder-dialog");
+    import("./group-delete-dialog");
+  }, []);
+
+  useEffect(() => {
     if (dropdownOpen) {
       import("./group-form-dialog");
       import("./group-reorder-dialog");
@@ -171,7 +177,7 @@ export function GroupDropdown({
               style={{ backgroundColor: triggerDotColor, width: 12, height: 12 }}
             />
             <span className="min-w-0 truncate">{label}</span>
-            <ChevronDown size={16} className="text-muted-foreground opacity-50 shrink-0" />
+            <ChevronDown size={16} className="text-muted-foreground opacity-50 shrink-0" style={{ color: "var(--muted-foreground, #374151)" }} />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="min-w-[200px]">
@@ -190,7 +196,7 @@ export function GroupDropdown({
               <span className="truncate text-sm text-left">All Bookmarks</span>
             </span>
             {selectedGroupId === null && (
-              <Check size={16} className="text-muted-foreground shrink-0" />
+              <Check size={16} className="text-muted-foreground shrink-0" style={{ color: "var(--muted-foreground, #374151)" }} />
             )}
             <span className="text-xs text-muted-foreground min-w-5 text-right">
               {safeTotal}
@@ -214,7 +220,7 @@ export function GroupDropdown({
                 <span className="truncate text-sm text-left">{g.name}</span>
               </span>
               <span
-                className="opacity-0 group-hover/group-row:opacity-100 focus-within:opacity-100 flex items-center gap-0.5 transition-opacity duration-150 shrink-0"
+                className="opacity-50 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/group-row:opacity-100 focus-within:opacity-100 flex items-center gap-0.5 transition-opacity duration-150 shrink-0"
                 onClick={(e) => e.stopPropagation()}
               >
                 <button
@@ -230,7 +236,7 @@ export function GroupDropdown({
                   }}
                   aria-label="Edit group"
                 >
-                  <Pencil size={14} className="text-foreground shrink-0" />
+                  <Pencil size={14} className="text-foreground shrink-0" style={{ color: "var(--foreground, #171717)" }} />
                 </button>
                 <button
                   type="button"
@@ -245,11 +251,11 @@ export function GroupDropdown({
                   }}
                   aria-label="Delete group"
                 >
-                  <Trash2 size={14} className="text-foreground shrink-0" />
+                  <Trash2 size={14} className="text-foreground shrink-0" style={{ color: "var(--foreground, #171717)" }} />
                 </button>
               </span>
               {selectedGroupId === g.id && (
-                <Check size={16} className="text-muted-foreground shrink-0" />
+                <Check size={16} className="text-muted-foreground shrink-0" style={{ color: "var(--muted-foreground, #374151)" }} />
               )}
               <span className="text-xs text-muted-foreground min-w-5 text-right shrink-0">
                 {g._count?.bookmarks ?? 0}
@@ -259,12 +265,12 @@ export function GroupDropdown({
           <DropdownMenuSeparator />
           {safeGroups.length > 1 && (
             <DropdownMenuItem onSelect={() => setReorderOpen(true)}>
-              <List size={16} className="text-foreground shrink-0" />
+              <List size={16} className="text-foreground shrink-0" style={{ color: "var(--foreground, #171717)" }} />
               Reorder groups
             </DropdownMenuItem>
           )}
           <DropdownMenuItem onSelect={() => setCreateOpen(true)}>
-            <Plus size={16} className="text-foreground shrink-0" />
+            <Plus size={16} className="text-foreground shrink-0" style={{ color: "var(--foreground, #171717)" }} />
             New Group
           </DropdownMenuItem>
         </DropdownMenuContent>
