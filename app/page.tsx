@@ -1,38 +1,47 @@
 import Link from "next/link";
+import { Header } from "@/components/header";
+import { HeroSection } from "@/components/hero";
+import { FeatureSection } from "@/components/feature-section";
+import { LogosSection } from "@/components/logos-section";
+import { Integrations } from "@/components/integrations";
+import { Button } from "@/components/ui/button";
 
 export default function Page() {
   return (
     <main className="min-h-dvh bg-background">
-      <section className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col items-center justify-center px-6 py-16 text-center">
-        <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
-          Linkbox
-        </p>
-        <h1 className="mt-3 text-balance text-4xl font-semibold tracking-tight sm:text-5xl">
-          Save and organize your web bookmarks
-        </h1>
-        <p className="mt-4 max-w-xl text-pretty text-base text-muted-foreground sm:text-lg">
-          The app has moved to your dashboard. Use the links below to sign in,
-          create an account, or open your workspace.
-        </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Link
-            href="/dashboard"
-            className="rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background"
-          >
-            Open dashboard
-          </Link>
-          <Link
-            href="/sign-in"
-            className="rounded-md border border-border px-4 py-2 text-sm font-medium"
-          >
-            Sign in
-          </Link>
-          <Link
-            href="/sign-up"
-            className="rounded-md border border-border px-4 py-2 text-sm font-medium"
-          >
-            Sign up
-          </Link>
+      <Header />
+      <HeroSection />
+      <section className="border-t py-16 md:py-24">
+        <div className="mx-auto max-w-5xl px-4">
+          <FeatureSection />
+        </div>
+      </section>
+      <LogosSection />
+      <section id="integrations" className="border-t py-16 md:py-24">
+        <div className="mx-auto max-w-5xl px-4">
+          <h2 className="mb-8 text-center font-medium text-2xl md:text-3xl">
+            How it works
+          </h2>
+          <Integrations />
+        </div>
+      </section>
+      <section className="border-t py-16 md:py-24">
+        <div className="mx-auto flex max-w-3xl flex-col items-center justify-center px-6 text-center">
+          <p className="text-balance text-lg text-muted-foreground">
+            Ready to save and organize your bookmarks? Sign in, create an
+            account, or jump straight to your workspace.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Button asChild size="lg" className="rounded-md bg-foreground text-background">
+              <Link href="/dashboard">Open dashboard</Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="rounded-md">
+              <Link href="/sign-in">Sign in</Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="rounded-md">
+              <Link href="/sign-up">Sign up</Link>
+            </Button>
+          </div>
         </div>
       </section>
     </main>
