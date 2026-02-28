@@ -23,9 +23,16 @@ export function sendMessage<T extends MessageType>(
   })
 }
 
-export async function setToken(token: string): Promise<{ success: boolean }> {
+export async function setToken(token: string): Promise<{
+  success: boolean
+  unauthorized?: boolean
+  status?: number
+  error?: string
+}> {
   const res = await sendMessage('setToken', { token })
-  return (res as { success: boolean }) ?? { success: false }
+  return (
+    res as { success: boolean; unauthorized?: boolean; status?: number; error?: string }
+  ) ?? { success: false }
 }
 
 export async function clearToken(): Promise<{ success: boolean }> {

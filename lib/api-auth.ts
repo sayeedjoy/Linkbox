@@ -1,4 +1,6 @@
 import { createHash } from "crypto";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-config";
 import { prisma } from "@/lib/prisma";
 
 const TOKEN_LAST_USED_TOUCH_INTERVAL_MS = 10 * 60 * 1000;
@@ -31,4 +33,29 @@ export async function userIdFromBearerToken(authHeader: string | null): Promise<
   }
 
   return record.userId;
+}
+
+export function isExtensionOrigin(origin: string | null): boolean {
+  return Boolean(origin?.startsWith("chrome-extension://"));
+}
+
+export async function resolveApiUserId(
+  request: Request,
+  allowSessionFallback = true
+): Promise<string | null> {
+  const authHeader = request.headers.get("Authorization");
+  if (authHeader?.trim()) {
+    return userIdFromBearerToken(authHeader);
+  }
+
+  if (isExtensionOrigin(request.headers.get("Origin"))) {
+    return null;
+  }
+
+  if (!allowSessionFallback) {
+    return null;
+  }
+
+  const session = await getServerSession(authOptions);
+  return session?.user?.id ?? null;
 }

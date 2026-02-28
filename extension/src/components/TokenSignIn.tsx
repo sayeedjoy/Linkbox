@@ -29,7 +29,17 @@ export default function TokenSignIn({ onSuccess, className }: TokenSignInProps) 
     if (result.success) {
       onSuccess()
     } else {
-      setError('Invalid token. Check the token or get a new one from the web app.')
+      if (result.unauthorized || result.status === 401) {
+        setError('Invalid token. Check the token or get a new one from the web app.')
+      } else if (typeof result.status === 'number') {
+        setError(`Could not verify token right now. Server returned ${result.status}.`)
+      } else if (result.error === 'network') {
+        setError('Could not reach the server. Check the API URL or your connection.')
+      } else if (result.error) {
+        setError('Could not verify token right now. Try again in a moment.')
+      } else {
+        setError('Invalid token. Check the token or get a new one from the web app.')
+      }
     }
   }
 

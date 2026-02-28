@@ -1,7 +1,5 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-config";
 import { prisma } from "@/lib/prisma";
-import { userIdFromBearerToken } from "@/lib/api-auth";
+import { isExtensionOrigin, resolveApiUserId } from "@/lib/api-auth";
 import { subscribeUserEvents, type RealtimeEvent } from "@/lib/realtime";
 
 const HEARTBEAT_INTERVAL_MS = 20_000;
@@ -9,15 +7,10 @@ const POLL_INTERVAL_MS = 1_500;
 
 function corsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get("Origin");
-  if (origin?.startsWith("chrome-extension://")) {
+  if (isExtensionOrigin(origin)) {
     return { "Access-Control-Allow-Origin": origin };
   }
   return {};
-}
-
-function isExtensionRequest(request: Request): boolean {
-  const origin = request.headers.get("Origin");
-  return Boolean(origin?.startsWith("chrome-extension://"));
 }
 
 function encodeSseEvent(event: RealtimeEvent, eventId: string): Uint8Array {
@@ -39,12 +32,7 @@ async function getBookmarkSignature(userId: string): Promise<string> {
 }
 
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("Authorization");
-  let userId = (await userIdFromBearerToken(authHeader)) ?? undefined;
-  if (!userId && !isExtensionRequest(request)) {
-    const session = await getServerSession(authOptions);
-    userId = session?.user?.id;
-  }
+  const userId = await resolveApiUserId(request);
 
   if (!userId) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -154,7 +142,7 @@ export async function OPTIONS(request: Request) {
     "Access-Control-Max-Age": "86400",
   };
   const origin = request.headers.get("Origin");
-  if (origin?.startsWith("chrome-extension://")) {
+  if (isExtensionOrigin(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
   }
   return new Response(null, { status: 204, headers });

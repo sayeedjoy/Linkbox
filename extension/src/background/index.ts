@@ -31,6 +31,14 @@ type SyncFetchResult = {
   nextCursor: string | null
   unauthorized: boolean
 }
+type TokenValidationResult =
+  | { ok: true }
+  | {
+      ok: false
+      unauthorized?: boolean
+      status?: number
+      error?: string
+    }
 
 const INITIAL_SYNC_LIMIT = 150
 const PROGRESSIVE_SYNC_LIMIT = 300
@@ -56,7 +64,13 @@ async function getToken(): Promise<string | null> {
 
 async function setStoredToken(token: string | null): Promise<void> {
   if (token === null) {
-    await chrome.storage.local.remove(Object.values(STORAGE_KEYS))
+    await chrome.storage.local.remove([
+      STORAGE_KEYS.apiToken,
+      STORAGE_KEYS.bookmarksCache,
+      STORAGE_KEYS.bookmarksCacheTime,
+      STORAGE_KEYS.groupsCache,
+      STORAGE_KEYS.groupsCacheTime,
+    ])
   } else {
     await chrome.storage.local.set({ [STORAGE_KEYS.apiToken]: token })
   }
@@ -98,15 +112,17 @@ async function fetchWithAuth<T>(
   return { ok: true, data }
 }
 
-async function validateToken(token: string): Promise<boolean> {
+async function validateToken(token: string): Promise<TokenValidationResult> {
   const url = `${API_BASE_URL.replace(/\/$/, '')}/api/sync?mode=initial&limit=1`
   try {
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
     })
-    return res.ok
+    if (res.ok) return { ok: true }
+    if (res.status === 401) return { ok: false, unauthorized: true, status: 401 }
+    return { ok: false, status: res.status }
   } catch {
-    return false
+    return { ok: false, error: 'network' }
   }
 }
 
@@ -649,9 +665,28 @@ chrome.runtime.onMessage.addListener(
         case 'setToken': {
           const { token } = (message.payload || {}) as SetTokenPayload
           const trimmed = typeof token === 'string' ? token.trim() : ''
-          if (!trimmed) return { success: false }
-          const valid = await validateToken(trimmed)
-          if (!valid) return { success: false }
+          if (!trimmed) return { success: false, error: 'missing_token' }
+          const validation = await validateToken(trimmed)
+          if (!validation.ok) {
+            if (validation.unauthorized) {
+              await clearAuthState()
+            }
+            console.warn('Token validation failed', {
+              unauthorized: validation.unauthorized ?? false,
+              status: validation.status,
+              error: validation.error,
+            })
+            return {
+              success: false,
+              unauthorized: validation.unauthorized,
+              status: validation.status,
+              error: validation.error,
+            }
+          }
+          const existingToken = await getToken()
+          if (existingToken && existingToken !== trimmed) {
+            await clearAuthState()
+          }
           await setStoredToken(trimmed)
           void revalidateAll('initial')
           void startRealtimeSync()

@@ -1,22 +1,15 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-config";
 import { prisma } from "@/lib/prisma";
-import { userIdFromBearerToken } from "@/lib/api-auth";
+import { isExtensionOrigin, resolveApiUserId } from "@/lib/api-auth";
 
 const DEFAULT_INITIAL_SYNC_LIMIT = 150;
 const MAX_SYNC_LIMIT = 2000;
 
 function corsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get("Origin");
-  if (origin?.startsWith("chrome-extension://"))
+  if (isExtensionOrigin(origin))
     return { "Access-Control-Allow-Origin": origin };
   return {};
-}
-
-function isExtensionRequest(request: Request): boolean {
-  const origin = request.headers.get("Origin");
-  return Boolean(origin?.startsWith("chrome-extension://"));
 }
 
 function parsePositiveInt(value: string | null): number | null {
@@ -32,12 +25,7 @@ export async function GET(request: Request) {
   const cursor = url.searchParams.get("cursor");
   const requestedLimit = parsePositiveInt(url.searchParams.get("limit"));
 
-  const authHeader = request.headers.get("Authorization");
-  let userId = (await userIdFromBearerToken(authHeader)) ?? undefined;
-  if (!userId && !isExtensionRequest(request)) {
-    const session = await getServerSession(authOptions);
-    userId = session?.user?.id;
-  }
+  const userId = await resolveApiUserId(request);
   if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders(request) });
 
@@ -108,6 +96,6 @@ export async function OPTIONS(request: Request) {
     "Access-Control-Max-Age": "86400",
   };
   const origin = request.headers.get("Origin");
-  if (origin?.startsWith("chrome-extension://")) headers["Access-Control-Allow-Origin"] = origin;
+  if (isExtensionOrigin(origin)) headers["Access-Control-Allow-Origin"] = origin;
   return new NextResponse(null, { status: 204, headers });
 }
