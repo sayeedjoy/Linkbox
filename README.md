@@ -15,6 +15,8 @@ A full-stack bookmarking platform with two clients:
 
 This README documents the whole application. Extension-specific implementation details are in [extension/README.md](extension/README.md).
 
+![LinkArena bookmark management interface](docs/reposs.png)
+
 ---
 
 ## Core capabilities
