@@ -46,6 +46,9 @@ export function GroupDropdown({
   onSelectGroupId: (id: string | null) => void;
   onGroupsChange: () => void;
 }) {
+  const safeGroups = groups ?? [];
+  const safeTotal = totalBookmarkCount ?? 0;
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [reorderOpen, setReorderOpen] = useState(false);
@@ -68,7 +71,7 @@ export function GroupDropdown({
     async (event: DragEndEvent) => {
       const { active, over } = event;
       if (!over || active.id === over.id) return;
-      const ids = groups.map((g) => g.id);
+      const ids = safeGroups.map((g) => g.id);
       const oldIndex = ids.indexOf(active.id as string);
       const newIndex = ids.indexOf(over.id as string);
       if (oldIndex === -1 || newIndex === -1) return;
@@ -81,7 +84,7 @@ export function GroupDropdown({
         toast.error("Failed to reorder");
       }
     },
-    [groups, onGroupsChange]
+    [safeGroups, onGroupsChange]
   );
 
   const handleCreate = useCallback(async () => {
@@ -130,11 +133,11 @@ export function GroupDropdown({
   const label =
     selectedGroupId === null
       ? "All Bookmarks"
-      : groups.find((g) => g.id === selectedGroupId)?.name ?? "All Bookmarks";
+      : safeGroups.find((g) => g.id === selectedGroupId)?.name ?? "All Bookmarks";
   const triggerDotColor =
     selectedGroupId === null
       ? "#6b7280"
-      : groups.find((g) => g.id === selectedGroupId)?.color ?? "#6b7280";
+      : safeGroups.find((g) => g.id === selectedGroupId)?.color ?? "#6b7280";
 
   const handleEditClick = useCallback(
     (e: React.MouseEvent | React.PointerEvent, g: GroupWithCount) => {
@@ -190,11 +193,11 @@ export function GroupDropdown({
               <Check className="h-4 w-4 text-muted-foreground shrink-0" />
             )}
             <span className="text-xs text-muted-foreground min-w-5 text-right">
-              {totalBookmarkCount}
+              {safeTotal}
             </span>
           </div>
-          {groups.length > 0 && <DropdownMenuSeparator />}
-          {groups.map((g) => (
+          {safeGroups.length > 0 && <DropdownMenuSeparator />}
+          {safeGroups.map((g) => (
             <div
               key={g.id}
               role="menuitemcheckbox"
@@ -216,7 +219,7 @@ export function GroupDropdown({
               >
                 <button
                   type="button"
-                  className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
+                  className="p-0.5 rounded hover:bg-accent text-foreground/60 hover:text-foreground"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleEditClick(e, g);
@@ -231,7 +234,7 @@ export function GroupDropdown({
                 </button>
                 <button
                   type="button"
-                  className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                  className="p-0.5 rounded hover:bg-destructive/10 text-foreground/60 hover:text-destructive"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleDeleteClick(e, g);
@@ -249,12 +252,12 @@ export function GroupDropdown({
                 <Check className="h-4 w-4 text-muted-foreground shrink-0" />
               )}
               <span className="text-xs text-muted-foreground min-w-5 text-right shrink-0">
-                {g._count.bookmarks}
+                {g._count?.bookmarks ?? 0}
               </span>
             </div>
           ))}
           <DropdownMenuSeparator />
-          {groups.length > 1 && (
+          {safeGroups.length > 1 && (
             <DropdownMenuItem onSelect={() => setReorderOpen(true)}>
               <List className="size-4" />
               Reorder groups
@@ -267,7 +270,7 @@ export function GroupDropdown({
         </DropdownMenuContent>
       </DropdownMenu>
       <GroupReorderDialog
-        groups={groups}
+        groups={safeGroups}
         onReorderEnd={handleReorderEnd}
         open={reorderOpen}
         onOpenChange={setReorderOpen}
