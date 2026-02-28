@@ -168,10 +168,10 @@ export function GroupDropdown({
           <Button variant="outline" className="gap-2 font-normal min-w-0 max-w-[calc(100vw-8rem)]">
             <span
               className="size-3 rounded-full shrink-0"
-              style={{ backgroundColor: triggerDotColor }}
+              style={{ backgroundColor: triggerDotColor, width: 12, height: 12 }}
             />
             <span className="min-w-0 truncate">{label}</span>
-            <ChevronDown className="size-4 opacity-50" />
+            <ChevronDown size={16} className="text-muted-foreground opacity-50 shrink-0" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="min-w-[200px]">
@@ -185,12 +185,12 @@ export function GroupDropdown({
             <span className="flex-1 min-w-0 flex items-center gap-2">
               <span
                 className="h-2.5 w-2.5 rounded-full shrink-0"
-                style={{ backgroundColor: "#6b7280" }}
+                style={{ backgroundColor: "#6b7280", width: 10, height: 10 }}
               />
               <span className="truncate text-sm text-left">All Bookmarks</span>
             </span>
             {selectedGroupId === null && (
-              <Check className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Check size={16} className="text-muted-foreground shrink-0" />
             )}
             <span className="text-xs text-muted-foreground min-w-5 text-right">
               {safeTotal}
@@ -209,12 +209,12 @@ export function GroupDropdown({
               <span className="flex-1 min-w-0 flex items-center gap-2">
                 <span
                   className="h-2.5 w-2.5 rounded-full shrink-0"
-                  style={{ backgroundColor: g.color ?? "#6b7280" }}
+                  style={{ backgroundColor: g.color ?? "#6b7280", width: 10, height: 10 }}
                 />
                 <span className="truncate text-sm text-left">{g.name}</span>
               </span>
               <span
-                className="opacity-0 group-hover/group-row:opacity-100 flex items-center gap-0.5 transition-opacity shrink-0"
+                className="opacity-0 group-hover/group-row:opacity-100 focus-within:opacity-100 flex items-center gap-0.5 transition-opacity duration-150 shrink-0"
                 onClick={(e) => e.stopPropagation()}
               >
                 <button
@@ -230,7 +230,7 @@ export function GroupDropdown({
                   }}
                   aria-label="Edit group"
                 >
-                  <Pencil className="size-3.5" />
+                  <Pencil size={14} className="text-foreground shrink-0" />
                 </button>
                 <button
                   type="button"
@@ -245,11 +245,11 @@ export function GroupDropdown({
                   }}
                   aria-label="Delete group"
                 >
-                  <Trash2 className="size-3.5" />
+                  <Trash2 size={14} className="text-foreground shrink-0" />
                 </button>
               </span>
               {selectedGroupId === g.id && (
-                <Check className="h-4 w-4 text-muted-foreground shrink-0" />
+                <Check size={16} className="text-muted-foreground shrink-0" />
               )}
               <span className="text-xs text-muted-foreground min-w-5 text-right shrink-0">
                 {g._count?.bookmarks ?? 0}
@@ -259,12 +259,12 @@ export function GroupDropdown({
           <DropdownMenuSeparator />
           {safeGroups.length > 1 && (
             <DropdownMenuItem onSelect={() => setReorderOpen(true)}>
-              <List className="size-4" />
+              <List size={16} className="text-foreground shrink-0" />
               Reorder groups
             </DropdownMenuItem>
           )}
           <DropdownMenuItem onSelect={() => setCreateOpen(true)}>
-            <Plus className="size-4" />
+            <Plus size={16} className="text-foreground shrink-0" />
             New Group
           </DropdownMenuItem>
         </DropdownMenuContent>

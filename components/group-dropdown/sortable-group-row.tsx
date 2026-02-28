@@ -31,11 +31,11 @@ export function SortableGroupRow({ group }: { group: GroupWithCount }) {
         {...listeners}
         aria-label="Drag to reorder"
       >
-        <GripVerticalIcon className="size-4" />
+        <GripVerticalIcon size={16} className="text-muted-foreground shrink-0" />
       </button>
       <span
         className="size-3 rounded-full shrink-0"
-        style={{ backgroundColor: group.color ?? "#6b7280" }}
+        style={{ backgroundColor: group.color ?? "#6b7280", width: 12, height: 12 }}
       />
       <span className="truncate flex-1">{group.name}</span>
       <span className="text-xs text-muted-foreground">{group._count.bookmarks}</span>
