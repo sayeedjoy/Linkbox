@@ -8,6 +8,16 @@ import { BookmarkHeroInput } from "@/components/bookmark-hero-input";
 import { BookmarkList } from "@/components/bookmark-list";
 import { MultiSelectToolbar } from "@/components/multi-select";
 import { MoveToGroupDialog } from "@/components/move-to-group-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useBookmarkApp } from "./use-bookmark-app";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
 import type { GroupWithCount } from "@/lib/types";
@@ -59,9 +69,10 @@ export function BookmarkApp({
     focusedIndex,
     setFocusedIndex,
     selectionMode,
-    setSelectionMode,
     selectedIds,
     toggleSelection,
+    enterSelectionWithBookmark,
+    allDisplayedSelected,
     selectAll,
     clearSelection,
     moveDialogOpen,
@@ -70,7 +81,10 @@ export function BookmarkApp({
     handleMoveConfirm,
     handleBulkCopyUrls,
     handleBulkExport,
-    handleBulkDelete,
+    bulkDeleteConfirmOpen,
+    setBulkDeleteConfirmOpen,
+    requestBulkDelete,
+    confirmBulkDelete,
   } = useBookmarkApp({
     initialBookmarks,
     initialGroups,
@@ -86,7 +100,16 @@ export function BookmarkApp({
   }, [displayedBookmarks.length]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div
+      className="min-h-screen flex flex-col bg-background"
+      onPointerDownCapture={(event) => {
+        const target = event.target as HTMLElement;
+        if (!selectionMode || selectedIds.size > 0 || target.closest("[role='dialog']")) return;
+        clearSelection();
+        event.preventDefault();
+        event.stopPropagation();
+      }}
+    >
       <ProfileHeader
         groups={groups}
         totalBookmarkCount={totalBookmarkCount}
@@ -116,18 +139,18 @@ export function BookmarkApp({
           selectionMode={selectionMode}
           selectedIds={selectedIds}
           onToggleSelect={toggleSelection}
-          onSelectClick={() => setSelectionMode(true)}
-          onCancelSelect={clearSelection}
+          onSelectClick={enterSelectionWithBookmark}
         />
       </main>
       <AnimatePresence>
         {selectionMode && selectedIds.size > 0 && (
           <MultiSelectToolbar
+            allSelected={allDisplayedSelected}
             onSelectAll={selectAll}
             onMove={handleBulkMove}
             onCopyUrls={handleBulkCopyUrls}
             onExport={handleBulkExport}
-            onDelete={handleBulkDelete}
+            onDelete={requestBulkDelete}
             onClose={clearSelection}
             hasUsername={false}
           />
@@ -139,6 +162,22 @@ export function BookmarkApp({
         groups={groups}
         onConfirm={handleMoveConfirm}
       />
+      <AlertDialog open={bulkDeleteConfirmOpen} onOpenChange={setBulkDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete selected bookmarks?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete {selectedIds.size} selected bookmark{selectedIds.size === 1 ? "" : "s"}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={confirmBulkDelete}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <PreviewDialog
         bookmark={previewBookmark}
         open={!!previewBookmark}
@@ -148,3 +187,4 @@ export function BookmarkApp({
     </div>
   );
 }
+

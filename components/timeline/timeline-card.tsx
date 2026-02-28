@@ -22,6 +22,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
 export function TimelineCard({
@@ -44,6 +54,7 @@ export function TimelineCard({
   onSelectClick?: () => void;
 }) {
   const [faviconError, setFaviconError] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const domain = safeHostname(bookmark.url);
   const faviconSrc = bookmark.favicon && !faviconError ? bookmark.favicon : null;
   const hasUrl = Boolean(bookmark.url?.trim());
@@ -147,7 +158,7 @@ export function TimelineCard({
                   Select
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem variant="destructive" onSelect={() => onDelete?.(bookmark.id)}>
+              <DropdownMenuItem variant="destructive" onSelect={() => setConfirmDelete(true)}>
                 <Trash2 className="size-4" />
                 Delete
               </DropdownMenuItem>
@@ -155,6 +166,20 @@ export function TimelineCard({
           </DropdownMenu>
         </div>
       </CardHeader>
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete bookmark?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this bookmark.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={() => onDelete?.(bookmark.id)}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

@@ -29,7 +29,6 @@ export function BookmarkList({
   selectedIds,
   onToggleSelect,
   onSelectClick,
-  onCancelSelect,
 }: {
   bookmarks: BookmarkListItem[];
   groups: { id: string; name: string; color: string | null }[];
@@ -49,8 +48,7 @@ export function BookmarkList({
   selectionMode?: boolean;
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
-  onSelectClick?: () => void;
-  onCancelSelect?: () => void;
+  onSelectClick?: (id: string) => void;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditForm>({
@@ -125,11 +123,7 @@ export function BookmarkList({
       className="w-full min-w-0 overflow-hidden"
       onMouseLeave={() => onFocusChange?.(-1)}
     >
-      <BookmarkStatusHeader
-        selectionMode={selectionMode}
-        onSelectClick={onSelectClick}
-        onCancelSelect={onCancelSelect}
-      />
+      <BookmarkStatusHeader />
       {isTransitionLoading && (
         <div className="hidden sm:flex justify-end px-4 pb-1 text-[11px] text-muted-foreground">
           Updating...
@@ -167,6 +161,7 @@ export function BookmarkList({
               selectionMode={selectionMode}
               isSelected={selectedIds?.has(b.id)}
               onToggleSelect={onToggleSelect ? () => onToggleSelect(b.id) : undefined}
+              onSelectClick={onSelectClick ? () => onSelectClick(b.id) : undefined}
             />
           )
         )}

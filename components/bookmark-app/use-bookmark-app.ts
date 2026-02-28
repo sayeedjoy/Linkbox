@@ -53,6 +53,7 @@ export function useBookmarkApp({
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
   const deferredSearchQuery = useDeferredValue(searchQuery);
 
   const toggleSelection = useCallback((id: string) => {
@@ -67,9 +68,20 @@ export function useBookmarkApp({
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set());
     setSelectionMode(false);
+    setBulkDeleteConfirmOpen(false);
   }, []);
 
   const handleBulkMove = useCallback(() => setMoveDialogOpen(true), []);
+
+  const enterSelectionWithBookmark = useCallback((id: string) => {
+    setSelectionMode(true);
+    setSelectedIds((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (!userId) return;
@@ -423,8 +435,19 @@ export function useBookmarkApp({
     [adjustCount, adjustGroupCount, queryClient, userId]
   );
 
+  const allDisplayedSelected = useMemo(() => {
+    if (displayedBookmarks.length === 0) return false;
+    return displayedBookmarks.every((bookmark) => selectedIds.has(bookmark.id));
+  }, [displayedBookmarks, selectedIds]);
+
   const selectAll = useCallback(() => {
-    setSelectedIds(new Set(displayedBookmarks.map((b) => b.id)));
+    if (displayedBookmarks.length === 0) return;
+
+    setSelectedIds((prev) => {
+      const allSelected = displayedBookmarks.every((bookmark) => prev.has(bookmark.id));
+      if (allSelected) return new Set();
+      return new Set(displayedBookmarks.map((bookmark) => bookmark.id));
+    });
   }, [displayedBookmarks]);
 
   const handleMoveConfirm = useCallback(
@@ -488,11 +511,17 @@ export function useBookmarkApp({
     [displayedBookmarks, selectedIds]
   );
 
-  const handleBulkDelete = useCallback(async () => {
+  const requestBulkDelete = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    setBulkDeleteConfirmOpen(true);
+  }, [selectedIds]);
+
+  const confirmBulkDelete = useCallback(async () => {
     const ids = Array.from(selectedIds);
     for (const id of ids) {
       await handleBookmarkDelete(id);
     }
+    setBulkDeleteConfirmOpen(false);
     clearSelection();
     if (ids.length) toast.success(`Deleted ${ids.length} bookmark${ids.length === 1 ? "" : "s"}`);
   }, [selectedIds, handleBookmarkDelete, clearSelection]);
@@ -716,6 +745,8 @@ export function useBookmarkApp({
     setSelectionMode,
     selectedIds,
     toggleSelection,
+    enterSelectionWithBookmark,
+    allDisplayedSelected,
     selectAll,
     clearSelection,
     moveDialogOpen,
@@ -724,6 +755,9 @@ export function useBookmarkApp({
     handleMoveConfirm,
     handleBulkCopyUrls,
     handleBulkExport,
-    handleBulkDelete,
+    bulkDeleteConfirmOpen,
+    setBulkDeleteConfirmOpen,
+    requestBulkDelete,
+    confirmBulkDelete,
   };
 }
