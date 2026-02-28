@@ -4,7 +4,7 @@ import { isExtensionOrigin, resolveApiUserId } from "@/lib/api-auth";
 
 function corsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get("Origin");
-  if (isExtensionOrigin(origin))
+  if (origin && isExtensionOrigin(origin))
     return { "Access-Control-Allow-Origin": origin };
   return {};
 }
@@ -47,6 +47,6 @@ export async function OPTIONS(request: Request) {
     "Access-Control-Max-Age": "86400",
   };
   const origin = request.headers.get("Origin");
-  if (isExtensionOrigin(origin)) headers["Access-Control-Allow-Origin"] = origin;
+  if (origin && isExtensionOrigin(origin)) headers["Access-Control-Allow-Origin"] = origin;
   return new NextResponse(null, { status: 204, headers });
 }

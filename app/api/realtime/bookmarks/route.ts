@@ -7,7 +7,7 @@ const POLL_INTERVAL_MS = 1_500;
 
 function corsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get("Origin");
-  if (isExtensionOrigin(origin)) {
+  if (origin && isExtensionOrigin(origin)) {
     return { "Access-Control-Allow-Origin": origin };
   }
   return {};
@@ -142,7 +142,7 @@ export async function OPTIONS(request: Request) {
     "Access-Control-Max-Age": "86400",
   };
   const origin = request.headers.get("Origin");
-  if (isExtensionOrigin(origin)) {
+  if (origin && isExtensionOrigin(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
   }
   return new Response(null, { status: 204, headers });
