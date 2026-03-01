@@ -19,15 +19,28 @@ function encodeSseEvent(event: RealtimeEvent, eventId: string): Uint8Array {
 }
 
 async function getBookmarkSignature(userId: string): Promise<string> {
-  const aggregate = await prisma.bookmark.aggregate({
-    where: { userId },
-    _count: { _all: true },
-    _max: { createdAt: true, updatedAt: true },
-  });
+  const [bookmarkAgg, groups] = await Promise.all([
+    prisma.bookmark.aggregate({
+      where: { userId },
+      _count: { _all: true },
+      _max: { createdAt: true, updatedAt: true },
+    }),
+    prisma.group.findMany({
+      where: { userId },
+      select: { id: true, name: true, color: true, order: true },
+      orderBy: { order: "asc" },
+    }),
+  ]);
+  // Build a lightweight group fingerprint so polling detects create/update/delete/reorder.
+  const groupSig = groups
+    .map((g) => `${g.id}:${g.name}:${g.color ?? ""}:${g.order}`)
+    .join(",");
   return [
-    aggregate._count._all ?? 0,
-    aggregate._max.createdAt?.toISOString() ?? "",
-    aggregate._max.updatedAt?.toISOString() ?? "",
+    bookmarkAgg._count._all ?? 0,
+    bookmarkAgg._max.createdAt?.toISOString() ?? "",
+    bookmarkAgg._max.updatedAt?.toISOString() ?? "",
+    groups.length,
+    groupSig,
   ].join("|");
 }
 

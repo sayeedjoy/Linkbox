@@ -43,6 +43,7 @@ export async function createGroup(name: string, color?: string) {
     },
   });
   revalidatePath("/");
+  revalidateTag("groups", "max");
   publishUserEvent(userId, { type: "group.created", entity: "group", id: group.id });
   return group;
 }
@@ -57,6 +58,7 @@ export async function updateGroup(
     data,
   });
   revalidatePath("/");
+  revalidateTag("groups", "max");
   publishUserEvent(userId, { type: "group.updated", entity: "group", id });
   return { ok: true };
 }
@@ -72,6 +74,7 @@ export async function reorderGroups(orderedIds: string[]) {
     )
   );
   revalidatePath("/");
+  revalidateTag("groups", "max");
   for (const id of orderedIds) {
     publishUserEvent(userId, { type: "group.updated", entity: "group", id });
   }
