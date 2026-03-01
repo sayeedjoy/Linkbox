@@ -145,6 +145,7 @@ export function BookmarkApp({
       <AnimatePresence>
         {selectionMode && selectedIds.size > 0 && (
           <MultiSelectToolbar
+            selectedCount={selectedIds.size}
             allSelected={allDisplayedSelected}
             onSelectAll={selectAll}
             onMove={handleBulkMove}

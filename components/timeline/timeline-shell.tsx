@@ -355,6 +355,7 @@ export function TimelineShell({
       <AnimatePresence>
         {selectionMode && selectedIds.size > 0 && (
           <MultiSelectToolbar
+            selectedCount={selectedIds.size}
             onSelectAll={selectAll}
             onMove={handleBulkMove}
             onCopyUrls={handleBulkCopyUrls}
