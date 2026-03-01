@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveApiUserId } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
+import { backfillUngroupedBookmarks } from "@/app/actions/categorize";
 
 function corsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get("Origin");
@@ -72,6 +73,11 @@ export async function PATCH(request: Request) {
     data,
     select: { autoGroupEnabled: true },
   });
+
+  // Fire-and-forget: backfill existing ungrouped bookmarks when enabling
+  if (data.autoGroupEnabled === true) {
+    backfillUngroupedBookmarks(userId).catch(() => {});
+  }
 
   return NextResponse.json(
     { autoGroupEnabled: user.autoGroupEnabled },

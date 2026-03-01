@@ -2,6 +2,7 @@
 
 import { currentUserId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { backfillUngroupedBookmarks } from "@/app/actions/categorize";
 
 /**
  * Get the current user's auto-group preference.
@@ -26,5 +27,11 @@ export async function updateAutoGroupEnabled(
     where: { id: userId },
     data: { autoGroupEnabled: enabled },
   });
+
+  // Fire-and-forget: backfill existing ungrouped bookmarks when enabling
+  if (enabled) {
+    backfillUngroupedBookmarks(userId).catch(() => {});
+  }
+
   return { success: true };
 }
