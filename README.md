@@ -19,6 +19,21 @@ This README documents the whole application. Extension-specific implementation d
 
 ---
 
+## System overview
+
+| Layer | Description |
+|-------|-------------|
+| **Clients** | Next.js web app (dashboard, timeline, sign-in/up, admin) and Chrome extension (popup + background worker). |
+| **Auth** | NextAuth credentials for web; API tokens (Bearer) for extension and integrations. Tokens hashed in DB. |
+| **API** | App Router route handlers under `app/api/`: bookmarks, groups, categories, sync, export, realtime SSE, settings, NextAuth. Session or Bearer auth per route. |
+| **Server logic** | Server Actions in `app/actions/` for mutations; shared lib (auth, Prisma, realtime, app config, metadata). |
+| **Data** | PostgreSQL via Prisma. Models: `User`, `Bookmark`, `Group`, `ApiToken`, `PasswordResetToken`, `AppConfig`. |
+| **Realtime** | SSE at `GET /api/realtime/bookmarks`; web app and extension subscribe for live bookmark/group updates. |
+| **AI** | [Vercel AI SDK](https://sdk.vercel.ai/) with OpenRouter for optional auto-grouping of uncategorized bookmarks. |
+| **Email** | Resend for password reset. Optional admin and public-signup control via `AppConfig`. |
+
+---
+
 ## Core capabilities
 
 - Save links and notes
@@ -47,8 +62,8 @@ This README documents the whole application. Extension-specific implementation d
 
 ### Data layer
 - **PostgreSQL** via Prisma (`prisma/schema.prisma`)
-- **Entities:** `User`, `Bookmark`, `Group`, `ApiToken`, `PasswordResetToken`
-- **User preferences:** `autoGroupEnabled` for AI categorization
+- **Entities:** `User`, `Bookmark`, `Group`, `ApiToken`, `PasswordResetToken`, `AppConfig`
+- **User preferences:** `autoGroupEnabled` for AI categorization; `AppConfig.publicSignupEnabled` for signup gating
 
 ### Realtime model
 - **SSE Endpoint:** `GET /api/realtime/bookmarks`
@@ -72,7 +87,7 @@ This README documents the whole application. Extension-specific implementation d
 | Database | PostgreSQL + Prisma |
 | Auth | NextAuth |
 | Styling | Tailwind CSS 4 + shadcn/ui-style components |
-| AI Categorization | AI SDK + OpenRouter |
+| AI Categorization | [Vercel AI SDK](https://sdk.vercel.ai/) + OpenRouter |
 | Email | Resend |
 | Extension Build | Vite + CRXJS |
 
@@ -240,6 +255,12 @@ cmd /c npm run build
 - Verify API base URL and token
 - Confirm `/api/realtime/bookmarks` is reachable
 - Ensure CORS allows `chrome-extension://` origins
+
+---
+
+## Credits
+
+UI inspired by [Bookmarks (Basic) for Raycast](https://www.raycast.com/).
 
 ---
 
