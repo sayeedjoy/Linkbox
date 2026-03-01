@@ -1,9 +1,14 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { redirect, notFound } from "next/navigation";
 import { cacheLife, cacheTag } from "next/cache";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-config";
+import {
+  ArrowLeftIcon,
+  BookmarkIcon,
+  FolderIcon,
+  ShieldCheck,
+  TrendingUpIcon,
+  UsersIcon,
+} from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import {
   Card,
@@ -12,86 +17,157 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeftIcon } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { AdminFooter } from "@/components/admin/admin-footer";
+import { PublicSignupCard } from "@/components/admin/public-signup-card";
+import {
+  AdminUsersCard,
+  type AdminUserRow,
+} from "@/components/admin/admin-users-card";
+import { isPublicSignupEnabled } from "@/lib/app-config";
+import { requireAdminSession } from "@/lib/admin";
 
-async function getAdminData() {
+const USERS_PER_PAGE = 20;
+
+function firstParam(value: string | string[] | undefined): string | null {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value) && value.length > 0) return value[0] ?? null;
+  return null;
+}
+
+function parsePage(value: string | null): number {
+  const parsed = Number.parseInt(value ?? "1", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+
+const statIcons = [UsersIcon, BookmarkIcon, FolderIcon, TrendingUpIcon];
+
+async function getAdminStats() {
   "use cache";
   cacheLife("minutes");
   cacheTag("admin-stats");
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-  const [
-    totalUsers,
-    totalBookmarks,
-    totalGroups,
-    newBookmarks7d,
-    topUsers,
-  ] = await Promise.all([
-    prisma.user.count(),
-    prisma.bookmark.count(),
-    prisma.group.count(),
-    prisma.bookmark.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
-    prisma.user.findMany({
-      select: {
-        name: true,
-        email: true,
-        _count: { select: { bookmarks: true } },
-      },
-      orderBy: { bookmarks: { _count: "desc" } },
-      take: 10,
-    }),
-  ]);
+  const [totalUsers, totalBookmarks, totalGroups, newBookmarks7d] =
+    await Promise.all([
+      prisma.user.count(),
+      prisma.bookmark.count(),
+      prisma.group.count(),
+      prisma.bookmark.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
+    ]);
 
   const avgBookmarks =
     totalUsers > 0 ? (totalBookmarks / totalUsers).toFixed(1) : "0";
 
-  const stats = [
-    { label: "Total Users", value: totalUsers },
-    { label: "Total Bookmarks", value: totalBookmarks },
-    { label: "Total Groups", value: totalGroups },
-    { label: "New Bookmarks (7d)", value: newBookmarks7d },
-  ];
+  return {
+    stats: [
+      {
+        label: "Total Users",
+        value: totalUsers,
+        note: "Registered accounts",
+      },
+      {
+        label: "Bookmarks",
+        value: totalBookmarks,
+        note: "Across all users",
+      },
+      {
+        label: "Groups",
+        value: totalGroups,
+        note: "Organizational folders",
+      },
+      {
+        label: "7-Day Activity",
+        value: newBookmarks7d,
+        note: "New bookmarks this week",
+      },
+    ],
+    avgBookmarks,
+  };
+}
 
-  const formattedTopUsers = topUsers.map((u) => ({
-    name: u.name ?? "—",
-    email: u.email,
-    bookmarks: u._count.bookmarks,
-  }));
+async function getAdminUsers(
+  query: string,
+  requestedPage: number,
+  currentAdminId: string
+): Promise<{
+  users: AdminUserRow[];
+  totalUsers: number;
+  totalPages: number;
+  page: number;
+}> {
+  const where = query
+    ? {
+        OR: [
+          { name: { contains: query, mode: "insensitive" as const } },
+          { email: { contains: query, mode: "insensitive" as const } },
+        ],
+      }
+    : undefined;
+
+  const totalUsers = await prisma.user.count({ where });
+  const totalPages = Math.max(1, Math.ceil(totalUsers / USERS_PER_PAGE));
+  const page = Math.min(requestedPage, totalPages);
+  const skip = (page - 1) * USERS_PER_PAGE;
+
+  const users = await prisma.user.findMany({
+    where,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      _count: { select: { bookmarks: true } },
+    },
+    orderBy: [{ bookmarks: { _count: "desc" } }, { email: "asc" }],
+    skip,
+    take: USERS_PER_PAGE,
+  });
 
   return {
-    stats,
-    avgBookmarks,
-    topUsers: formattedTopUsers,
+    users: users.map((user) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      bookmarkCount: user._count.bookmarks,
+      isCurrentAdmin: user.id === currentAdminId,
+    })),
+    totalUsers,
+    totalPages,
+    page,
   };
 }
 
 function AdminSkeleton() {
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Card key={i} size="sm">
+    <div className="space-y-8">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Card key={index}>
             <CardHeader className="pb-2">
-              <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+              <div className="h-3 w-20 animate-pulse rounded bg-muted" />
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-2">
               <div className="h-8 w-16 animate-pulse rounded bg-muted" />
+              <div className="h-3 w-28 animate-pulse rounded bg-muted" />
             </CardContent>
           </Card>
         ))}
       </div>
+
       <Card>
         <CardHeader>
-          <CardTitle>Top 10 Users</CardTitle>
+          <div className="h-5 w-32 animate-pulse rounded bg-muted" />
+          <div className="h-3 w-64 animate-pulse rounded bg-muted" />
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            {Array.from({ length: 5 }).map((_, i) => (
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, index) => (
               <div
-                key={i}
-                className="h-10 w-full animate-pulse rounded bg-muted"
+                key={index}
+                className="h-14 w-full animate-pulse rounded-lg bg-muted"
               />
             ))}
           </div>
@@ -101,100 +177,191 @@ function AdminSkeleton() {
   );
 }
 
-async function AdminData() {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    redirect("/sign-in");
-  }
+async function AdminData({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [session, params] = await Promise.all([
+    requireAdminSession(),
+    searchParams,
+  ]);
 
-  const adminEmail = process.env.ADMIN_EMAIL;
-  if (
-    !adminEmail ||
-    (session.user?.email ?? "").toLowerCase() !== adminEmail.toLowerCase()
-  ) {
-    notFound();
-  }
+  const query = (firstParam(params.q) ?? "").trim();
+  const requestedPage = parsePage(firstParam(params.page));
 
-  const { stats, avgBookmarks, topUsers } = await getAdminData();
+  const [{ stats, avgBookmarks }, publicSignupEnabled, userData] =
+    await Promise.all([
+      getAdminStats(),
+      isPublicSignupEnabled(),
+      getAdminUsers(query, requestedPage, session.user.id),
+    ]);
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {stats.map((stat) => (
-          <Card key={stat.label} size="sm">
-            <CardHeader className="pb-2">
-              <CardDescription>{stat.label}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-semibold">{stat.value}</p>
-            </CardContent>
-          </Card>
-        ))}
+    <div className="space-y-8">
+      {/* Hero header card */}
+      <Card className="p-6 sm:p-8">
+        <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-start">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                <ShieldCheck className="size-5" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                  Admin Console
+                </h1>
+              </div>
+            </div>
+            <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
+              Monitor system activity, manage user accounts, and control
+              registration settings from one place.
+            </p>
+          </div>
+
+          {/* Summary pills */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="rounded-xl border border-border bg-muted/50 px-4 py-3">
+              <p className="text-xs font-medium text-muted-foreground">
+                Avg. bookmarks/user
+              </p>
+              <p className="mt-0.5 text-xl font-semibold tabular-nums tracking-tight text-foreground">
+                {avgBookmarks}
+              </p>
+            </div>
+            <div className="rounded-xl border border-border bg-muted/50 px-4 py-3">
+              <p className="text-xs font-medium text-muted-foreground">
+                Registration
+              </p>
+              <p className="mt-0.5 text-sm font-semibold text-foreground">
+                {publicSignupEnabled ? (
+                  <span className="flex items-center gap-1.5">
+                    <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
+                    Open
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5">
+                    <span className="inline-block size-1.5 rounded-full bg-muted-foreground" />
+                    Private
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Stat cards row */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {stats.map((stat, index) => {
+          const Icon = statIcons[index] ?? UsersIcon;
+          return (
+            <Card key={stat.label}>
+              <CardHeader className="flex-row items-center justify-between pb-1">
+                <CardDescription className="text-xs font-medium uppercase tracking-widest">
+                  {stat.label}
+                </CardDescription>
+                <div className="flex size-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                  <Icon className="size-4" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-semibold tabular-nums tracking-tight text-foreground">
+                  {stat.value.toLocaleString()}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {stat.note}
+                </p>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Avg Bookmarks per User</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-2xl font-semibold">{avgBookmarks}</p>
-        </CardContent>
-      </Card>
+      {/* Main content grid */}
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <AdminUsersCard
+          users={userData.users}
+          query={query}
+          page={userData.page}
+          totalPages={userData.totalPages}
+          totalUsers={userData.totalUsers}
+        />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Top 10 Users</CardTitle>
-          <CardDescription>By bookmark count</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left">
-                  <th className="pb-2 pr-4 font-medium">Name</th>
-                  <th className="pb-2 pr-4 font-medium">Email</th>
-                  <th className="pb-2 font-medium">Bookmarks</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topUsers.map((user) => (
-                  <tr key={user.email} className="border-b last:border-0">
-                    <td className="py-2 pr-4">{user.name}</td>
-                    <td className="py-2 pr-4">{user.email}</td>
-                    <td className="py-2">{user.bookmarks}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+        <div className="space-y-6">
+          <PublicSignupCard initialEnabled={publicSignupEnabled} />
+
+          {/* Operational notes */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Operational Notes</CardTitle>
+              <CardDescription>
+                Important reminders for admin actions.
+              </CardDescription>
+            </CardHeader>
+            <Separator />
+            <CardContent className="space-y-3 pt-4 text-sm leading-relaxed text-muted-foreground">
+              <p>
+                Deleting a user removes their bookmarks, groups, API tokens, and
+                reset tokens through the relational cascade.
+              </p>
+              <p>
+                Live search updates the URL as you type, so filtered views
+                remain shareable and reload safely.
+              </p>
+              <p>
+                The current admin account is protected in both the UI and the
+                server action.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
 
-export default function AdminPage() {
+export default function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-        <div className="mb-6 flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/dashboard" aria-label="Back to dashboard">
-              <ArrowLeftIcon className="h-5 w-5" />
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-2xl font-semibold">Admin</h1>
-            <p className="text-sm text-muted-foreground">
-              Usage statistics
-            </p>
+    <div className="flex min-h-screen flex-col bg-background">
+      <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+        {/* Top nav bar */}
+        <div className="mb-8 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="icon"
+              asChild
+            >
+              <Link href="/dashboard" aria-label="Back to dashboard">
+                <ArrowLeftIcon className="size-4" />
+              </Link>
+            </Button>
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                Administration
+              </p>
+              <p className="text-xs text-muted-foreground">
+                System overview & user management
+              </p>
+            </div>
           </div>
+          <Badge variant="secondary" className="gap-1.5">
+            <ShieldCheck className="size-3" />
+            Admin
+          </Badge>
         </div>
 
         <Suspense fallback={<AdminSkeleton />}>
-          <AdminData />
+          <AdminData searchParams={searchParams} />
         </Suspense>
       </div>
+
+      <AdminFooter />
     </div>
   );
 }

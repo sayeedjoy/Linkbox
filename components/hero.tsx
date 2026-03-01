@@ -5,7 +5,13 @@ import { FullWidthDivider } from "@/components/ui/full-width-divider";
 import { Button } from "@/components/ui/button";
 import { ArrowRightIcon, LinkIcon } from "lucide-react";
 
-export function HeroSection() {
+export function HeroSection({
+	isAuthenticated,
+	publicSignupEnabled,
+}: {
+	isAuthenticated: boolean;
+	publicSignupEnabled: boolean;
+}) {
 	return (
 		<section>
 			<div className="relative flex flex-col items-center justify-center gap-5 px-4 py-12 md:px-4 md:py-24 lg:py-28">
@@ -63,11 +69,25 @@ export function HeroSection() {
 				</p>
 
 				<div className="fade-in slide-in-from-bottom-10 flex w-fit animate-in items-center justify-center gap-3 fill-mode-backwards pt-2 delay-300 duration-500 ease-out">
-					<Button asChild variant="outline">
-						<Link href="/sign-up">
-							Sign up <ArrowRightIcon data-icon="inline-end" />
-						</Link>
-					</Button>
+					{isAuthenticated ? (
+						<Button asChild variant="outline">
+							<Link href="/dashboard">
+								Open dashboard <ArrowRightIcon data-icon="inline-end" />
+							</Link>
+						</Button>
+					) : publicSignupEnabled ? (
+						<Button asChild variant="outline">
+							<Link href="/sign-up">
+								Sign up <ArrowRightIcon data-icon="inline-end" />
+							</Link>
+						</Button>
+					) : (
+						<Button asChild variant="outline">
+							<Link href="/sign-in">
+								Sign in <ArrowRightIcon data-icon="inline-end" />
+							</Link>
+						</Button>
+					)}
 					<Button asChild>
 						<Link href="/dashboard">
 							<LinkIcon data-icon="inline-start" /> Open dashboard

@@ -1,7 +1,6 @@
 import { createHash } from "crypto";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-config";
 import { prisma } from "@/lib/prisma";
+import { getVerifiedAuthSession } from "@/lib/auth";
 
 const TOKEN_LAST_USED_TOUCH_INTERVAL_MS = 10 * 60 * 1000;
 
@@ -56,6 +55,6 @@ export async function resolveApiUserId(
     return null;
   }
 
-  const session = await getServerSession(authOptions);
+  const session = await getVerifiedAuthSession();
   return session?.user?.id ?? null;
 }

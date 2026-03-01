@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { Header } from "@/components/header";
 import { HeroSection } from "@/components/hero";
 import { FeatureSection } from "@/components/feature-section";
@@ -6,12 +7,27 @@ import { Integrations } from "@/components/integrations";
 import { FaqsSection } from "@/components/faqs-section";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
+import { getAuthOptional } from "@/lib/auth";
+import { isPublicSignupEnabled } from "@/lib/app-config";
 
-export default function Page() {
+export default async function Page() {
+  await headers();
+  const [session, publicSignupEnabled] = await Promise.all([
+    getAuthOptional(),
+    isPublicSignupEnabled(),
+  ]);
+  const isAuthenticated = Boolean(session?.user?.id);
+
   return (
     <main className="min-h-dvh overflow-x-hidden bg-background">
-      <Header />
-      <HeroSection />
+      <Header
+        isAuthenticated={isAuthenticated}
+        publicSignupEnabled={publicSignupEnabled}
+      />
+      <HeroSection
+        isAuthenticated={isAuthenticated}
+        publicSignupEnabled={publicSignupEnabled}
+      />
       <section className="border-t py-16 md:py-24">
         <div className="mx-auto max-w-5xl px-4">
           <FeatureSection />
@@ -38,12 +54,16 @@ export default function Page() {
             <Button asChild size="lg" className="rounded-md bg-foreground text-background">
               <Link href="/dashboard">Open dashboard</Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="rounded-md">
-              <Link href="/sign-in">Sign in</Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="rounded-md">
-              <Link href="/sign-up">Sign up</Link>
-            </Button>
+            {!isAuthenticated ? (
+              <Button asChild variant="outline" size="lg" className="rounded-md">
+                <Link href="/sign-in">Sign in</Link>
+              </Button>
+            ) : null}
+            {!isAuthenticated && publicSignupEnabled ? (
+              <Button asChild variant="outline" size="lg" className="rounded-md">
+                <Link href="/sign-up">Sign up</Link>
+              </Button>
+            ) : null}
           </div>
         </div>
       </section>

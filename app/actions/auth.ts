@@ -5,9 +5,16 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { currentUserId } from "@/lib/auth";
 import { hashToken } from "@/lib/api-auth";
+import {
+  isPublicSignupEnabled,
+  isPublicSignupEnabledForClient,
+} from "@/lib/app-config";
 import { sendPasswordResetEmail } from "@/lib/email";
 
 export async function register(email: string, password: string, name?: string) {
+  const publicSignupEnabled = await isPublicSignupEnabled();
+  if (!publicSignupEnabled) throw new Error("Public signups are disabled");
+
   const existing = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
   if (existing) throw new Error("User already exists");
   const hashed = await bcrypt.hash(password, 12);
@@ -23,8 +30,22 @@ export async function register(email: string, password: string, name?: string) {
 export async function deleteAccount(): Promise<{ ok: true } | { error: string }> {
   const userId = await currentUserId();
   if (!userId) return { error: "Not authenticated" };
-  await prisma.user.delete({ where: { id: userId } });
-  return { ok: true };
+
+  return prisma.$transaction(async (tx) => {
+    const [totalUsers, publicSignupEnabled] = await Promise.all([
+      tx.user.count(),
+      isPublicSignupEnabledForClient(tx),
+    ]);
+
+    if (totalUsers <= 1 && !publicSignupEnabled) {
+      return {
+        error: "Cannot delete the last account while public signup is disabled.",
+      };
+    }
+
+    await tx.user.delete({ where: { id: userId } });
+    return { ok: true };
+  });
 }
 
 export async function requestPasswordReset(email: string): Promise<{ ok: true }> {

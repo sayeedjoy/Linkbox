@@ -6,7 +6,13 @@ import { Button } from "@/components/ui/button";
 import { navLinks } from "@/components/header";
 import { XIcon, MenuIcon } from "lucide-react";
 
-export function MobileNav() {
+export function MobileNav({
+	isAuthenticated,
+	publicSignupEnabled,
+}: {
+	isAuthenticated: boolean;
+	publicSignupEnabled: boolean;
+}) {
 	const [open, setOpen] = React.useState(false);
 
 	return (
@@ -49,12 +55,22 @@ export function MobileNav() {
 							))}
 						</div>
 						<div className="mt-12 flex flex-col gap-2">
-							<Button asChild className="w-full" variant="outline">
-								<Link href="/sign-in">Sign In</Link>
-							</Button>
-							<Button asChild className="w-full">
-								<Link href="/sign-up">Get Started</Link>
-							</Button>
+							{isAuthenticated ? (
+								<Button asChild className="w-full">
+									<Link href="/dashboard">Open dashboard</Link>
+								</Button>
+							) : (
+								<>
+									<Button asChild className="w-full" variant="outline">
+										<Link href="/sign-in">Sign In</Link>
+									</Button>
+									{publicSignupEnabled ? (
+										<Button asChild className="w-full">
+											<Link href="/sign-up">Get Started</Link>
+										</Button>
+									) : null}
+								</>
+							)}
 						</div>
 					</div>
 				</Portal>

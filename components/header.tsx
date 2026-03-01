@@ -17,7 +17,13 @@ export const navLinks = [
 	},
 ];
 
-export function Header() {
+export function Header({
+	isAuthenticated,
+	publicSignupEnabled,
+}: {
+	isAuthenticated: boolean;
+	publicSignupEnabled: boolean;
+}) {
 	const scrolled = useScroll(10);
 
 	return (
@@ -52,14 +58,27 @@ export function Header() {
 							</Button>
 						))}
 					</div>
-					<Button asChild size="sm" variant="outline">
-						<Link href="/sign-in">Sign In</Link>
-					</Button>
-					<Button asChild size="sm">
-						<Link href="/sign-up">Get Started</Link>
-					</Button>
+					{isAuthenticated ? (
+						<Button asChild size="sm">
+							<Link href="/dashboard">Open dashboard</Link>
+						</Button>
+					) : (
+						<>
+							<Button asChild size="sm" variant="outline">
+								<Link href="/sign-in">Sign In</Link>
+							</Button>
+							{publicSignupEnabled ? (
+								<Button asChild size="sm">
+									<Link href="/sign-up">Get Started</Link>
+								</Button>
+							) : null}
+						</>
+					)}
 				</div>
-				<MobileNav />
+				<MobileNav
+					isAuthenticated={isAuthenticated}
+					publicSignupEnabled={publicSignupEnabled}
+				/>
 			</nav>
 		</header>
 	);

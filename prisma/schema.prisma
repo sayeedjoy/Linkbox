@@ -27,6 +27,11 @@ model User {
   passwordResetTokens  PasswordResetToken[]
 }
 
+model AppConfig {
+  id                  Int     @id
+  publicSignupEnabled Boolean @default(true)
+}
+
 model PasswordResetToken {
   id        String   @id @default(cuid())
   userId    String

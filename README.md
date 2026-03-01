@@ -5,13 +5,13 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=fff)](https://www.typescriptlang.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-4169E1?logo=postgresql&logoColor=fff)](https://www.postgresql.org/)
 [![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma&logoColor=fff)](https://www.prisma.io/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-38B2AC?logo=tailwindcss&logoColor=fff)](https://tailwindcss.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-38B2AC?logo=tailwindcss&logoColor=fff)](https://tailwindcss.com/)
 [![Node](https://img.shields.io/badge/Node-20+-339933?logo=nodedotjs&logoColor=fff)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/License-Private-gray)](.)
 
 A full-stack bookmarking platform with two clients:
-- **Web app** (Next.js) for full management workflows
-- **Chrome extension** for fast capture and lightweight management
+- **Web app** (Next.js) for full bookmark management, organization, settings, and account flows
+- **Chrome extension** for fast capture, lightweight browsing, and token-auth sync
 
 This README documents the whole application. Extension-specific implementation details are in [extension/README.md](extension/README.md).
 
@@ -23,13 +23,15 @@ This README documents the whole application. Extension-specific implementation d
 
 - Save links and notes
 - Auto-unfurl metadata (title, description, favicon, preview image)
-- Group bookmarks with color and ordering
-- Search and timeline views
+- Group bookmarks with color, ordering, and move flows
+- Search, filtering, and timeline views
 - Edit, refresh metadata, and delete bookmarks
-- Export bookmarks
-- API token management for integrations/extension
+- Export bookmarks as JSON
+- API token generation and revocation for extension/integrations
 - Realtime sync across active clients
-- Account auth + password reset flows
+- AI auto-grouping for uncategorized bookmarks with optional backfill
+- Account auth, password reset, theme settings, and account deletion
+- Admin dashboard with user/bookmark activity stats
 
 ---
 
@@ -38,13 +40,15 @@ This README documents the whole application. Extension-specific implementation d
 ### Web platform
 - **Next.js 16** App Router (`app/`)
 - **Server Actions** for bookmark/group/account operations (`app/actions/`)
-- **Route Handlers** for token-auth APIs used by extension (`app/api/`)
+- **Route Handlers** for session and bearer-token APIs (`app/api/`)
 - **NextAuth** credentials auth for web sessions
+- **Settings + AI categorization** for user-controlled auto-grouping
 - **TanStack Query** for client caching/invalidation
 
 ### Data layer
 - **PostgreSQL** via Prisma (`prisma/schema.prisma`)
 - **Entities:** `User`, `Bookmark`, `Group`, `ApiToken`, `PasswordResetToken`
+- **User preferences:** `autoGroupEnabled` for AI categorization
 
 ### Realtime model
 - **SSE Endpoint:** `GET /api/realtime/bookmarks`
@@ -53,8 +57,8 @@ This README documents the whole application. Extension-specific implementation d
 
 ### Extension client
 - **Manifest V3** app in `extension/`
-- Background worker is source-of-truth for token, cache, network sync
-- Popup is a thin UI over runtime messaging
+- Background worker is source-of-truth for token, cache, progressive sync, and realtime
+- Popup and sidepanel are thin UIs over runtime messaging
 
 ---
 
@@ -67,7 +71,9 @@ This README documents the whole application. Extension-specific implementation d
 | Language | TypeScript |
 | Database | PostgreSQL + Prisma |
 | Auth | NextAuth |
-| Styling | Tailwind CSS + shadcn/ui |
+| Styling | Tailwind CSS 4 + shadcn/ui-style components |
+| AI Categorization | AI SDK + OpenRouter |
+| Email | Resend |
 | Extension Build | Vite + CRXJS |
 
 ---
@@ -113,7 +119,7 @@ cp .env.example .env.local
 - `NEXT_PUBLIC_APP_URL`
 - `RESEND_API_KEY`
 - `RESEND_FROM_EMAIL`
-- `OPENAI_API_KEY`
+- `OPENROUTER_API_KEY`
 - `ADMIN_EMAIL`
 
 ### 3. Run Migrations
@@ -152,6 +158,8 @@ Open **http://localhost:3000**.
 | `GET` | `/api/sync` | Sync all bookmarks |
 | `GET` | `/api/export` | Export bookmarks |
 | `GET` | `/api/categories` | List all groups |
+| `GET` | `/api/settings` | Read user settings |
+| `PATCH` | `/api/settings` | Update user settings |
 | `POST` | `/api/bookmarks` | Create bookmark |
 | `PUT` | `/api/bookmarks` | Update bookmark |
 | `DELETE` | `/api/bookmarks` | Delete bookmark |
@@ -212,7 +220,9 @@ Zip artifact is generated in `extension/release/`.
 
 - API tokens are persisted in extension `chrome.storage.local`
 - Token validity is controlled server-side (revoke/regenerate from web app)
+- Extension initial sync is paginated, then progressively hydrates remaining bookmarks in the background
 - Realtime and progressive sync keep clients aligned with minimal refresh latency
+- AI auto-grouping is optional and only runs when configured and enabled
 
 ---
 

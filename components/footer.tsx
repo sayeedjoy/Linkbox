@@ -3,6 +3,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
+import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 import { FacebookIcon, GithubIcon, InstagramIcon, LinkedinIcon, YoutubeIcon } from "lucide-react";
 
 export function Footer() {
@@ -67,11 +68,12 @@ export function Footer() {
 						</div>
 					</div>
 				</div>
-				<div className="absolute inset-x-0 h-px w-full bg-border" />
-				<div className="flex max-w-4xl flex-col justify-between gap-2 py-4">
-					<p className="text-center font-light text-muted-foreground text-sm">
-						&copy; {new Date().getFullYear()} LinkArena, All rights reserved
+			<div className="absolute inset-x-0 h-px w-full bg-border" />
+				<div className="flex max-w-5xl items-center justify-between gap-2 px-4 py-4">
+					<p className="font-light text-muted-foreground text-sm">
+						&copy; {new Date().getFullYear()} LinkArena
 					</p>
+					<AnimatedThemeToggler className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground [&_svg]:size-4" />
 				</div>
 			</div>
 		</footer>

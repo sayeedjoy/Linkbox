@@ -8,7 +8,7 @@ Operating guide for coding agents working in this repository.
 - This repository contains two related apps:
 - A Next.js web app at the repo root
 - A Chrome extension workspace in `extension/`
-- The product manages bookmarks, groups, export, token-auth extension access, and realtime sync
+- The product manages bookmarks and notes, colored groups, export, API tokens, AI auto-grouping, token-auth extension access, realtime sync, and account/admin workflows
 
 ## Tech Stack
 
@@ -18,7 +18,9 @@ Operating guide for coding agents working in this repository.
 - PostgreSQL with Prisma
 - NextAuth credentials auth for browser web sessions
 - Token-auth route handlers for extension and integration APIs
-- Tailwind CSS with shadcn/ui-style components
+- Tailwind CSS 4 with shadcn/ui-style components
+- AI SDK with OpenRouter for bookmark auto-grouping
+- Resend for password reset email delivery
 - Chrome extension built with React, Vite, and CRXJS
 
 ## Repo Map
@@ -40,6 +42,10 @@ High-value files:
 - `prisma/schema.prisma`: data model source of truth
 - `next.config.ts`: Next.js runtime and bundling configuration
 - `eslint.config.mjs`: lint configuration
+- `app/actions/categorize.ts`: AI auto-grouping and backfill behavior
+- `app/actions/settings.ts`: user preference actions for auto-grouping
+- `app/api/settings/route.ts`: settings API for session and bearer-token clients
+- `app/admin/page.tsx`: admin analytics dashboard
 - `extension/manifest.config.ts`: extension manifest definition
 - `extension/src/types/messages.ts`: popup/background runtime message contract
 - `extension/src/lib/constants.ts`: extension storage keys and API base URL
@@ -54,6 +60,8 @@ High-value files:
 - Do not add dependencies unless the current toolset cannot reasonably solve the problem.
 - Treat auth, token handling, and storage clearing as security-sensitive areas.
 - If changing token-auth routes, evaluate both browser-session behavior and extension bearer-token behavior.
+- If changing settings or preferences APIs, evaluate both browser-session behavior and extension bearer-token behavior.
+- If changing AI categorization, account for `OPENROUTER_API_KEY`, `autoGroupEnabled`, rate limiting, and backfill side effects.
 - If changing extension storage clearing, preserve non-auth preferences such as theme unless the UX explicitly changes.
 - Do not log plaintext tokens, secrets, or credential-like values.
 
@@ -64,6 +72,7 @@ High-value files:
 - Prefer existing patterns in `app/actions/` for app-triggered mutations.
 - Use `app/api/` route handlers for extension and integration-facing APIs.
 - Browser auth uses NextAuth credentials sessions.
+- User settings include AI auto-grouping and account-level flows such as export and delete account.
 - Prisma-backed data logic should follow the current schema in `prisma/schema.prisma`.
 - If changing schema, account for migration workflow and downstream Prisma client impact.
 - Respect `next.config.ts`, especially `output: "standalone"` and `serverExternalPackages`.
@@ -73,6 +82,7 @@ High-value files:
 - `extension/` is an independent workspace with its own `package.json`.
 - The background service worker is the source of truth for token state, cache, sync, realtime, and messaging.
 - Keep the popup thin. Prefer runtime messaging over direct API orchestration in popup components.
+- Sidepanel and popup should stay aligned with the background message contract.
 - Extension auth is token-based, not cookie/session-based.
 - Token and cache state live in `chrome.storage.local`.
 - If popup auth UX changes, update the background message contract and popup consumers together.
@@ -81,6 +91,7 @@ High-value files:
 ## Data And Auth
 
 - Core Prisma models include `User`, `Bookmark`, `Group`, `ApiToken`, and `PasswordResetToken`.
+- `User.autoGroupEnabled` controls AI auto-categorization behavior.
 - API tokens are hashed server-side before lookup.
 - Browser web-session auth and extension bearer auth are distinct mechanisms.
 - If a route supports both session and bearer auth, be explicit about fallback behavior.
@@ -114,6 +125,7 @@ Windows note:
 - For web route or data changes, prefer lint, build, or focused manual API verification.
 - For extension changes, rebuild the extension and test popup flows manually.
 - For auth changes, verify valid token, invalid token, logout, and cache-clearing behavior.
+- For AI/settings changes, verify toggle on/off behavior, uncategorized bookmark backfill, and disabled-key fallback behavior.
 - If validation is blocked by environment restrictions, report the exact command and failure instead of guessing.
 
 ## Environment And Secrets
@@ -126,7 +138,7 @@ Root environment values documented in the repo:
 - Optional: `NEXT_PUBLIC_APP_URL`
 - Optional: `RESEND_API_KEY`
 - Optional: `RESEND_FROM_EMAIL`
-- Optional: `OPENAI_API_KEY`
+- Optional: `OPENROUTER_API_KEY`
 - Optional: `ADMIN_EMAIL`
 
 Extension environment:
@@ -143,6 +155,7 @@ Rules:
 - The root app and `extension/` are separate workspaces. Run commands in the correct directory.
 - Windows or sandboxed environments may fail on `npm run build` or `npm run lint` with `EPERM`.
 - Extension auth bugs often involve both background storage behavior and server route auth fallback.
+- AI auto-grouping behavior can appear broken if no groups exist, the feature is disabled in settings, or `OPENROUTER_API_KEY` is missing.
 - Popup error messages can hide server or network failures if message contracts are too coarse.
 - Route-handler auth changes must be checked against extension CORS and origin behavior.
 - Extension issues are often owned by the background worker rather than the popup UI.
@@ -152,5 +165,6 @@ Rules:
 - Confirm you changed the correct workspace.
 - Update shared types if a runtime message contract changed.
 - Verify auth and storage effects if touching extension auth or logout behavior.
+- Verify AI preference, backfill behavior, and environment assumptions if touching categorization or settings.
 - Consider Prisma schema and migration impact if touching the data layer.
 - Record any environment-caused validation failures in the final handoff.
