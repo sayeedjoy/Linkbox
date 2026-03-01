@@ -101,9 +101,9 @@ export const BookmarkRow = forwardRef<HTMLLIElement, {
       className={cn(
         "group relative min-w-0 flex flex-col gap-2 rounded-xl border border-transparent px-3 py-2.5 transition-colors hover:bg-muted/50",
         !selectionMode && "cursor-grab active:cursor-grabbing",
-        selectionMode && "cursor-pointer",
+        selectionMode && "cursor-pointer sm:my-1",
         isFocused && "bg-muted/50",
-        selectionMode && isSelected && "border-primary/30 bg-primary/[0.045]",
+        selectionMode && isSelected && "ring-1 ring-primary/30 bg-primary/[0.07]",
         "sm:grid sm:grid-cols-[1fr_auto] sm:gap-4 sm:items-center sm:px-4"
       )}
     >
@@ -115,8 +115,8 @@ export const BookmarkRow = forwardRef<HTMLLIElement, {
 
       <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:min-w-0">
         {selectionMode && (
-          <div className="shrink-0" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-            <Checkbox checked={!!isSelected} onCheckedChange={() => onToggleSelect?.()} aria-label={isSelected ? "Deselect" : "Select"} />
+          <div className="mr-0.5 shrink-0" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+            <Checkbox className="size-[18px]" checked={!!isSelected} onCheckedChange={() => onToggleSelect?.()} aria-label={isSelected ? "Deselect" : "Select"} />
           </div>
         )}
         {faviconSrc ? (

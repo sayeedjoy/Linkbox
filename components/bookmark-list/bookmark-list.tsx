@@ -5,6 +5,7 @@ import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
 import { BookmarkStatusHeader } from "./bookmark-status-header";
 import { BookmarkEditCard } from "./bookmark-edit-card";
 import { BookmarkRow } from "./bookmark-row";
+import { cn } from "@/lib/utils";
 
 type EditForm = {
   title: string;
@@ -130,7 +131,10 @@ export function BookmarkList({
         </div>
       )}
       <ul
-        className="min-w-0 space-y-3 sm:space-y-0"
+        className={cn(
+          "min-w-0 space-y-3 sm:space-y-0",
+          selectionMode && "px-px"
+        )}
         onMouseMove={(e) => {
           if (e.target === e.currentTarget) {
             onFocusChange?.(-1);
