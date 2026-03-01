@@ -45,7 +45,7 @@ export function TimelineFilters({
             }
           }
         }}
-        placeholder="Paste a link, image, or text..."
+        placeholder="Paste a link or text..."
         searchPlaceholder="Search bookmarks..."
       />
         </div>

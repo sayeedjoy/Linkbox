@@ -144,8 +144,7 @@ export function SettingsModal({
                     id="auto-group-desc"
                     className="text-xs text-muted-foreground"
                   >
-                    When enabled, new bookmarks may be assigned to an existing
-                    group (applies across the app + extension).
+                    Turning this on will automatically categorize new bookmarks using AI.
                   </p>
                 </div>
                 <Switch

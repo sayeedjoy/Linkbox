@@ -8,7 +8,7 @@ import { PlusIcon, Loader } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function BookmarkHeroInput({
-  placeholder = "Insert a link, image, or just plain text…",
+  placeholder = "Paste a link or plain text…",
   searchMode,
   searchPlaceholder = "Search bookmarks…",
   value,
