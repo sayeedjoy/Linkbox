@@ -169,7 +169,7 @@ export function GroupDropdown({
 
   return (
     <>
-      <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+      <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen} modal={false}>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" className="gap-2 font-normal min-w-0 max-w-[calc(100vw-8rem)]">
             <span
