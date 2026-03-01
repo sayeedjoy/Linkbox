@@ -20,6 +20,7 @@ model User {
   name                 String?
   image                String?
   password             String
+  autoGroupEnabled     Boolean              @default(false)
   groups               Group[]
   bookmarks            Bookmark[]
   apiTokens            ApiToken[]

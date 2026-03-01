@@ -6,6 +6,7 @@ import { currentUserId } from "@/lib/auth";
 import { unfurlUrl } from "@/app/actions/parse";
 import type { Bookmark } from "@/app/generated/prisma/client";
 import { publishUserEvent, type RealtimeEventType } from "@/lib/realtime";
+import { categorizeBookmark } from "@/app/actions/categorize";
 
 export type BookmarkWithGroup = Bookmark & {
   group: { id: string; name: string; color: string | null } | null;
@@ -147,6 +148,12 @@ export async function createBookmark(
   });
   revalidateBookmarkData();
   publishBookmarkEvent(userId, "bookmark.created", bookmark.id, { groupId: bookmark.groupId });
+
+  // Fire-and-forget auto-categorization for uncategorized bookmarks
+  if (!bookmark.groupId) {
+    categorizeBookmark(bookmark.id, userId).catch(() => {});
+  }
+
   return bookmark as BookmarkWithGroup;
 }
 
@@ -197,6 +204,12 @@ export async function createBookmarkFromMetadataForUser(
   });
   revalidateBookmarkData();
   publishBookmarkEvent(userId, "bookmark.created", bookmark.id, { groupId: bookmark.groupId });
+
+  // Fire-and-forget auto-categorization for uncategorized bookmarks
+  if (!bookmark.groupId) {
+    categorizeBookmark(bookmark.id, userId).catch(() => {});
+  }
+
   return bookmark as BookmarkWithGroup;
 }
 
@@ -237,6 +250,12 @@ export async function createNote(content: string, groupId?: string | null) {
   });
   revalidateBookmarkData();
   publishBookmarkEvent(userId, "bookmark.created", bookmark.id, { groupId: bookmark.groupId });
+
+  // Fire-and-forget auto-categorization for uncategorized notes
+  if (!bookmark.groupId) {
+    categorizeBookmark(bookmark.id, userId).catch(() => {});
+  }
+
   return bookmark as BookmarkWithGroup;
 }
 

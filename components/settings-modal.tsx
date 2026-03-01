@@ -30,8 +30,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { deleteAccount } from "@/app/actions/auth";
-
-const AUTO_GROUP_KEY = "bookmark-auto-group";
+import {
+  getAutoGroupEnabled,
+  updateAutoGroupEnabled,
+} from "@/app/actions/settings";
 
 const sectionLabelClass =
   "text-xs font-medium uppercase tracking-wide text-muted-foreground";
@@ -52,12 +54,17 @@ export function SettingsModal({
   const { data: session } = useSession();
   const { theme, setTheme } = useTheme();
   const [autoGroup, setAutoGroup] = useState(false);
+  const [autoGroupLoading, setAutoGroupLoading] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    setAutoGroup(localStorage.getItem(AUTO_GROUP_KEY) === "true");
+    if (!open) return;
+    setAutoGroupLoading(true);
+    getAutoGroupEnabled()
+      .then(setAutoGroup)
+      .catch(() => {})
+      .finally(() => setAutoGroupLoading(false));
   }, [open]);
 
   const handleThemeChange = useCallback(
@@ -69,9 +76,14 @@ export function SettingsModal({
 
   const displayTheme = (theme ?? "system") as "light" | "dark" | "system";
 
-  const handleAutoGroupChange = useCallback((checked: boolean) => {
+  const handleAutoGroupChange = useCallback(async (checked: boolean) => {
     setAutoGroup(checked);
-    localStorage.setItem(AUTO_GROUP_KEY, checked ? "true" : "false");
+    try {
+      await updateAutoGroupEnabled(checked);
+    } catch {
+      setAutoGroup(!checked);
+      toast.error("Failed to update setting");
+    }
   }, []);
 
   const handleExport = useCallback(() => {
@@ -140,6 +152,7 @@ export function SettingsModal({
                   id="auto-group"
                   checked={autoGroup}
                   onCheckedChange={handleAutoGroupChange}
+                  disabled={autoGroupLoading}
                   aria-describedby="auto-group-desc"
                   className="h-[1.15rem] w-8 shrink-0"
                 />

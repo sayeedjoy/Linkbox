@@ -223,18 +223,18 @@ export type ApiTokenOrderByWithRelationInput = {
 
 export type ApiTokenWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  tokenHash?: string
   AND?: Prisma.ApiTokenWhereInput | Prisma.ApiTokenWhereInput[]
   OR?: Prisma.ApiTokenWhereInput[]
   NOT?: Prisma.ApiTokenWhereInput | Prisma.ApiTokenWhereInput[]
   userId?: Prisma.StringFilter<"ApiToken"> | string
   name?: Prisma.StringFilter<"ApiToken"> | string
-  tokenHash?: Prisma.StringFilter<"ApiToken"> | string
   tokenPrefix?: Prisma.StringNullableFilter<"ApiToken"> | string | null
   tokenSuffix?: Prisma.StringNullableFilter<"ApiToken"> | string | null
   lastUsedAt?: Prisma.DateTimeNullableFilter<"ApiToken"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ApiToken"> | Date | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
-}, "id">
+}, "id" | "tokenHash">
 
 export type ApiTokenOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
