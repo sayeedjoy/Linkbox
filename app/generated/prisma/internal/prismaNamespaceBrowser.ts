@@ -52,6 +52,7 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   User: 'User',
+  AppConfig: 'AppConfig',
   PasswordResetToken: 'PasswordResetToken',
   ApiToken: 'ApiToken',
   Group: 'Group',
@@ -85,6 +86,14 @@ export const UserScalarFieldEnum = {
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const AppConfigScalarFieldEnum = {
+  id: 'id',
+  publicSignupEnabled: 'publicSignupEnabled'
+} as const
+
+export type AppConfigScalarFieldEnum = (typeof AppConfigScalarFieldEnum)[keyof typeof AppConfigScalarFieldEnum]
 
 
 export const PasswordResetTokenScalarFieldEnum = {

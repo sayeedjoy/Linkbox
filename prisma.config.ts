@@ -4,7 +4,10 @@ dotenv.config({ path: ".env.local", override: true });
 import { defineConfig } from "prisma/config";
 
 const url = process.env["DATABASE_URL"];
-if (!url?.trim()) {
+const prismaCommand = process.argv.slice(2).join(" ");
+const requiresDatabaseUrl = !prismaCommand.includes("generate");
+
+if (requiresDatabaseUrl && !url?.trim()) {
   throw new Error(
     "DATABASE_URL is not set. Create a .env file (see .env.example) and set DATABASE_URL to your PostgreSQL connection string."
   );
@@ -15,7 +18,11 @@ export default defineConfig({
   migrations: {
     path: "prisma/migrations",
   },
-  datasource: {
-    url,
-  },
+  ...(url?.trim()
+    ? {
+        datasource: {
+          url,
+        },
+      }
+    : {}),
 });

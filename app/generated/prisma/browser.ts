@@ -23,6 +23,11 @@ export * from './enums';
  */
 export type User = Prisma.UserModel
 /**
+ * Model AppConfig
+ * 
+ */
+export type AppConfig = Prisma.AppConfigModel
+/**
  * Model PasswordResetToken
  * 
  */
