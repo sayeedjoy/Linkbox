@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -5,6 +6,13 @@ import { SignUpForm } from "@/components/auth/sign-up-form";
 import { Button } from "@/components/ui/button";
 import { getAuthOptional } from "@/lib/auth";
 import { isPublicSignupEnabled } from "@/lib/app-config";
+
+export const metadata: Metadata = {
+  title: "Sign Up",
+  description:
+    "Create a LinkArena account to start saving and organizing your bookmarks.",
+  alternates: { canonical: "/sign-up" },
+};
 
 export default async function SignUpPage() {
   await headers();

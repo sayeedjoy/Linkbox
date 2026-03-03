@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import {
   dehydrate,
@@ -9,6 +10,11 @@ import { getGroups } from "@/app/actions/groups";
 import { getAuthOptional } from "@/lib/auth";
 import { timelineBookmarksKey, groupsKey } from "@/lib/query-keys";
 import { TimelineShell } from "@/components/timeline";
+
+export const metadata: Metadata = {
+  title: "Timeline",
+  robots: { index: false, follow: false },
+};
 
 export default async function TimelinePage() {
   const session = await getAuthOptional();

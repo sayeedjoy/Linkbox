@@ -16,6 +16,11 @@
       "sourceType": "github",
       "computedHash": "c31ddd68ba5798a79a516c619b1e1fc4408cc4876ad600fefa4f5add4425719d"
     },
+    "seo-audit": {
+      "source": "coreyhaines31/marketingskills",
+      "sourceType": "github",
+      "computedHash": "1c7e3a6fb4173f4e505d69cb4c3861af3287d0eeca7a6797a60a0707b5961a96"
+    },
     "vercel-react-best-practices": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",

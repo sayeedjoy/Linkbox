@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
 import { cacheLife, cacheTag } from "next/cache";
@@ -28,6 +29,11 @@ import {
 } from "@/components/admin/admin-users-card";
 import { isPublicSignupEnabled } from "@/lib/app-config";
 import { requireAdminSession } from "@/lib/admin";
+
+export const metadata: Metadata = {
+  title: "Admin",
+  robots: { index: false, follow: false },
+};
 
 const USERS_PER_PAGE = 20;
 
