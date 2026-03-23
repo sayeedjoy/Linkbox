@@ -170,6 +170,7 @@ Open **http://localhost:3000**.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| `POST` | `/api/mobile/auth/login` | Mobile login with email/password; returns API token |
 | `GET` | `/api/sync` | Sync all bookmarks |
 | `GET` | `/api/export` | Export bookmarks |
 | `GET` | `/api/categories` | List all groups |
@@ -186,6 +187,35 @@ Open **http://localhost:3000**.
 
 ```bash
 Authorization: Bearer <api-token>
+```
+
+### Mobile Login (Android/iOS)
+
+Use this endpoint to exchange email/password for an API token.
+
+```bash
+POST /api/mobile/auth/login
+Content-Type: application/json
+
+{
+  "email": "you@example.com",
+  "password": "your-password",
+  "tokenName": "Pixel 8 Pro"
+}
+```
+
+Success response:
+
+```json
+{
+  "token": "<api-token>",
+  "user": {
+    "id": "...",
+    "email": "you@example.com",
+    "name": "Your Name",
+    "image": null
+  }
+}
 ```
 
 ---
