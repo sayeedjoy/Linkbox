@@ -8,9 +8,27 @@ export function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
+function extractTokenFromAuthorizationHeader(authHeader: string | null): string | null {
+  const raw = authHeader?.trim();
+  if (!raw) return null;
+
+  // Accept common token auth schemes case-insensitively.
+  const schemeMatch = raw.match(/^([A-Za-z]+)\s+(.+)$/);
+  if (schemeMatch) {
+    const scheme = schemeMatch[1]?.toLowerCase();
+    const token = schemeMatch[2]?.trim();
+    if (!token) return null;
+    if (scheme === "bearer" || scheme === "token") return token;
+    return null;
+  }
+
+  // Backward-compatible fallback for clients sending raw token in Authorization.
+  if (raw.includes(" ")) return null;
+  return raw;
+}
+
 export async function userIdFromBearerToken(authHeader: string | null): Promise<string | null> {
-  if (!authHeader?.startsWith("Bearer ")) return null;
-  const token = authHeader.slice(7).trim();
+  const token = extractTokenFromAuthorizationHeader(authHeader);
   if (!token) return null;
   const hash = hashToken(token);
   const record = await prisma.apiToken.findFirst({
