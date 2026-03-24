@@ -173,7 +173,14 @@ Open **http://localhost:3000**.
 | `POST` | `/api/mobile/auth/login` | Mobile login with email/password; returns API token |
 | `GET` | `/api/sync` | Sync all bookmarks |
 | `GET` | `/api/export` | Export bookmarks |
-| `GET` | `/api/categories` | List all groups |
+| `GET` | `/api/groups` | List all groups (primary) |
+| `POST` | `/api/groups` | Create group (primary) |
+| `PATCH` | `/api/groups/:id` | Update group (primary) |
+| `DELETE` | `/api/groups/:id` | Delete group (primary) |
+| `GET` | `/api/categories` | List all groups (compatibility) |
+| `POST` | `/api/categories` | Create group (compatibility) |
+| `PATCH` | `/api/categories/:id` | Update group (compatibility) |
+| `DELETE` | `/api/categories/:id` | Delete group (compatibility) |
 | `GET` | `/api/settings` | Read user settings |
 | `PATCH` | `/api/settings` | Update user settings |
 | `POST` | `/api/bookmarks` | Create bookmark |
