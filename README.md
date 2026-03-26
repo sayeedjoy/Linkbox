@@ -171,6 +171,8 @@ Open **http://localhost:3000**.
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `POST` | `/api/mobile/auth/login` | Mobile login with email/password; returns API token |
+| `POST` | `/api/mobile/auth/forgot-password` | Request password reset email |
+| `POST` | `/api/mobile/auth/reset-password` | Reset password with token |
 | `GET` | `/api/sync` | Sync all bookmarks |
 | `GET` | `/api/export` | Export bookmarks |
 | `GET` | `/api/groups` | List all groups (primary) |
@@ -209,6 +211,45 @@ Content-Type: application/json
   "password": "your-password",
   "tokenName": "Pixel 8 Pro"
 }
+```
+
+### Mobile Forgot Password
+
+Use this endpoint to trigger a reset email. Response is always `ok` for non-empty email input to avoid account enumeration.
+
+```bash
+POST /api/mobile/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "you@example.com"
+}
+```
+
+Success response:
+
+```json
+{ "ok": true }
+```
+
+### Mobile Reset Password
+
+Use this endpoint with the token from the reset link and the new password.
+
+```bash
+POST /api/mobile/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "<reset-token>",
+  "newPassword": "your-new-password"
+}
+```
+
+Success response:
+
+```json
+{ "ok": true }
 ```
 
 Success response:
