@@ -171,6 +171,7 @@ Open **http://localhost:3000**.
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `POST` | `/api/mobile/auth/login` | Mobile login with email/password; returns API token |
+| `POST` | `/api/mobile/auth/logout` | Revoke the API token sent in `Authorization` (mobile sign-out) |
 | `POST` | `/api/mobile/auth/forgot-password` | Request password reset email |
 | `POST` | `/api/mobile/auth/reset-password` | Reset password with token |
 | `GET` | `/api/sync` | Sync all bookmarks |
@@ -202,6 +203,8 @@ Authorization: Bearer <api-token>
 
 Use this endpoint to exchange email/password for an API token.
 
+Send a **stable, unique `tokenName` per app install** (for example append an installation ID or Android ID). The server removes any existing API token for the same user and `tokenName` before creating a new one, so repeat logins from the same device do not accumulate rows. If two devices use the same `tokenName`, only one effective slot exists; use distinct names per device.
+
 ```bash
 POST /api/mobile/auth/login
 Content-Type: application/json
@@ -209,8 +212,37 @@ Content-Type: application/json
 {
   "email": "you@example.com",
   "password": "your-password",
-  "tokenName": "Pixel 8 Pro"
+  "tokenName": "Pixel 8 Pro · <install-id>"
 }
+```
+
+Success response:
+
+```json
+{
+  "token": "<api-token>",
+  "user": {
+    "id": "...",
+    "email": "you@example.com",
+    "name": "Your Name",
+    "image": null
+  }
+}
+```
+
+### Mobile Logout (Android/iOS)
+
+On sign-out, call logout **while you still have the token**, then clear local secure storage. Use the same `Authorization` header as other API requests. If the request fails (for example offline), you may still clear the token locally; the next login with the same `tokenName` will replace the stale row.
+
+```bash
+POST /api/mobile/auth/logout
+Authorization: Bearer <api-token>
+```
+
+Success response:
+
+```json
+{ "ok": true }
 ```
 
 ### Mobile Forgot Password
@@ -250,20 +282,6 @@ Success response:
 
 ```json
 { "ok": true }
-```
-
-Success response:
-
-```json
-{
-  "token": "<api-token>",
-  "user": {
-    "id": "...",
-    "email": "you@example.com",
-    "name": "Your Name",
-    "image": null
-  }
-}
 ```
 
 ---

@@ -46,20 +46,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
 
+  const tokenName = parseTokenName(body.tokenName);
+
   const plaintext = randomBytes(32).toString("hex");
   const tokenHash = hashToken(plaintext);
   const tokenPrefix = plaintext.slice(0, 4);
   const tokenSuffix = plaintext.slice(-4);
 
-  await prisma.apiToken.create({
-    data: {
-      userId: user.id,
-      name: parseTokenName(body.tokenName),
-      tokenHash,
-      tokenPrefix,
-      tokenSuffix,
-      lastUsedAt: new Date(),
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.apiToken.deleteMany({
+      where: { userId: user.id, name: tokenName },
+    });
+
+    await tx.apiToken.create({
+      data: {
+        userId: user.id,
+        name: tokenName,
+        tokenHash,
+        tokenPrefix,
+        tokenSuffix,
+        lastUsedAt: new Date(),
+      },
+    });
   });
 
   return NextResponse.json(
