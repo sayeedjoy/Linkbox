@@ -170,6 +170,7 @@ Open **http://localhost:3000**.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| `POST` | `/api/mobile/auth/signup` | Mobile signup with email/password; creates account and returns API token |
 | `POST` | `/api/mobile/auth/login` | Mobile login with email/password; returns API token |
 | `POST` | `/api/mobile/auth/logout` | Revoke the API token sent in `Authorization` (mobile sign-out) |
 | `POST` | `/api/mobile/auth/forgot-password` | Request password reset email |
@@ -212,6 +213,36 @@ Content-Type: application/json
 {
   "email": "you@example.com",
   "password": "your-password",
+  "tokenName": "Pixel 8 Pro · <install-id>"
+}
+```
+
+Success response:
+
+```json
+{
+  "token": "<api-token>",
+  "user": {
+    "id": "...",
+    "email": "you@example.com",
+    "name": "Your Name",
+    "image": null
+  }
+}
+```
+
+### Mobile Signup (Android/iOS)
+
+Use this endpoint to create a new account and receive an API token in one request.
+
+```bash
+POST /api/mobile/auth/signup
+Content-Type: application/json
+
+{
+  "email": "you@example.com",
+  "password": "your-password",
+  "name": "Your Name",
   "tokenName": "Pixel 8 Pro · <install-id>"
 }
 ```
