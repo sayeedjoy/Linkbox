@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { JSX, SVGProps, useState } from "react";
-import { signIn } from "next-auth/react";
+import { JSX, SVGProps, useEffect, useState } from "react";
+import { signIn, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { register } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useSignupConfig } from "@/hooks/use-signup-config";
 
 const DEMO_EMAIL = "demo@linkarena.app";
 
@@ -35,6 +37,9 @@ const Logo = (props: JSX.IntrinsicAttributes & SVGProps<SVGSVGElement>) => (
 );
 
 export function SignUpForm() {
+  const { status } = useSession();
+  const router = useRouter();
+  const publicSignupEnabled = useSignupConfig();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -43,6 +48,12 @@ export function SignUpForm() {
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/dashboard");
+    }
+  }, [status, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -70,6 +81,30 @@ export function SignUpForm() {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setLoading(false);
     }
+  }
+
+  if (!publicSignupEnabled) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center px-4">
+        <div className="w-full max-w-md rounded-xl border bg-card p-8 text-center shadow-sm">
+          <h1 className="text-2xl font-semibold text-foreground">
+            Signups are disabled
+          </h1>
+          <p className="mt-3 text-sm text-muted-foreground">
+            This self-hosted deployment is not accepting public registrations.
+            If you already have an account, sign in to continue.
+          </p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <Button asChild>
+              <Link href="/sign-in">Sign in</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/">Back to home</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

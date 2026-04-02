@@ -1,24 +1,41 @@
 "use client";
 
 import Link from "next/link";
-import { signIn } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { signIn, useSession } from "next-auth/react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Suspense, useState, useEffect } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useSignupConfig } from "@/hooks/use-signup-config";
 
 const DEMO_EMAIL = "demo@linkarena.app";
 
-function SignInFormInner({ publicSignupEnabled }: { publicSignupEnabled: boolean }) {
+function getSafeCallbackUrl(callbackUrl: string | null): string {
+  if (!callbackUrl) return "/dashboard";
+  if (!callbackUrl.startsWith("/")) return "/dashboard";
+  if (callbackUrl.startsWith("//")) return "/dashboard";
+  return callbackUrl;
+}
+
+function SignInFormInner() {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
+  const router = useRouter();
+  const { status } = useSession();
+  const callbackUrl = getSafeCallbackUrl(searchParams.get("callbackUrl"));
+  const publicSignupEnabled = useSignupConfig();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace(callbackUrl);
+    }
+  }, [status, callbackUrl, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -139,10 +156,10 @@ function SignInFormInner({ publicSignupEnabled }: { publicSignupEnabled: boolean
   );
 }
 
-export function SignInForm({ publicSignupEnabled }: { publicSignupEnabled: boolean }) {
+export function SignInForm() {
   return (
     <Suspense fallback={<div className="flex min-h-dvh items-center justify-center">Loading...</div>}>
-      <SignInFormInner publicSignupEnabled={publicSignupEnabled} />
+      <SignInFormInner />
     </Suspense>
   );
 }

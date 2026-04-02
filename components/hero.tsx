@@ -1,17 +1,18 @@
+"use client";
+
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { DecorIcon } from "@/components/ui/decor-icon";
 import { FullWidthDivider } from "@/components/ui/full-width-divider";
 import { Button } from "@/components/ui/button";
 import { ArrowRightIcon, LinkIcon } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useSignupConfig } from "@/hooks/use-signup-config";
 
-export function HeroSection({
-	isAuthenticated,
-	publicSignupEnabled,
-}: {
-	isAuthenticated: boolean;
-	publicSignupEnabled: boolean;
-}) {
+export function HeroSection() {
+	const { status } = useSession();
+	const isAuthenticated = status === "authenticated";
+	const publicSignupEnabled = useSignupConfig();
 	return (
 		<section>
 			<div className="relative flex flex-col items-center justify-center gap-5 px-4 py-12 md:px-4 md:py-24 lg:py-28">

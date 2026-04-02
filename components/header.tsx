@@ -3,8 +3,10 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/logo";
 import { useScroll } from "@/hooks/use-scroll";
+import { useSignupConfig } from "@/hooks/use-signup-config";
 import { Button } from "@/components/ui/button";
 import { MobileNav } from "@/components/mobile-nav";
+import { useSession } from "next-auth/react";
 
 export const navLinks = [
 	{
@@ -17,14 +19,11 @@ export const navLinks = [
 	},
 ];
 
-export function Header({
-	isAuthenticated,
-	publicSignupEnabled,
-}: {
-	isAuthenticated: boolean;
-	publicSignupEnabled: boolean;
-}) {
+export function Header() {
 	const scrolled = useScroll(10);
+	const { status } = useSession();
+	const isAuthenticated = status === "authenticated";
+	const publicSignupEnabled = useSignupConfig();
 
 	return (
 		<header
