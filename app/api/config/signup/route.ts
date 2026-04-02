@@ -1,5 +1,7 @@
 import { isPublicSignupEnabled } from "@/lib/app-config";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const enabled = await isPublicSignupEnabled();
   return Response.json(
