@@ -1,8 +1,8 @@
 import { isPublicSignupEnabled } from "@/lib/app-config";
-
-export const dynamic = "force-dynamic";
+import { connection } from "next/server";
 
 export async function GET() {
+  await connection();
   const enabled = await isPublicSignupEnabled();
   return Response.json(
     { enabled },
