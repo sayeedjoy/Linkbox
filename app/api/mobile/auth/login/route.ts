@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
   const user = await prisma.user.findUnique({
     where: { email },
-    select: { id: true, email: true, name: true, image: true, password: true },
+    select: { id: true, email: true, name: true, image: true, password: true, bannedUntil: true },
   });
 
   if (!user?.password) {
@@ -44,6 +44,10 @@ export async function POST(request: Request) {
   const passwordOk = await bcrypt.compare(password, user.password);
   if (!passwordOk) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+  }
+
+  if (user.bannedUntil && user.bannedUntil > new Date()) {
+    return NextResponse.json({ error: "Account is temporarily suspended" }, { status: 403 });
   }
 
   const tokenName = parseTokenName(body.tokenName);

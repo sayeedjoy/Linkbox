@@ -21,6 +21,8 @@ model User {
   image                String?
   password             String
   autoGroupEnabled     Boolean              @default(false)
+  createdAt            DateTime             @default(now())
+  bannedUntil          DateTime?
   groups               Group[]
   bookmarks            Bookmark[]
   apiTokens            ApiToken[]

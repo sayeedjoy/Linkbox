@@ -11,7 +11,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 
 export function PublicSignupCard({
   initialEnabled,
@@ -22,16 +21,15 @@ export function PublicSignupCard({
   const [isPending, startTransition] = useTransition();
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Public Signup</CardTitle>
+    <Card size="sm">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-semibold">Public Signup</CardTitle>
         <CardDescription>
           Control whether new users can register. Existing users can always sign
           in. Requires the latest database migration.
         </CardDescription>
       </CardHeader>
-      <Separator />
-      <CardContent className="flex items-center justify-between gap-4 pt-4">
+      <CardContent className="flex items-center justify-between gap-4 border-t border-border pt-3">
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">
             {enabled ? "Enabled" : "Disabled"}

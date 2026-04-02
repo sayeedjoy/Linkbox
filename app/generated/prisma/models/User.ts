@@ -32,6 +32,9 @@ export type UserMinAggregateOutputType = {
   image: string | null
   password: string | null
   autoGroupEnabled: boolean | null
+
+  createdAt: Date | null
+  bannedUntil: Date | null
 }
 
 export type UserMaxAggregateOutputType = {
@@ -42,6 +45,8 @@ export type UserMaxAggregateOutputType = {
   image: string | null
   password: string | null
   autoGroupEnabled: boolean | null
+  createdAt: Date | null
+  bannedUntil: Date | null
 }
 
 export type UserCountAggregateOutputType = {
@@ -52,6 +57,8 @@ export type UserCountAggregateOutputType = {
   image: number
   password: number
   autoGroupEnabled: number
+  createdAt: number
+  bannedUntil: number
   _all: number
 }
 
@@ -64,6 +71,8 @@ export type UserMinAggregateInputType = {
   image?: true
   password?: true
   autoGroupEnabled?: true
+  createdAt?: true
+  bannedUntil?: true
 }
 
 export type UserMaxAggregateInputType = {
@@ -74,6 +83,8 @@ export type UserMaxAggregateInputType = {
   image?: true
   password?: true
   autoGroupEnabled?: true
+  createdAt?: true
+  bannedUntil?: true
 }
 
 export type UserCountAggregateInputType = {
@@ -84,6 +95,8 @@ export type UserCountAggregateInputType = {
   image?: true
   password?: true
   autoGroupEnabled?: true
+  createdAt?: true
+  bannedUntil?: true
   _all?: true
 }
 
@@ -167,6 +180,8 @@ export type UserGroupByOutputType = {
   image: string | null
   password: string
   autoGroupEnabled: boolean
+  createdAt: Date
+  bannedUntil: Date | null
   _count: UserCountAggregateOutputType | null
   _min: UserMinAggregateOutputType | null
   _max: UserMaxAggregateOutputType | null
@@ -198,6 +213,8 @@ export type UserWhereInput = {
   image?: Prisma.StringNullableFilter<"User"> | string | null
   password?: Prisma.StringFilter<"User"> | string
   autoGroupEnabled?: Prisma.BoolFilter<"User"> | boolean
+  createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
+  bannedUntil?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   groups?: Prisma.GroupListRelationFilter
   bookmarks?: Prisma.BookmarkListRelationFilter
   apiTokens?: Prisma.ApiTokenListRelationFilter
@@ -212,6 +229,8 @@ export type UserOrderByWithRelationInput = {
   image?: Prisma.SortOrderInput | Prisma.SortOrder
   password?: Prisma.SortOrder
   autoGroupEnabled?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  bannedUntil?: Prisma.SortOrderInput | Prisma.SortOrder
   groups?: Prisma.GroupOrderByRelationAggregateInput
   bookmarks?: Prisma.BookmarkOrderByRelationAggregateInput
   apiTokens?: Prisma.ApiTokenOrderByRelationAggregateInput
@@ -229,6 +248,8 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   image?: Prisma.StringNullableFilter<"User"> | string | null
   password?: Prisma.StringFilter<"User"> | string
   autoGroupEnabled?: Prisma.BoolFilter<"User"> | boolean
+  createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
+  bannedUntil?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   groups?: Prisma.GroupListRelationFilter
   bookmarks?: Prisma.BookmarkListRelationFilter
   apiTokens?: Prisma.ApiTokenListRelationFilter
@@ -243,6 +264,8 @@ export type UserOrderByWithAggregationInput = {
   image?: Prisma.SortOrderInput | Prisma.SortOrder
   password?: Prisma.SortOrder
   autoGroupEnabled?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  bannedUntil?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.UserCountOrderByAggregateInput
   _max?: Prisma.UserMaxOrderByAggregateInput
   _min?: Prisma.UserMinOrderByAggregateInput
@@ -259,6 +282,8 @@ export type UserScalarWhereWithAggregatesInput = {
   image?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   password?: Prisma.StringWithAggregatesFilter<"User"> | string
   autoGroupEnabled?: Prisma.BoolWithAggregatesFilter<"User"> | boolean
+  createdAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
+  bannedUntil?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
 }
 
 export type UserCreateInput = {
@@ -269,6 +294,8 @@ export type UserCreateInput = {
   image?: string | null
   password: string
   autoGroupEnabled?: boolean
+  createdAt?: Date | string
+  bannedUntil?: Date | string | null
   groups?: Prisma.GroupCreateNestedManyWithoutUserInput
   bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
   apiTokens?: Prisma.ApiTokenCreateNestedManyWithoutUserInput
@@ -283,6 +310,8 @@ export type UserUncheckedCreateInput = {
   image?: string | null
   password: string
   autoGroupEnabled?: boolean
+  createdAt?: Date | string
+  bannedUntil?: Date | string | null
   groups?: Prisma.GroupUncheckedCreateNestedManyWithoutUserInput
   bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
   apiTokens?: Prisma.ApiTokenUncheckedCreateNestedManyWithoutUserInput
@@ -297,6 +326,8 @@ export type UserUpdateInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   password?: Prisma.StringFieldUpdateOperationsInput | string
   autoGroupEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  bannedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   groups?: Prisma.GroupUpdateManyWithoutUserNestedInput
   bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
   apiTokens?: Prisma.ApiTokenUpdateManyWithoutUserNestedInput
@@ -311,6 +342,8 @@ export type UserUncheckedUpdateInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   password?: Prisma.StringFieldUpdateOperationsInput | string
   autoGroupEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  bannedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   groups?: Prisma.GroupUncheckedUpdateManyWithoutUserNestedInput
   bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
   apiTokens?: Prisma.ApiTokenUncheckedUpdateManyWithoutUserNestedInput
@@ -325,6 +358,8 @@ export type UserCreateManyInput = {
   image?: string | null
   password: string
   autoGroupEnabled?: boolean
+  createdAt?: Date | string
+  bannedUntil?: Date | string | null
 }
 
 export type UserUpdateManyMutationInput = {
@@ -335,6 +370,8 @@ export type UserUpdateManyMutationInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   password?: Prisma.StringFieldUpdateOperationsInput | string
   autoGroupEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  bannedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type UserUncheckedUpdateManyInput = {
@@ -345,6 +382,8 @@ export type UserUncheckedUpdateManyInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   password?: Prisma.StringFieldUpdateOperationsInput | string
   autoGroupEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  bannedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type UserCountOrderByAggregateInput = {
@@ -355,6 +394,8 @@ export type UserCountOrderByAggregateInput = {
   image?: Prisma.SortOrder
   password?: Prisma.SortOrder
   autoGroupEnabled?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  bannedUntil?: Prisma.SortOrder
 }
 
 export type UserMaxOrderByAggregateInput = {
@@ -365,6 +406,8 @@ export type UserMaxOrderByAggregateInput = {
   image?: Prisma.SortOrder
   password?: Prisma.SortOrder
   autoGroupEnabled?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  bannedUntil?: Prisma.SortOrder
 }
 
 export type UserMinOrderByAggregateInput = {
@@ -375,6 +418,8 @@ export type UserMinOrderByAggregateInput = {
   image?: Prisma.SortOrder
   password?: Prisma.SortOrder
   autoGroupEnabled?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  bannedUntil?: Prisma.SortOrder
 }
 
 export type UserScalarRelationFilter = {
@@ -396,6 +441,10 @@ export type NullableStringFieldUpdateOperationsInput = {
 
 export type BoolFieldUpdateOperationsInput = {
   set?: boolean
+}
+
+export type DateTimeFieldUpdateOperationsInput = {
+  set?: Date | string
 }
 
 export type UserCreateNestedOneWithoutPasswordResetTokensInput = {
@@ -462,6 +511,8 @@ export type UserCreateWithoutPasswordResetTokensInput = {
   image?: string | null
   password: string
   autoGroupEnabled?: boolean
+  createdAt?: Date | string
+  bannedUntil?: Date | string | null
   groups?: Prisma.GroupCreateNestedManyWithoutUserInput
   bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
   apiTokens?: Prisma.ApiTokenCreateNestedManyWithoutUserInput
@@ -475,6 +526,8 @@ export type UserUncheckedCreateWithoutPasswordResetTokensInput = {
   image?: string | null
   password: string
   autoGroupEnabled?: boolean
+  createdAt?: Date | string
+  bannedUntil?: Date | string | null
   groups?: Prisma.GroupUncheckedCreateNestedManyWithoutUserInput
   bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
   apiTokens?: Prisma.ApiTokenUncheckedCreateNestedManyWithoutUserInput
@@ -504,6 +557,8 @@ export type UserUpdateWithoutPasswordResetTokensInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   password?: Prisma.StringFieldUpdateOperationsInput | string
   autoGroupEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  bannedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   groups?: Prisma.GroupUpdateManyWithoutUserNestedInput
   bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
   apiTokens?: Prisma.ApiTokenUpdateManyWithoutUserNestedInput
@@ -517,6 +572,8 @@ export type UserUncheckedUpdateWithoutPasswordResetTokensInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   password?: Prisma.StringFieldUpdateOperationsInput | string
   autoGroupEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  bannedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   groups?: Prisma.GroupUncheckedUpdateManyWithoutUserNestedInput
   bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
   apiTokens?: Prisma.ApiTokenUncheckedUpdateManyWithoutUserNestedInput
@@ -530,6 +587,8 @@ export type UserCreateWithoutApiTokensInput = {
   image?: string | null
   password: string
   autoGroupEnabled?: boolean
+  createdAt?: Date | string
+  bannedUntil?: Date | string | null
   groups?: Prisma.GroupCreateNestedManyWithoutUserInput
   bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
@@ -543,6 +602,8 @@ export type UserUncheckedCreateWithoutApiTokensInput = {
   image?: string | null
   password: string
   autoGroupEnabled?: boolean
+  createdAt?: Date | string
+  bannedUntil?: Date | string | null
   groups?: Prisma.GroupUncheckedCreateNestedManyWithoutUserInput
   bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
@@ -572,6 +633,8 @@ export type UserUpdateWithoutApiTokensInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   password?: Prisma.StringFieldUpdateOperationsInput | string
   autoGroupEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  bannedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   groups?: Prisma.GroupUpdateManyWithoutUserNestedInput
   bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
@@ -585,6 +648,8 @@ export type UserUncheckedUpdateWithoutApiTokensInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   password?: Prisma.StringFieldUpdateOperationsInput | string
   autoGroupEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  bannedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   groups?: Prisma.GroupUncheckedUpdateManyWithoutUserNestedInput
   bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
@@ -598,6 +663,8 @@ export type UserCreateWithoutGroupsInput = {
   image?: string | null
   password: string
   autoGroupEnabled?: boolean
+  createdAt?: Date | string
+  bannedUntil?: Date | string | null
   bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
   apiTokens?: Prisma.ApiTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
@@ -611,6 +678,8 @@ export type UserUncheckedCreateWithoutGroupsInput = {
   image?: string | null
   password: string
   autoGroupEnabled?: boolean
+  createdAt?: Date | string
+  bannedUntil?: Date | string | null
   bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
   apiTokens?: Prisma.ApiTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
@@ -640,6 +709,8 @@ export type UserUpdateWithoutGroupsInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   password?: Prisma.StringFieldUpdateOperationsInput | string
   autoGroupEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  bannedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
   apiTokens?: Prisma.ApiTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
@@ -653,6 +724,8 @@ export type UserUncheckedUpdateWithoutGroupsInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   password?: Prisma.StringFieldUpdateOperationsInput | string
   autoGroupEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  bannedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
   apiTokens?: Prisma.ApiTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
@@ -666,6 +739,8 @@ export type UserCreateWithoutBookmarksInput = {
   image?: string | null
   password: string
   autoGroupEnabled?: boolean
+  createdAt?: Date | string
+  bannedUntil?: Date | string | null
   groups?: Prisma.GroupCreateNestedManyWithoutUserInput
   apiTokens?: Prisma.ApiTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
@@ -679,6 +754,8 @@ export type UserUncheckedCreateWithoutBookmarksInput = {
   image?: string | null
   password: string
   autoGroupEnabled?: boolean
+  createdAt?: Date | string
+  bannedUntil?: Date | string | null
   groups?: Prisma.GroupUncheckedCreateNestedManyWithoutUserInput
   apiTokens?: Prisma.ApiTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
@@ -708,6 +785,8 @@ export type UserUpdateWithoutBookmarksInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   password?: Prisma.StringFieldUpdateOperationsInput | string
   autoGroupEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  bannedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   groups?: Prisma.GroupUpdateManyWithoutUserNestedInput
   apiTokens?: Prisma.ApiTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
@@ -721,6 +800,8 @@ export type UserUncheckedUpdateWithoutBookmarksInput = {
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   password?: Prisma.StringFieldUpdateOperationsInput | string
   autoGroupEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  bannedUntil?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   groups?: Prisma.GroupUncheckedUpdateManyWithoutUserNestedInput
   apiTokens?: Prisma.ApiTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
@@ -792,6 +873,8 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   image?: boolean
   password?: boolean
   autoGroupEnabled?: boolean
+  createdAt?: boolean
+  bannedUntil?: boolean
   groups?: boolean | Prisma.User$groupsArgs<ExtArgs>
   bookmarks?: boolean | Prisma.User$bookmarksArgs<ExtArgs>
   apiTokens?: boolean | Prisma.User$apiTokensArgs<ExtArgs>
@@ -807,6 +890,8 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   image?: boolean
   password?: boolean
   autoGroupEnabled?: boolean
+  createdAt?: boolean
+  bannedUntil?: boolean
 }, ExtArgs["result"]["user"]>
 
 export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -817,6 +902,8 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   image?: boolean
   password?: boolean
   autoGroupEnabled?: boolean
+  createdAt?: boolean
+  bannedUntil?: boolean
 }, ExtArgs["result"]["user"]>
 
 export type UserSelectScalar = {
@@ -827,9 +914,11 @@ export type UserSelectScalar = {
   image?: boolean
   password?: boolean
   autoGroupEnabled?: boolean
+  createdAt?: boolean
+  bannedUntil?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "emailVerified" | "name" | "image" | "password" | "autoGroupEnabled", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "emailVerified" | "name" | "image" | "password" | "autoGroupEnabled" | "createdAt" | "bannedUntil", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   groups?: boolean | Prisma.User$groupsArgs<ExtArgs>
   bookmarks?: boolean | Prisma.User$bookmarksArgs<ExtArgs>
@@ -856,6 +945,8 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     image: string | null
     password: string
     autoGroupEnabled: boolean
+    createdAt: Date
+    bannedUntil: Date | null
   }, ExtArgs["result"]["user"]>
   composites: {}
 }
@@ -1290,6 +1381,8 @@ export interface UserFieldRefs {
   readonly image: Prisma.FieldRef<"User", 'String'>
   readonly password: Prisma.FieldRef<"User", 'String'>
   readonly autoGroupEnabled: Prisma.FieldRef<"User", 'Boolean'>
+  readonly createdAt: Prisma.FieldRef<"User", 'DateTime'>
+  readonly bannedUntil: Prisma.FieldRef<"User", 'DateTime'>
 }
     
 

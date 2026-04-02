@@ -18,6 +18,9 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldCheck,
+  DownloadIcon,
+  InfoIcon,
+  ShieldOffIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteUserAsAdmin } from "@/app/actions/admin-users";
@@ -41,6 +44,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { InviteUserDialog } from "@/components/admin/invite-user-dialog";
+import { UserDetailSheet } from "@/components/admin/user-detail-sheet";
 
 export type AdminUserRow = {
   id: string;
@@ -48,6 +53,7 @@ export type AdminUserRow = {
   email: string;
   bookmarkCount: number;
   isCurrentAdmin: boolean;
+  isBanned: boolean;
 };
 
 type AdminUsersCardProps = {
@@ -89,6 +95,7 @@ export function AdminUsersCard({
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [targetUser, setTargetUser] = useState<AdminUserRow | null>(null);
+  const [detailUser, setDetailUser] = useState<AdminUserRow | null>(null);
   const [searchValue, setSearchValue] = useState(query);
   const deferredSearchValue = useDeferredValue(searchValue);
 
@@ -148,22 +155,29 @@ export function AdminUsersCard({
   return (
     <>
       <Card>
-        <CardHeader className="space-y-4 border-b border-border pb-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-1">
+        <CardHeader className="space-y-3 border-b border-border pb-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-0.5">
               <CardTitle>User Accounts</CardTitle>
               <CardDescription>
                 Search, review, and manage registered accounts. The current
                 admin account is protected.
               </CardDescription>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline" className="tabular-nums">
                 {totalUsers} total
               </Badge>
               <Badge variant="secondary" className="tabular-nums">
                 {users.length} visible
               </Badge>
+              <InviteUserDialog onSuccess={() => router.refresh()} />
+              <Button variant="outline" size="sm" className="gap-1.5" asChild>
+                <a href="/api/admin/users/export" download>
+                  <DownloadIcon className="size-3.5" />
+                  Export CSV
+                </a>
+              </Button>
             </div>
           </div>
 
@@ -192,26 +206,26 @@ export function AdminUsersCard({
             <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left">
-                  <th className="px-5 py-3 text-xs font-medium text-muted-foreground">
+                  <th className="px-4 py-2.5 text-xs font-medium text-muted-foreground">
                     User
                   </th>
-                  <th className="px-5 py-3 text-xs font-medium text-muted-foreground">
+                  <th className="px-4 py-2.5 text-xs font-medium text-muted-foreground">
                     Email
                   </th>
-                  <th className="px-5 py-3 text-xs font-medium text-muted-foreground">
+                  <th className="px-4 py-2.5 text-xs font-medium text-muted-foreground">
                     Bookmarks
                   </th>
-                  <th className="px-5 py-3 text-right text-xs font-medium text-muted-foreground">
-                    Action
+                  <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">
+                    Actions
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {users.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-5 py-16">
+                    <td colSpan={4} className="px-5 py-10">
                       <div className="mx-auto max-w-sm text-center">
-                        <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-xl bg-muted">
+                        <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-xl bg-muted">
                           <Search className="size-5 text-muted-foreground" />
                         </div>
                         <p className="text-sm font-medium text-foreground">
@@ -231,27 +245,32 @@ export function AdminUsersCard({
                       key={user.id}
                       className="border-b border-border/50 transition-colors last:border-0 hover:bg-muted/50"
                     >
-                      <td className="px-5 py-3.5">
+                      <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-semibold text-muted-foreground">
+                          <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground">
                             {initialsFor(user.name, user.email)}
                           </div>
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-foreground">
-                              {user.name ?? "Unnamed"}
-                            </p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="truncate text-sm font-medium text-foreground">
+                                {user.name ?? "Unnamed"}
+                              </p>
+                              {user.isBanned && (
+                                <ShieldOffIcon className="size-3 shrink-0 text-amber-500" />
+                              )}
+                            </div>
                             <p className="text-xs text-muted-foreground">
                               #{(page - 1) * 20 + index + 1}
                             </p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-3.5">
+                      <td className="px-4 py-3">
                         <span className="font-mono text-xs text-foreground/80">
                           {user.email}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5">
+                      <td className="px-4 py-3">
                         <span className="inline-flex items-baseline gap-1 tabular-nums">
                           <span className="text-sm font-semibold text-foreground">
                             {user.bookmarkCount}
@@ -261,28 +280,41 @@ export function AdminUsersCard({
                           </span>
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 text-right">
-                        {user.isCurrentAdmin ? (
-                          <Badge
-                            variant="outline"
-                            className="gap-1 border-emerald-600/20 bg-emerald-500/10 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-400"
-                          >
-                            <ShieldCheck className="size-3" />
-                            Admin
-                          </Badge>
-                        ) : (
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
-                            disabled={isPending}
-                            onClick={() => setTargetUser(user)}
-                            className="gap-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => setDetailUser(user)}
+                            className="gap-1 text-muted-foreground hover:text-foreground"
+                            aria-label={`View details for ${user.email}`}
                           >
-                            <Trash className="size-3" />
-                            Delete
+                            <InfoIcon className="size-3.5" />
+                            Details
                           </Button>
-                        )}
+                          {user.isCurrentAdmin ? (
+                            <Badge
+                              variant="outline"
+                              className="gap-1 border-emerald-600/20 bg-emerald-500/10 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-400"
+                            >
+                              <ShieldCheck className="size-3" />
+                              Admin
+                            </Badge>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              disabled={isPending}
+                              onClick={() => setTargetUser(user)}
+                              className="gap-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              <Trash className="size-3" />
+                              Delete
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -292,7 +324,7 @@ export function AdminUsersCard({
           </div>
 
           {/* Pagination footer */}
-          <div className="flex flex-col gap-3 border-t border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-muted-foreground">
               Page{" "}
               <span className="font-medium text-foreground">
@@ -384,6 +416,14 @@ export function AdminUsersCard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <UserDetailSheet
+        userId={detailUser?.id ?? null}
+        userEmail={detailUser?.email ?? null}
+        userName={detailUser?.name ?? null}
+        isCurrentAdmin={detailUser?.isCurrentAdmin ?? false}
+        onClose={() => setDetailUser(null)}
+      />
     </>
   );
 }

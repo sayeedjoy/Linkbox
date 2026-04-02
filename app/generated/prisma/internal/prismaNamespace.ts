@@ -899,7 +899,9 @@ export const UserScalarFieldEnum = {
   name: 'name',
   image: 'image',
   password: 'password',
-  autoGroupEnabled: 'autoGroupEnabled'
+  autoGroupEnabled: 'autoGroupEnabled',
+  createdAt: 'createdAt',
+  bannedUntil: 'bannedUntil'
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]

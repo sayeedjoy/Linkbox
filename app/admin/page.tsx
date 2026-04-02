@@ -6,8 +6,6 @@ import {
   ArrowLeftIcon,
   BookmarkIcon,
   FolderIcon,
-  ShieldCheck,
-  TrendingUpIcon,
   UsersIcon,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
@@ -18,15 +16,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { AdminFooter } from "@/components/admin/admin-footer";
 import { PublicSignupCard } from "@/components/admin/public-signup-card";
 import {
   AdminUsersCard,
   type AdminUserRow,
 } from "@/components/admin/admin-users-card";
+import { SystemHealthCard } from "@/components/admin/system-health-card";
+import { ActivityChart, type ActivityDataPoint } from "@/components/admin/activity-chart";
+import { TopDomainsCard } from "@/components/admin/top-domains-card";
 import { isPublicSignupEnabled } from "@/lib/app-config";
 import { requireAdminSession } from "@/lib/admin";
 
@@ -48,22 +47,23 @@ function parsePage(value: string | null): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }
 
-const statIcons = [UsersIcon, BookmarkIcon, FolderIcon, TrendingUpIcon];
+const statIcons = [UsersIcon, BookmarkIcon, FolderIcon];
+const statColors = [
+  "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+  "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+  "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+];
 
 async function getAdminStats() {
   "use cache";
   cacheLife("minutes");
   cacheTag("admin-stats");
 
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-
-  const [totalUsers, totalBookmarks, totalGroups, newBookmarks7d] =
-    await Promise.all([
-      prisma.user.count(),
-      prisma.bookmark.count(),
-      prisma.group.count(),
-      prisma.bookmark.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
-    ]);
+  const [totalUsers, totalBookmarks, totalGroups] = await Promise.all([
+    prisma.user.count(),
+    prisma.bookmark.count(),
+    prisma.group.count(),
+  ]);
 
   const avgBookmarks =
     totalUsers > 0 ? (totalBookmarks / totalUsers).toFixed(1) : "0";
@@ -85,14 +85,45 @@ async function getAdminStats() {
         value: totalGroups,
         note: "Organizational folders",
       },
-      {
-        label: "7-Day Activity",
-        value: newBookmarks7d,
-        note: "New bookmarks this week",
-      },
     ],
     avgBookmarks,
   };
+}
+
+interface DayCountRow {
+  day: Date;
+  count: bigint;
+}
+
+async function getActivityTimeline(): Promise<{
+  data7d: ActivityDataPoint[];
+  data30d: ActivityDataPoint[];
+}> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("admin-stats");
+
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+  const rows = await prisma.$queryRaw<DayCountRow[]>`
+    SELECT
+      DATE_TRUNC('day', "createdAt")::date AS day,
+      COUNT(*)::bigint AS count
+    FROM "Bookmark"
+    WHERE "createdAt" >= ${thirtyDaysAgo}
+    GROUP BY day
+    ORDER BY day ASC
+  `;
+
+  const mapped = rows.map((r) => ({
+    date: r.day.toISOString().split("T")[0] as string,
+    count: Number(r.count),
+  }));
+
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const data7d = mapped.filter((d) => new Date(d.date) >= sevenDaysAgo);
+
+  return { data7d, data30d: mapped };
 }
 
 async function getAdminUsers(
@@ -125,12 +156,15 @@ async function getAdminUsers(
       id: true,
       name: true,
       email: true,
+      bannedUntil: true,
       _count: { select: { bookmarks: true } },
     },
     orderBy: [{ bookmarks: { _count: "desc" } }, { email: "asc" }],
     skip,
     take: USERS_PER_PAGE,
   });
+
+  const now = new Date();
 
   return {
     users: users.map((user) => ({
@@ -139,6 +173,7 @@ async function getAdminUsers(
       email: user.email,
       bookmarkCount: user._count.bookmarks,
       isCurrentAdmin: user.id === currentAdminId,
+      isBanned: user.bannedUntil != null && user.bannedUntil > now,
     })),
     totalUsers,
     totalPages,
@@ -148,37 +183,51 @@ async function getAdminUsers(
 
 function AdminSkeleton() {
   return (
-    <div className="space-y-8">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (
-          <Card key={index}>
-            <CardHeader className="pb-2">
+          <Card key={index} size="sm">
+            <CardHeader className="pb-0">
               <div className="h-3 w-20 animate-pulse rounded bg-muted" />
             </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="h-8 w-16 animate-pulse rounded bg-muted" />
+            <CardContent className="space-y-1.5">
+              <div className="h-7 w-16 animate-pulse rounded bg-muted" />
               <div className="h-3 w-28 animate-pulse rounded bg-muted" />
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="h-5 w-32 animate-pulse rounded bg-muted" />
-          <div className="h-3 w-64 animate-pulse rounded bg-muted" />
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {Array.from({ length: 5 }).map((_, index) => (
-              <div
-                key={index}
-                className="h-14 w-full animate-pulse rounded-lg bg-muted"
-              />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+        <Card>
+          <CardHeader>
+            <div className="h-5 w-32 animate-pulse rounded bg-muted" />
+            <div className="h-3 w-64 animate-pulse rounded bg-muted" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="h-12 w-full animate-pulse rounded-lg bg-muted"
+                />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+        <div className="space-y-3">
+          {Array.from({ length: 2 }).map((_, index) => (
+            <Card key={index} size="sm">
+              <CardHeader className="pb-0">
+                <div className="h-4 w-28 animate-pulse rounded bg-muted" />
+              </CardHeader>
+              <CardContent>
+                <div className="h-16 animate-pulse rounded bg-muted" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -196,120 +245,79 @@ async function AdminData({
   const query = (firstParam(params.q) ?? "").trim();
   const requestedPage = parsePage(firstParam(params.page));
 
-  const [{ stats, avgBookmarks }, publicSignupEnabled, userData] =
+  const [{ stats }, publicSignupEnabled, userData, activityData] =
     await Promise.all([
       getAdminStats(),
       isPublicSignupEnabled(),
       getAdminUsers(query, requestedPage, session.user.id),
+      getActivityTimeline(),
     ]);
 
   return (
-    <div className="space-y-8">
-      {/* Hero header card */}
-      <Card className="p-6 sm:p-8">
-        <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-start">
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                <ShieldCheck className="size-5" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-                  Admin Console
-                </h1>
-              </div>
-            </div>
-            <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
-              Monitor system activity, manage user accounts, and control
-              registration settings from one place.
-            </p>
-          </div>
-
-          {/* Summary pills */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="rounded-xl border border-border bg-muted/50 px-4 py-3">
-              <p className="text-xs font-medium text-muted-foreground">
-                Avg. bookmarks/user
-              </p>
-              <p className="mt-0.5 text-xl font-semibold tabular-nums tracking-tight text-foreground">
-                {avgBookmarks}
-              </p>
-            </div>
-            <div className="rounded-xl border border-border bg-muted/50 px-4 py-3">
-              <p className="text-xs font-medium text-muted-foreground">
-                Registration
-              </p>
-              <p className="mt-0.5 text-sm font-semibold text-foreground">
-                {publicSignupEnabled ? (
-                  <span className="flex items-center gap-1.5">
-                    <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
-                    Open
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1.5">
-                    <span className="inline-block size-1.5 rounded-full bg-muted-foreground" />
-                    Private
-                  </span>
-                )}
-              </p>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Stat cards row */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="space-y-4">
+      {/* Stat cards + activity chart */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {stats.map((stat, index) => {
           const Icon = statIcons[index] ?? UsersIcon;
+          const colorClass = statColors[index] ?? statColors[0];
           return (
-            <Card key={stat.label}>
-              <CardHeader className="flex-row items-center justify-between pb-1">
+            <Card key={stat.label} size="sm">
+              <CardHeader className="flex-row items-center justify-between space-y-0 pb-0">
                 <CardDescription className="text-xs font-medium uppercase tracking-widest">
                   {stat.label}
                 </CardDescription>
-                <div className="flex size-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                  <Icon className="size-4" />
+                <div className={`flex size-7 items-center justify-center rounded-md ${colorClass}`}>
+                  <Icon className="size-3.5" />
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-semibold tabular-nums tracking-tight text-foreground">
+                <p className="text-xl font-semibold tabular-nums tracking-tight text-foreground sm:text-2xl">
                   {stat.value.toLocaleString()}
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {stat.note}
                 </p>
               </CardContent>
             </Card>
           );
         })}
+
+        {/* Activity chart in 4th slot */}
+        <ActivityChart
+          data7d={activityData.data7d}
+          data30d={activityData.data30d}
+        />
       </div>
 
-      {/* Main content grid */}
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <AdminUsersCard
-          users={userData.users}
-          query={query}
-          page={userData.page}
-          totalPages={userData.totalPages}
-          totalUsers={userData.totalUsers}
-        />
+      {/* Main content grid: left (users + domains) + right sidebar */}
+      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+        <div className="min-w-0 space-y-4">
+          <AdminUsersCard
+            users={userData.users}
+            query={query}
+            page={userData.page}
+            totalPages={userData.totalPages}
+            totalUsers={userData.totalUsers}
+          />
+          <TopDomainsCard />
+        </div>
 
-        <div className="space-y-6">
+        <div className="space-y-3">
           <PublicSignupCard initialEnabled={publicSignupEnabled} />
+          <SystemHealthCard />
 
           {/* Operational notes */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Operational Notes</CardTitle>
+          <Card size="sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold">Operational Notes</CardTitle>
               <CardDescription>
                 Important reminders for admin actions.
               </CardDescription>
             </CardHeader>
-            <Separator />
-            <CardContent className="space-y-3 pt-4 text-sm leading-relaxed text-muted-foreground">
+            <CardContent className="space-y-2 border-t border-border pt-3 text-xs leading-relaxed text-muted-foreground">
               <p>
                 Deleting a user removes their bookmarks, groups, API tokens, and
-                reset tokens through the relational cascade.
+                reset tokens through relational cascade.
               </p>
               <p>
                 Live search updates the URL as you type, so filtered views
@@ -334,32 +342,17 @@ export default function AdminPage({
 }) {
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-        {/* Top nav bar */}
-        <div className="mb-8 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="icon"
-              asChild
-            >
-              <Link href="/dashboard" aria-label="Back to dashboard">
-                <ArrowLeftIcon className="size-4" />
-              </Link>
-            </Button>
-            <div>
-              <p className="text-sm font-medium text-foreground">
-                Administration
-              </p>
-              <p className="text-xs text-muted-foreground">
-                System overview & user management
-              </p>
-            </div>
-          </div>
-          <Badge variant="secondary" className="gap-1.5">
-            <ShieldCheck className="size-3" />
-            Admin
-          </Badge>
+      <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-4 sm:px-6 sm:py-6">
+        {/* Page header */}
+        <div className="mb-4 flex items-center gap-3">
+          <Button variant="outline" size="icon" asChild className="shrink-0">
+            <Link href="/dashboard" aria-label="Back to dashboard">
+              <ArrowLeftIcon className="size-4" />
+            </Link>
+          </Button>
+          <h1 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+            Admin Console
+          </h1>
         </div>
 
         <Suspense fallback={<AdminSkeleton />}>
