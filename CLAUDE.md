@@ -27,13 +27,16 @@ LinkArena is a full-stack bookmarking platform with two clients:
 # Web app
 npm run dev        # Start development server
 npm run build      # Production build
+npm run start      # Start production server
 npm run lint       # Run ESLint
 npx prisma migrate dev  # Run database migrations
 
 # Chrome extension
 cd extension && npm run dev    # Dev mode
-cd extension && npm run build  # Production build
+cd extension && npm run build  # Production build (tsc -b && vite build)
 ```
+
+There is no test framework configured in this project.
 
 ## Architecture
 
@@ -56,6 +59,7 @@ extension/              Chrome extension (Manifest V3)
 - **Route Handlers** (`app/api/`): Session and bearer-token APIs for extension/integrations
 - **Server Actions** (`app/actions/`): Bookmark, group, account mutations
 - **SSE Endpoint**: `GET /api/realtime/bookmarks` for realtime updates
+- **Mobile API** (`app/api/mobile/auth/`): Separate REST endpoints for mobile clients — login, logout, signup, forgot-password, reset-password
 
 ### Dual Auth System
 1. **NextAuth** for web sessions (credentials provider)
@@ -77,6 +81,10 @@ extension/              Chrome extension (Manifest V3)
 - Generated client outputs to `app/generated/prisma` (not default `node_modules`)
 - Import from `@/app/generated/prisma/client` in server code
 - Use `lib/prisma.ts` singleton for all database access
+- `prisma.config.ts` loads both `.env` and `.env.local` (with override) and validates `DATABASE_URL` before running commands
+
+### Route Protection
+- `proxy.ts` (root) is the Next.js middleware — protects `/dashboard/:path*` and `/admin/:path*`, redirecting unauthenticated users to `/sign-in` with a callback URL
 
 ### Auth Flow
 - `lib/auth.ts` exports `getVerifiedAuthSession()` and `currentUserId()` helpers
