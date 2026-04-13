@@ -191,6 +191,7 @@ Open **http://localhost:3000**.
 | `PUT` | `/api/bookmarks` | Update bookmark |
 | `DELETE` | `/api/bookmarks` | Delete bookmark |
 | `DELETE` | `/api/bookmarks/:id` | Delete by ID |
+|Refetch metadata and return updated bookmark |
 | `PUT` | `/api/bookmarks/:id/category` | Update category |
 | `GET` | `/api/realtime/bookmarks` | Realtime SSE stream |
 

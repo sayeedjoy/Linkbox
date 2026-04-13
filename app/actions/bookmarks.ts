@@ -12,6 +12,10 @@ export type BookmarkWithGroup = Bookmark & {
   group: { id: string; name: string; color: string | null } | null;
 };
 
+export type RefreshBookmarkForUserResult =
+  | { ok: true; bookmark: BookmarkWithGroup }
+  | { ok: false; reason: "not_found" | "missing_url" };
+
 export type ImportBookmarkItem = {
   url: string;
   title?: string | null;
@@ -643,12 +647,23 @@ export async function updateBookmarkCategoryForUser(
 
 export async function refreshBookmark(id: string): Promise<BookmarkWithGroup | null> {
   const userId = await currentUserId();
+  const result = await refreshBookmarkForUser(userId, id);
+  if (!result.ok) return null;
+  return result.bookmark;
+}
+
+export async function refreshBookmarkForUser(
+  userId: string,
+  id: string
+): Promise<RefreshBookmarkForUserResult> {
   const bookmark = await prisma.bookmark.findFirst({
     where: { id, userId },
     include: { group: { select: { id: true, name: true, color: true } } },
   });
-  if (!bookmark?.url?.trim()) return null;
-  const unfurled = await unfurlUrl(bookmark.url.trim());
+  if (!bookmark) return { ok: false, reason: "not_found" };
+  const normalizedUrl = bookmark.url?.trim();
+  if (!normalizedUrl) return { ok: false, reason: "missing_url" };
+  const unfurled = await unfurlUrl(normalizedUrl);
   await prisma.bookmark.update({
     where: { id },
     data: {
@@ -664,5 +679,6 @@ export async function refreshBookmark(id: string): Promise<BookmarkWithGroup | n
     where: { id },
     include: { group: { select: { id: true, name: true, color: true } } },
   });
-  return updated as BookmarkWithGroup;
+  if (!updated) return { ok: false, reason: "not_found" };
+  return { ok: true, bookmark: updated as BookmarkWithGroup };
 }

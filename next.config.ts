@@ -35,6 +35,14 @@ const nextConfig: NextConfig = {
     };
     return config;
   },
+  async rewrites() {
+    return [
+      {
+        source: "/api/bookmarks/:bookmarkId/refetch",
+        destination: "/api/bookmarks/:bookmarkId",
+      },
+    ];
+  },
 };
 
 export default nextConfig;
