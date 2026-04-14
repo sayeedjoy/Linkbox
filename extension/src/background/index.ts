@@ -55,6 +55,8 @@ let realtimeReconnectTimer: ReturnType<typeof setTimeout> | null = null
 let realtimeReconnectAttempt = 0
 let realtimeLastEventId: string | null = null
 let realtimeSuppressedUntil = 0
+let consecutive401Count = 0
+const AUTH_CLEAR_THRESHOLD = 3
 
 async function getToken(): Promise<string | null> {
   const out = await chrome.storage.local.get(STORAGE_KEYS.apiToken)
@@ -99,12 +101,22 @@ async function fetchWithAuth<T>(
     },
   })
   if (res.status === 401) {
-    await clearAuthState()
+    consecutive401Count++
+    if (consecutive401Count >= AUTH_CLEAR_THRESHOLD) {
+      const validation = await validateToken(token)
+      if (!validation.ok && validation.unauthorized) {
+        await clearAuthState()
+      } else {
+        // Transient failure — do not wipe the token
+        consecutive401Count = 0
+      }
+    }
     return { ok: false, status: 401 }
   }
   if (!res.ok) {
     return { ok: false, status: res.status }
   }
+  consecutive401Count = 0
   if (res.status === 204) {
     return { ok: true, data: undefined as T }
   }
@@ -458,8 +470,16 @@ async function startRealtimeSync(): Promise<void> {
     })
     if (!response.ok || !response.body) {
       if (response.status === 401) {
-        stopRealtimeSync()
-        return
+        const currentToken = await getToken()
+        if (currentToken) {
+          const validation = await validateToken(currentToken)
+          if (!validation.ok && validation.unauthorized) {
+            await clearAuthState()
+            return
+          }
+        }
+        // Transient 401 (network not ready, server restarting) — reconnect with backoff
+        throw new Error('Realtime stream returned transient 401')
       }
       throw new Error(`Realtime stream failed with status ${response.status}`)
     }
@@ -896,14 +916,18 @@ chrome.contextMenus.onClicked.addListener(async (_info, tab) => {
   }
 })
 
-void getToken().then((token) => {
-  if (!token) return
-  void startRealtimeSync()
-})
-
-chrome.runtime.onStartup.addListener(() => {
+setTimeout(() => {
   void getToken().then((token) => {
     if (!token) return
     void startRealtimeSync()
   })
+}, 2000)
+
+chrome.runtime.onStartup.addListener(() => {
+  setTimeout(() => {
+    void getToken().then((token) => {
+      if (!token) return
+      void startRealtimeSync()
+    })
+  }, 2000)
 })

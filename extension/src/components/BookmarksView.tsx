@@ -35,6 +35,56 @@ function bookmarkMenuKey(bookmark: ExportBookmark): string {
   return `${bookmark.url}-${bookmark.createdAt}`
 }
 
+function FaviconImg({ url, faviconUrl }: { url: string; faviconUrl: string | null }) {
+  const hostname = hostnameFromUrl(url)
+  const googleSrc = hostname
+    ? `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(hostname)}`
+    : null
+  const storedSrc = faviconUrl?.trim() || null
+  const primary = googleSrc ?? storedSrc
+  const fallback = storedSrc !== googleSrc ? storedSrc : null
+  const [src, setSrc] = useState(primary)
+
+  useEffect(() => {
+    setSrc(googleSrc ?? storedSrc)
+  }, [url, faviconUrl]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!src) {
+    return <span className="text-muted-foreground text-[10px] font-mono leading-none">{'{}'}</span>
+  }
+
+  return (
+    <img
+      src={src}
+      alt=""
+      className="w-4 h-4"
+      onError={() => {
+        if (fallback && src !== fallback) {
+          setSrc(fallback)
+        } else {
+          setSrc(null as unknown as string)
+        }
+      }}
+    />
+  )
+}
+
+function SkeletonRows() {
+  return (
+    <div className="space-y-0">
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="flex items-start gap-2 px-2 py-2 rounded-md">
+          <div className="shrink-0 w-5 h-5 rounded bg-muted animate-pulse mt-0.5" />
+          <div className="flex-1 space-y-1.5 min-w-0">
+            <div className="h-3.5 bg-muted animate-pulse rounded w-3/4" />
+            <div className="h-3 bg-muted animate-pulse rounded w-1/2" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function BookmarksView({ onSignOut }: { onSignOut: () => void }) {
   const [bookmarks, setBookmarks] = useState<ExportBookmark[]>([])
   const [groups, setGroups] = useState<Group[]>([])
@@ -43,6 +93,7 @@ export default function BookmarksView({ onSignOut }: { onSignOut: () => void }) 
   const [saving, setSaving] = useState(false)
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [saveSuccess, setSaveSuccess] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [syncInProgress, setSyncInProgress] = useState(false)
   const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null)
@@ -104,6 +155,7 @@ export default function BookmarksView({ onSignOut }: { onSignOut: () => void }) 
 
   const handleSaveCurrentTab = async () => {
     setSaveError(null)
+    setSaveSuccess(false)
     setSaving(true)
     const result = await saveBookmark({ groupId: selectedGroupId ?? undefined })
     setSaving(false)
@@ -112,7 +164,8 @@ export default function BookmarksView({ onSignOut }: { onSignOut: () => void }) 
       return
     }
     if (result.success) {
-      return
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 2000)
     } else {
       setSaveError(result.error ?? 'Failed to save')
     }
@@ -281,6 +334,7 @@ export default function BookmarksView({ onSignOut }: { onSignOut: () => void }) 
           />
         </div>
         {saveError && <p className="text-xs text-destructive mt-1">{saveError}</p>}
+        {saveSuccess && <p className="text-xs text-green-600 dark:text-green-400 mt-1">Bookmark saved!</p>}
       </div>
 
       <Separator />
@@ -303,6 +357,7 @@ export default function BookmarksView({ onSignOut }: { onSignOut: () => void }) 
                 onClick={() => setSelectedGroupId(null)}
               >
                 All
+                <span className="ml-1 opacity-60 font-normal">{bookmarks.length}</span>
               </Badge>
               {groups.map((g) => (
                 <Badge
@@ -313,6 +368,9 @@ export default function BookmarksView({ onSignOut }: { onSignOut: () => void }) 
                   onClick={() => setSelectedGroupId(g.id)}
                 >
                   {g.name}
+                  {g._count?.bookmarks != null && (
+                    <span className="ml-1 opacity-60 font-normal">{g._count.bookmarks}</span>
+                  )}
                 </Badge>
               ))}
             </div>
@@ -322,15 +380,23 @@ export default function BookmarksView({ onSignOut }: { onSignOut: () => void }) 
       )}
 
       <div className="shrink-0 px-2 pt-2 pb-1">
-        <p className="text-xs font-medium text-muted-foreground">All Bookmarks</p>
+        <p className="text-xs font-medium text-muted-foreground">
+          {searchQuery.trim() ? `Results for "${searchQuery.trim()}"` : 'All Bookmarks'}
+        </p>
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden hidden-scrollbar">
         <div className="px-2 pb-2">
           {loading ? (
-            <div className="py-8 text-center text-sm text-muted-foreground">Loading...</div>
+            <SkeletonRows />
           ) : filteredBookmarks.length === 0 ? (
-            <div className="py-8 text-center text-sm text-muted-foreground">No bookmarks</div>
+            <div className="py-8 text-center text-sm text-muted-foreground px-4">
+              {searchQuery.trim()
+                ? `No results for "${searchQuery.trim()}"`
+                : bookmarks.length === 0
+                  ? 'No bookmarks yet. Click + to save the current tab.'
+                  : 'No bookmarks in this group.'}
+            </div>
           ) : (
             <ul className="space-y-0">
               {filteredBookmarks.map((b) => (
@@ -342,11 +408,7 @@ export default function BookmarksView({ onSignOut }: { onSignOut: () => void }) 
                     className="flex items-start gap-2 px-2 py-2 rounded-md hover:bg-accent/50 transition-colors"
                   >
                     <div className="shrink-0 w-5 h-5 flex items-center justify-center overflow-hidden rounded mt-0.5">
-                      {b.faviconUrl ? (
-                        <img src={b.faviconUrl} alt="" className="w-4 h-4" />
-                      ) : (
-                        <span className="text-muted-foreground text-xs">&lt;&gt;</span>
-                      )}
+                      <FaviconImg url={b.url} faviconUrl={b.faviconUrl} />
                     </div>
                     <div className="flex-1 min-w-0 overflow-hidden">
                       <p className="text-sm font-medium text-foreground truncate block">{b.title || hostnameFromUrl(b.url) || b.url}</p>

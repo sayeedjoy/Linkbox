@@ -90,12 +90,11 @@ export const BookmarkEditCard = forwardRef<
 
   const linkUrl = (editForm.url?.trim() || bookmark.url) ?? "";
   const hostname = linkUrl ? safeHostname(linkUrl) : "";
-  const faviconSrc =
-    typeof bookmark.faviconUrl === "string" && bookmark.faviconUrl.trim()
+  const faviconSrc = hostname
+    ? `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(hostname)}`
+    : typeof bookmark.faviconUrl === "string" && bookmark.faviconUrl.trim()
       ? bookmark.faviconUrl.trim()
-      : hostname
-        ? `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(hostname)}`
-        : null;
+      : null;
 
   const card = (
     <div className="w-full rounded-xl border border-border bg-card p-3">

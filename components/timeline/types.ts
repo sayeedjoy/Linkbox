@@ -14,14 +14,13 @@ export interface Bookmark {
 }
 
 function getFaviconUrl(b: BookmarkWithGroup): string {
-  if (b.faviconUrl?.trim()) return b.faviconUrl.trim();
-  if (!b.url?.trim()) return "";
-  try {
-    const hostname = new URL(b.url).hostname;
-    return `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(hostname)}`;
-  } catch {
-    return "";
+  if (b.url?.trim()) {
+    try {
+      const hostname = new URL(b.url).hostname;
+      if (hostname) return `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(hostname)}`;
+    } catch {}
   }
+  return b.faviconUrl?.trim() ?? "";
 }
 
 export function bookmarkWithGroupToTimeline(b: BookmarkWithGroup): Bookmark {

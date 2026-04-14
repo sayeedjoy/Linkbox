@@ -61,7 +61,7 @@ export const BookmarkRow = forwardRef<HTMLLIElement, {
     typeof bookmark.faviconUrl === "string" && bookmark.faviconUrl.trim()
       ? bookmark.faviconUrl.trim()
       : null;
-  const faviconCandidates = [savedFaviconSrc, googleFaviconSrc].filter(
+  const faviconCandidates = [googleFaviconSrc, savedFaviconSrc].filter(
     (src): src is string => !!src,
   );
   const brokenImage = imageState.token === imageToken ? imageState.broken : null;
