@@ -1,7 +1,8 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma";
+import { eq, count } from "drizzle-orm";
+import { db, users } from "@/lib/db";
 import { currentUserId } from "@/lib/auth";
 import {
   isPublicSignupEnabled,
@@ -11,20 +12,24 @@ import {
   requestPasswordResetByEmail,
   resetPasswordWithToken,
 } from "@/lib/password-reset";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import type * as schema from "@/db/schema";
 
 export async function register(email: string, password: string, name?: string) {
   const publicSignupEnabled = await isPublicSignupEnabled();
   if (!publicSignupEnabled) throw new Error("Public signups are disabled");
 
-  const existing = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
+  const [existing] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, email.trim().toLowerCase()))
+    .limit(1);
   if (existing) throw new Error("User already exists");
   const hashed = await bcrypt.hash(password, 12);
-  await prisma.user.create({
-    data: {
-      email: email.trim().toLowerCase(),
-      password: hashed,
-      name: name?.trim() || null,
-    },
+  await db.insert(users).values({
+    email: email.trim().toLowerCase(),
+    password: hashed,
+    name: name?.trim() || null,
   });
 }
 
@@ -32,11 +37,13 @@ export async function deleteAccount(): Promise<{ ok: true } | { error: string }>
   const userId = await currentUserId();
   if (!userId) return { error: "Not authenticated" };
 
-  return prisma.$transaction(async (tx) => {
-    const [totalUsers, publicSignupEnabled] = await Promise.all([
-      tx.user.count(),
-      isPublicSignupEnabledForClient(tx),
-    ]);
+  return db.transaction(async (tx) => {
+    const [{ value: totalUsers }] = await tx
+      .select({ value: count() })
+      .from(users);
+    const publicSignupEnabled = await isPublicSignupEnabledForClient(
+      tx as NodePgDatabase<typeof schema>
+    );
 
     if (totalUsers <= 1 && !publicSignupEnabled) {
       return {
@@ -44,7 +51,7 @@ export async function deleteAccount(): Promise<{ ok: true } | { error: string }>
       };
     }
 
-    await tx.user.delete({ where: { id: userId } });
+    await tx.delete(users).where(eq(users.id, userId));
     return { ok: true };
   });
 }

@@ -1,3 +1,4 @@
-import type { Group } from "@/app/generated/prisma/client";
+import type { groups } from "@/db/schema";
 
+export type Group = typeof groups.$inferSelect;
 export type GroupWithCount = Group & { _count: { bookmarks: number } };

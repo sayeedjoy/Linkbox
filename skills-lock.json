@@ -26,6 +26,11 @@
       "sourceType": "github",
       "computedHash": "61f8c307aa8ce0c4c52da8886d42e344dab83f76f9b5360cf8923b25fb1d67bb"
     },
+    "vercel-react-native-skills": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "computedHash": "41d24eafa7c3d82e270439808f7cfbc4d51aeb2d14f2809a2267c16275784d06"
+    },
     "web-design-guidelines": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",

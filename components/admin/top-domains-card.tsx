@@ -1,4 +1,5 @@
-import { prisma } from "@/lib/prisma";
+import { sql } from "drizzle-orm";
+import { db } from "@/lib/db";
 import {
   Card,
   CardContent,
@@ -10,28 +11,16 @@ import { GlobeIcon } from "lucide-react";
 
 interface DomainRow {
   domain: string;
-  count: bigint;
+  count: number;
 }
 
 async function getTopDomains(limit = 10) {
-  const rows = await prisma.$queryRaw<DomainRow[]>`
-    SELECT
-      lower(
-        regexp_replace(
-          regexp_replace(url, '^https?://(www\.)?', ''),
-          '[/?#].*$', ''
-        )
-      ) AS domain,
-      COUNT(*)::bigint AS count
-    FROM "Bookmark"
-    WHERE url IS NOT NULL AND url <> ''
-    GROUP BY domain
-    ORDER BY count DESC
-    LIMIT ${limit}
-  `;
-
-  const total = rows.reduce((s, r) => s + Number(r.count), 0);
-  return { rows: rows.map((r) => ({ domain: r.domain, count: Number(r.count) })), total };
+  const result = await db.execute<{ domain: string; count: string }>(
+    sql`SELECT lower(regexp_replace(regexp_replace(url, '^https?://(www\.)?', ''), '[/?#].*$', '')) AS domain, COUNT(*)::text AS count FROM "Bookmark" WHERE url IS NOT NULL AND url <> '' GROUP BY domain ORDER BY count DESC LIMIT ${limit}`
+  );
+  const rows: DomainRow[] = result.rows.map((r) => ({ domain: r.domain, count: Number(r.count) }));
+  const total = rows.reduce((s, r) => s + r.count, 0);
+  return { rows, total };
 }
 
 export async function TopDomainsCard() {

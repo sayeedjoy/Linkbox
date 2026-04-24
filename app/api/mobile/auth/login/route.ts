@@ -1,7 +1,8 @@
 import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { eq, and } from "drizzle-orm";
+import { db, users, apiTokens } from "@/lib/db";
 import { hashToken } from "@/lib/api-auth";
 
 type LoginBody = {
@@ -32,10 +33,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email },
-    select: { id: true, email: true, name: true, image: true, password: true, bannedUntil: true },
-  });
+  const [user] = await db
+    .select({ id: users.id, email: users.email, name: users.name, image: users.image, password: users.password, bannedUntil: users.bannedUntil })
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
 
   if (!user?.password) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
@@ -57,33 +59,20 @@ export async function POST(request: Request) {
   const tokenPrefix = plaintext.slice(0, 4);
   const tokenSuffix = plaintext.slice(-4);
 
-  await prisma.$transaction(async (tx) => {
-    await tx.apiToken.deleteMany({
-      where: { userId: user.id, name: tokenName },
-    });
-
-    await tx.apiToken.create({
-      data: {
-        userId: user.id,
-        name: tokenName,
-        tokenHash,
-        tokenPrefix,
-        tokenSuffix,
-        lastUsedAt: new Date(),
-      },
+  await db.transaction(async (tx) => {
+    await tx.delete(apiTokens).where(and(eq(apiTokens.userId, user.id), eq(apiTokens.name, tokenName)));
+    await tx.insert(apiTokens).values({
+      userId: user.id,
+      name: tokenName,
+      tokenHash,
+      tokenPrefix,
+      tokenSuffix,
+      lastUsedAt: new Date(),
     });
   });
 
   return NextResponse.json(
-    {
-      token: plaintext,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        image: user.image,
-      },
-    },
+    { token: plaintext, user: { id: user.id, email: user.email, name: user.name, image: user.image } },
     { status: 200 }
   );
 }

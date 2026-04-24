@@ -1,20 +1,52 @@
 "use server";
 
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
-import { prisma } from "@/lib/prisma";
+import { eq, and, asc, count, sql } from "drizzle-orm";
+import { db, groups, bookmarks } from "@/lib/db";
 import { currentUserId } from "@/lib/auth";
-import type { Group } from "@/app/generated/prisma/client";
 import { publishUserEvent } from "@/lib/realtime";
 
-export type GroupWithCount = Group & { _count: { bookmarks: number } };
+export type GroupWithCount = {
+  id: string;
+  userId: string;
+  name: string;
+  color: string | null;
+  order: number;
+  _count: { bookmarks: number };
+};
+
+async function getMaxGroupOrder(userId: string): Promise<number> {
+  const [row] = await db
+    .select({ maxOrder: sql<number>`coalesce(max(${groups.order}), -1)` })
+    .from(groups)
+    .where(eq(groups.userId, userId));
+  return row?.maxOrder ?? -1;
+}
 
 export async function getGroupsForUser(userId: string): Promise<GroupWithCount[]> {
-  const list = await prisma.group.findMany({
-    where: { userId },
-    orderBy: { order: "asc" },
-    include: { _count: { select: { bookmarks: true } } },
-  });
-  return list as GroupWithCount[];
+  const rows = await db
+    .select({
+      id: groups.id,
+      userId: groups.userId,
+      name: groups.name,
+      color: groups.color,
+      order: groups.order,
+      bookmarkCount: count(bookmarks.id),
+    })
+    .from(groups)
+    .leftJoin(bookmarks, eq(bookmarks.groupId, groups.id))
+    .where(eq(groups.userId, userId))
+    .groupBy(groups.id)
+    .orderBy(asc(groups.order));
+
+  return rows.map((r) => ({
+    id: r.id,
+    userId: r.userId,
+    name: r.name,
+    color: r.color,
+    order: r.order,
+    _count: { bookmarks: r.bookmarkCount },
+  }));
 }
 
 export async function getGroups(): Promise<GroupWithCount[]> {
@@ -28,20 +60,11 @@ export async function getGroups(): Promise<GroupWithCount[]> {
 
 export async function createGroup(name: string, color?: string) {
   const userId = await currentUserId();
-  const maxOrder = await prisma.group
-    .aggregate({
-      where: { userId },
-      _max: { order: true },
-    })
-    .then((r) => r._max.order ?? -1);
-  const group = await prisma.group.create({
-    data: {
-      userId,
-      name: name.trim(),
-      color: color ?? null,
-      order: maxOrder + 1,
-    },
-  });
+  const maxOrder = await getMaxGroupOrder(userId);
+  const [group] = await db
+    .insert(groups)
+    .values({ userId, name: name.trim(), color: color ?? null, order: maxOrder + 1 })
+    .returning();
   revalidatePath("/");
   revalidateTag("groups", "max");
   publishUserEvent(userId, { type: "group.created", entity: "group", id: group.id });
@@ -53,10 +76,7 @@ export async function updateGroup(
   data: { name?: string; color?: string | null; order?: number }
 ) {
   const userId = await currentUserId();
-  await prisma.group.updateMany({
-    where: { id, userId },
-    data,
-  });
+  await db.update(groups).set(data).where(and(eq(groups.id, id), eq(groups.userId, userId)));
   revalidatePath("/");
   revalidateTag("groups", "max");
   publishUserEvent(userId, { type: "group.updated", entity: "group", id });
@@ -65,14 +85,14 @@ export async function updateGroup(
 
 export async function reorderGroups(orderedIds: string[]) {
   const userId = await currentUserId();
-  await prisma.$transaction(
-    orderedIds.map((id, index) =>
-      prisma.group.updateMany({
-        where: { id, userId },
-        data: { order: index },
-      })
-    )
-  );
+  await db.transaction(async (tx) => {
+    for (let i = 0; i < orderedIds.length; i++) {
+      await tx
+        .update(groups)
+        .set({ order: i })
+        .where(and(eq(groups.id, orderedIds[i]!), eq(groups.userId, userId)));
+    }
+  });
   revalidatePath("/");
   revalidateTag("groups", "max");
   for (const id of orderedIds) {
@@ -83,11 +103,8 @@ export async function reorderGroups(orderedIds: string[]) {
 
 export async function deleteGroup(id: string) {
   const userId = await currentUserId();
-  await prisma.bookmark.updateMany({
-    where: { groupId: id, userId },
-    data: { groupId: null },
-  });
-  await prisma.group.deleteMany({ where: { id, userId } });
+  await db.update(bookmarks).set({ groupId: null }).where(and(eq(bookmarks.groupId, id), eq(bookmarks.userId, userId)));
+  await db.delete(groups).where(and(eq(groups.id, id), eq(groups.userId, userId)));
   revalidatePath("/");
   revalidateTag("groups", "max");
   publishUserEvent(userId, { type: "group.deleted", entity: "group", id });
@@ -95,20 +112,11 @@ export async function deleteGroup(id: string) {
 }
 
 export async function createGroupForUser(userId: string, name: string, color?: string | null) {
-  const maxOrder = await prisma.group
-    .aggregate({
-      where: { userId },
-      _max: { order: true },
-    })
-    .then((r) => r._max.order ?? -1);
-  const group = await prisma.group.create({
-    data: {
-      userId,
-      name: name.trim(),
-      color: color ?? null,
-      order: maxOrder + 1,
-    },
-  });
+  const maxOrder = await getMaxGroupOrder(userId);
+  const [group] = await db
+    .insert(groups)
+    .values({ userId, name: name.trim(), color: color ?? null, order: maxOrder + 1 })
+    .returning();
   revalidatePath("/");
   revalidateTag("groups", "max");
   publishUserEvent(userId, { type: "group.created", entity: "group", id: group.id });
@@ -125,10 +133,7 @@ export async function updateGroupForUser(
   if (data.color !== undefined) updatePayload.color = data.color;
   if (data.order !== undefined) updatePayload.order = data.order;
   if (Object.keys(updatePayload).length === 0) return { ok: true };
-  await prisma.group.updateMany({
-    where: { id, userId },
-    data: updatePayload,
-  });
+  await db.update(groups).set(updatePayload).where(and(eq(groups.id, id), eq(groups.userId, userId)));
   revalidatePath("/");
   revalidateTag("groups", "max");
   publishUserEvent(userId, { type: "group.updated", entity: "group", id });
@@ -136,11 +141,8 @@ export async function updateGroupForUser(
 }
 
 export async function deleteGroupForUser(userId: string, id: string) {
-  await prisma.bookmark.updateMany({
-    where: { groupId: id, userId },
-    data: { groupId: null },
-  });
-  await prisma.group.deleteMany({ where: { id, userId } });
+  await db.update(bookmarks).set({ groupId: null }).where(and(eq(bookmarks.groupId, id), eq(bookmarks.userId, userId)));
+  await db.delete(groups).where(and(eq(groups.id, id), eq(groups.userId, userId)));
   revalidatePath("/");
   revalidateTag("groups", "max");
   publishUserEvent(userId, { type: "group.deleted", entity: "group", id });

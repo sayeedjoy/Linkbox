@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
+import { eq, and } from "drizzle-orm";
 import { userIdFromBearerToken } from "@/lib/api-auth";
 import { createBookmarkFromMetadataForUser } from "@/app/actions/bookmarks";
-import { prisma } from "@/lib/prisma";
+import { db, bookmarks, groups } from "@/lib/db";
 import { publishUserEvent } from "@/lib/realtime";
 
 function corsHeaders(request: Request): Record<string, string> {
@@ -24,22 +25,55 @@ export async function PUT(request: Request) {
   const url = typeof body.url === "string" ? body.url.trim() : "";
   if (!url || !url.startsWith("http"))
     return NextResponse.json({ error: "Invalid URL" }, { status: 400, headers: corsHeaders(request) });
-  const existing = await prisma.bookmark.findFirst({
-    where: { url, userId },
-    include: { group: { select: { id: true, name: true, color: true } } },
-  });
+
+  const [existing] = await db
+    .select({
+      id: bookmarks.id,
+      userId: bookmarks.userId,
+      groupId: bookmarks.groupId,
+      url: bookmarks.url,
+      title: bookmarks.title,
+      description: bookmarks.description,
+      faviconUrl: bookmarks.faviconUrl,
+      previewImageUrl: bookmarks.previewImageUrl,
+      createdAt: bookmarks.createdAt,
+      updatedAt: bookmarks.updatedAt,
+      group: { id: groups.id, name: groups.name, color: groups.color },
+    })
+    .from(bookmarks)
+    .leftJoin(groups, eq(bookmarks.groupId, groups.id))
+    .where(and(eq(bookmarks.url, url), eq(bookmarks.userId, userId)))
+    .limit(1);
+
   if (!existing)
     return NextResponse.json({ error: "Bookmark not found" }, { status: 404, headers: corsHeaders(request) });
+
   const updateData: { title?: string | null; description?: string | null; groupId?: string | null; faviconUrl?: string | null } = {};
   if (body.title !== undefined) updateData.title = typeof body.title === "string" ? body.title : null;
   if (body.description !== undefined) updateData.description = typeof body.description === "string" ? body.description : null;
   if (body.groupId !== undefined) updateData.groupId = body.groupId === null || body.groupId === undefined ? null : (typeof body.groupId === "string" ? body.groupId : null);
   if (body.faviconUrl !== undefined) updateData.faviconUrl = body.faviconUrl === null || body.faviconUrl === undefined ? null : (typeof body.faviconUrl === "string" && body.faviconUrl.trim().startsWith("http") ? body.faviconUrl.trim() : null);
-  const updated = await prisma.bookmark.update({
-    where: { id: existing.id },
-    data: updateData,
-    include: { group: { select: { id: true, name: true, color: true } } },
-  });
+
+  await db.update(bookmarks).set(updateData).where(eq(bookmarks.id, existing.id));
+  const [updated] = await db
+    .select({
+      id: bookmarks.id,
+      userId: bookmarks.userId,
+      groupId: bookmarks.groupId,
+      url: bookmarks.url,
+      title: bookmarks.title,
+      description: bookmarks.description,
+      faviconUrl: bookmarks.faviconUrl,
+      previewImageUrl: bookmarks.previewImageUrl,
+      createdAt: bookmarks.createdAt,
+      updatedAt: bookmarks.updatedAt,
+      group: { id: groups.id, name: groups.name, color: groups.color },
+    })
+    .from(bookmarks)
+    .leftJoin(groups, eq(bookmarks.groupId, groups.id))
+    .where(eq(bookmarks.id, existing.id))
+    .limit(1);
+
   publishUserEvent(userId, {
     type: "bookmark.updated",
     entity: "bookmark",
@@ -93,21 +127,15 @@ export async function DELETE(request: Request) {
   const url = typeof body.url === "string" ? body.url.trim() : "";
   if (!url || !url.startsWith("http"))
     return NextResponse.json({ error: "Invalid URL" }, { status: 400, headers: corsHeaders(request) });
-  const toDelete = await prisma.bookmark.findMany({
-    where: { userId, url },
-    select: { id: true },
-  });
-  const result = await prisma.bookmark.deleteMany({
-    where: { userId, url },
-  });
-  if (result.count === 0)
+
+  const toDelete = await db.select({ id: bookmarks.id }).from(bookmarks).where(and(eq(bookmarks.userId, userId), eq(bookmarks.url, url)));
+  const result = await db.delete(bookmarks).where(and(eq(bookmarks.userId, userId), eq(bookmarks.url, url))).returning({ id: bookmarks.id });
+
+  if (result.length === 0)
     return NextResponse.json({ error: "Bookmark not found" }, { status: 404, headers: corsHeaders(request) });
+
   for (const bookmark of toDelete) {
-    publishUserEvent(userId, {
-      type: "bookmark.deleted",
-      entity: "bookmark",
-      id: bookmark.id,
-    });
+    publishUserEvent(userId, { type: "bookmark.deleted", entity: "bookmark", id: bookmark.id });
   }
   return new NextResponse(null, { status: 204, headers: corsHeaders(request) });
 }

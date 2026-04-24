@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { eq, desc, asc, count } from "drizzle-orm";
+import { db, bookmarks, groups } from "@/lib/db";
 import { isExtensionOrigin, resolveApiUserId } from "@/lib/api-auth";
 
 const DEFAULT_INITIAL_SYNC_LIMIT = 150;
@@ -35,31 +36,44 @@ export async function GET(request: Request) {
     MAX_SYNC_LIMIT
   );
 
-  const [bookmarks, groups] = await Promise.all([
-    prisma.bookmark.findMany({
-      where: { userId },
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      take: shouldPaginate ? resolvedLimit + 1 : undefined,
-      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-      include: {
-        group: { select: { name: true, color: true } },
-      },
-    }),
-    prisma.group.findMany({
-      where: { userId },
-      orderBy: [{ order: "asc" }, { name: "asc" }],
-      select: {
-        id: true,
-        name: true,
-        color: true,
-        order: true,
-        _count: { select: { bookmarks: true } },
-      },
-    }),
-  ]);
+  const bookmarkQuery = db
+    .select({
+      id: bookmarks.id,
+      url: bookmarks.url,
+      title: bookmarks.title,
+      description: bookmarks.description,
+      faviconUrl: bookmarks.faviconUrl,
+      previewImageUrl: bookmarks.previewImageUrl,
+      createdAt: bookmarks.createdAt,
+      groupId: bookmarks.groupId,
+      groupName: groups.name,
+      groupColor: groups.color,
+    })
+    .from(bookmarks)
+    .leftJoin(groups, eq(bookmarks.groupId, groups.id))
+    .where(eq(bookmarks.userId, userId))
+    .orderBy(desc(bookmarks.createdAt), desc(bookmarks.id));
 
-  const hasMore = shouldPaginate && bookmarks.length > resolvedLimit;
-  const pageRows = shouldPaginate ? bookmarks.slice(0, resolvedLimit) : bookmarks;
+  if (shouldPaginate) bookmarkQuery.limit(resolvedLimit + 1);
+
+  const groupsWithCount = await db
+    .select({
+      id: groups.id,
+      name: groups.name,
+      color: groups.color,
+      order: groups.order,
+      bookmarkCount: count(bookmarks.id),
+    })
+    .from(groups)
+    .leftJoin(bookmarks, eq(bookmarks.groupId, groups.id))
+    .where(eq(groups.userId, userId))
+    .groupBy(groups.id)
+    .orderBy(asc(groups.order), asc(groups.name));
+
+  const bookmarkRows = await bookmarkQuery;
+
+  const hasMore = shouldPaginate && bookmarkRows.length > resolvedLimit;
+  const pageRows = shouldPaginate ? bookmarkRows.slice(0, resolvedLimit) : bookmarkRows;
 
   const bookmarkData = pageRows.map((b) => ({
     id: b.id,
@@ -69,22 +83,24 @@ export async function GET(request: Request) {
     faviconUrl: b.faviconUrl,
     previewImageUrl: b.previewImageUrl,
     createdAt: b.createdAt.toISOString(),
-    group: b.group?.name ?? null,
-    groupColor: b.group?.color ?? null,
+    group: b.groupName ?? null,
+    groupColor: b.groupColor ?? null,
     groupId: b.groupId ?? null,
   }));
 
   const nextCursor =
-    hasMore && pageRows.length > 0 ? pageRows[pageRows.length - 1].id : null;
+    hasMore && pageRows.length > 0 ? pageRows[pageRows.length - 1]!.id : null;
+
+  const groupData = groupsWithCount.map((g) => ({
+    id: g.id,
+    name: g.name,
+    color: g.color,
+    order: g.order,
+    _count: { bookmarks: g.bookmarkCount },
+  }));
 
   return NextResponse.json(
-    {
-      bookmarks: bookmarkData,
-      groups,
-      partial: hasMore,
-      hasMore,
-      nextCursor,
-    },
+    { bookmarks: bookmarkData, groups: groupData, partial: hasMore, hasMore, nextCursor },
     { headers: corsHeaders(request) }
   );
 }

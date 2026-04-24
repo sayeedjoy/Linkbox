@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
-import { prisma } from "@/lib/prisma";
+import { eq } from "drizzle-orm";
+import { db, apiTokens } from "@/lib/db";
 import { getVerifiedAuthSession } from "@/lib/auth";
 
 const TOKEN_LAST_USED_TOUCH_INTERVAL_MS = 10 * 60 * 1000;
@@ -12,7 +13,6 @@ function extractTokenFromAuthorizationHeader(authHeader: string | null): string 
   const raw = authHeader?.trim();
   if (!raw) return null;
 
-  // Accept common token auth schemes case-insensitively.
   const schemeMatch = raw.match(/^([A-Za-z]+)\s+(.+)$/);
   if (schemeMatch) {
     const scheme = schemeMatch[1]?.toLowerCase();
@@ -22,7 +22,6 @@ function extractTokenFromAuthorizationHeader(authHeader: string | null): string 
     return null;
   }
 
-  // Backward-compatible fallback for clients sending raw token in Authorization.
   if (raw.includes(" ")) return null;
   return raw;
 }
@@ -31,21 +30,21 @@ export async function userIdFromBearerToken(authHeader: string | null): Promise<
   const token = extractTokenFromAuthorizationHeader(authHeader);
   if (!token) return null;
   const hash = hashToken(token);
-  const record = await prisma.apiToken.findFirst({
-    where: { tokenHash: hash },
-    select: { id: true, userId: true, lastUsedAt: true },
-  });
+  const [record] = await db
+    .select({ id: apiTokens.id, userId: apiTokens.userId, lastUsedAt: apiTokens.lastUsedAt })
+    .from(apiTokens)
+    .where(eq(apiTokens.tokenHash, hash))
+    .limit(1);
   if (!record) return null;
 
   const shouldTouch =
     !record.lastUsedAt ||
     Date.now() - record.lastUsedAt.getTime() >= TOKEN_LAST_USED_TOUCH_INTERVAL_MS;
   if (shouldTouch) {
-    void prisma.apiToken
-      .update({
-        where: { id: record.id },
-        data: { lastUsedAt: new Date() },
-      })
+    void db
+      .update(apiTokens)
+      .set({ lastUsedAt: new Date() })
+      .where(eq(apiTokens.id, record.id))
       .catch(() => undefined);
   }
 

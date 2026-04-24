@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { eq, asc, count } from "drizzle-orm";
 import { requireAdminSession } from "@/lib/admin";
-import { prisma } from "@/lib/prisma";
+import { db, users, bookmarks, groups } from "@/lib/db";
 
 export async function GET() {
   try {
@@ -9,21 +10,26 @@ export async function GET() {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
-  const users = await prisma.user.findMany({
-    select: {
-      email: true,
-      name: true,
-      autoGroupEnabled: true,
-      createdAt: true,
-      _count: {
-        select: {
-          bookmarks: true,
-          groups: true,
-        },
-      },
-    },
-    orderBy: { createdAt: "asc" },
-  });
+  const rows = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      name: users.name,
+      autoGroupEnabled: users.autoGroupEnabled,
+      createdAt: users.createdAt,
+      bookmarkCount: count(bookmarks.id),
+    })
+    .from(users)
+    .leftJoin(bookmarks, eq(bookmarks.userId, users.id))
+    .groupBy(users.id)
+    .orderBy(asc(users.createdAt));
+
+  // Group counts require a separate subquery approach; fetch separately
+  const groupCounts = await db
+    .select({ userId: groups.userId, groupCount: count(groups.id) })
+    .from(groups)
+    .groupBy(groups.userId);
+  const groupCountMap = new Map(groupCounts.map((r) => [r.userId, r.groupCount]));
 
   const headers = ["email", "name", "bookmarks", "groups", "autoGroupEnabled", "memberSince"];
 
@@ -35,18 +41,18 @@ export async function GET() {
     return str;
   }
 
-  const rows = users.map((u) =>
+  const csvRows = rows.map((u) =>
     [
       escapeCsv(u.email),
       escapeCsv(u.name),
-      u._count.bookmarks,
-      u._count.groups,
+      u.bookmarkCount,
+      groupCountMap.get(u.id) ?? 0,
       u.autoGroupEnabled ? "true" : "false",
       u.createdAt ? u.createdAt.toISOString().split("T")[0] : "",
     ].join(",")
   );
 
-  const csv = [headers.join(","), ...rows].join("\n");
+  const csv = [headers.join(","), ...csvRows].join("\n");
 
   return new NextResponse(csv, {
     headers: {

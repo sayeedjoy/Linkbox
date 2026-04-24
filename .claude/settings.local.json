@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(pnpm add *)",
+      "Bash(pnpm remove *)",
+      "Bash(pnpm exec *)",
+      "Bash(pnpm run *)"
+    ]
+  }
+}

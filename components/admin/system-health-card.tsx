@@ -1,4 +1,5 @@
-import { prisma } from "@/lib/prisma";
+import { sql } from "drizzle-orm";
+import { db } from "@/lib/db";
 import {
   Card,
   CardContent,
@@ -22,12 +23,12 @@ async function getSystemHealth(): Promise<{
   let dbOk = false;
   let dbSize: string | undefined;
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    await db.execute(sql`SELECT 1`);
     dbOk = true;
-    const rows = await prisma.$queryRaw<[{ size: string }]>`
-      SELECT pg_size_pretty(pg_database_size(current_database())) AS size
-    `;
-    dbSize = rows[0]?.size;
+    const result = await db.execute<{ size: string }>(
+      sql`SELECT pg_size_pretty(pg_database_size(current_database())) AS size`
+    );
+    dbSize = result.rows[0]?.size;
   } catch {
     // db error handled below
   }
@@ -90,8 +91,8 @@ function StatusDot({ status }: { status: HealthStatus }) {
 }
 
 export async function SystemHealthCard() {
-  const { db, services } = await getSystemHealth();
-  const all = [db, ...services];
+  const { db: dbHealth, services } = await getSystemHealth();
+  const all = [dbHealth, ...services];
   const errors = all.filter((i) => i.status === "error").length;
   const warnings = all.filter((i) => i.status === "warning").length;
 

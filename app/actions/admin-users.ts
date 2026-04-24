@@ -4,11 +4,12 @@ import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
-import { Prisma } from "@/app/generated/prisma/client";
+import { eq, desc, count } from "drizzle-orm";
 import { requireAdminSession } from "@/lib/admin";
-import { prisma } from "@/lib/prisma";
+import { db, users, apiTokens, groups, bookmarks, passwordResetTokens } from "@/lib/db";
 import { hashToken } from "@/lib/api-auth";
 import { sendPasswordResetEmail } from "@/lib/email";
+
 
 export async function deleteUserAsAdmin(
   userId: string
@@ -17,18 +18,14 @@ export async function deleteUserAsAdmin(
     const session = await requireAdminSession();
     const targetUserId = userId.trim();
 
-    if (!targetUserId) {
-      return { success: false, error: "User not found." };
-    }
+    if (!targetUserId) return { success: false, error: "User not found." };
 
     if (session.user.id === targetUserId) {
-      return {
-        success: false,
-        error: "You cannot delete your own account from the admin panel.",
-      };
+      return { success: false, error: "You cannot delete your own account from the admin panel." };
     }
 
-    await prisma.user.delete({ where: { id: targetUserId } });
+    const result = await db.delete(users).where(eq(users.id, targetUserId)).returning({ id: users.id });
+    if (result.length === 0) return { success: false, error: "User not found." };
 
     revalidatePath("/admin");
     revalidateTag("admin-stats", "max");
@@ -36,14 +33,6 @@ export async function deleteUserAsAdmin(
     return { success: true };
   } catch (error) {
     unstable_rethrow(error);
-
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2025"
-    ) {
-      return { success: false, error: "User not found." };
-    }
-
     return { success: false, error: "Failed to delete user." };
   }
 }
@@ -58,29 +47,22 @@ export async function inviteUserAsAdmin(
     const normalized = email.trim().toLowerCase();
     if (!normalized) return { success: false, error: "Email is required." };
 
-    const existing = await prisma.user.findUnique({ where: { email: normalized } });
-    if (existing) {
-      return { success: false, error: "An account with that email already exists." };
-    }
+    const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, normalized)).limit(1);
+    if (existing) return { success: false, error: "An account with that email already exists." };
 
     const randomPassword = randomBytes(32).toString("hex");
     const hashedPassword = await bcrypt.hash(randomPassword, 12);
 
-    const user = await prisma.user.create({
-      data: {
-        email: normalized,
-        password: hashedPassword,
-        name: name?.trim() || null,
-      },
-    });
+    const [user] = await db
+      .insert(users)
+      .values({ email: normalized, password: hashedPassword, name: name?.trim() || null })
+      .returning({ id: users.id });
 
     const token = randomBytes(32).toString("hex");
     const tokenHash = hashToken(token);
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-    await prisma.passwordResetToken.create({
-      data: { userId: user.id, tokenHash, expiresAt },
-    });
+    await db.insert(passwordResetTokens).values({ userId: user.id, tokenHash, expiresAt });
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
     const resetUrl = `${baseUrl}/reset-password?token=${token}`;
@@ -117,40 +99,34 @@ export async function getUserDetailsAsAdmin(
   try {
     await requireAdminSession();
 
-    // Split into two queries to avoid issues with mixing _count and relation queries
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        autoGroupEnabled: true,
-        createdAt: true,
-        bannedUntil: true,
-        _count: {
-          select: {
-            bookmarks: true,
-            groups: true,
-            apiTokens: true,
-          },
-        },
-      },
-    });
+    const [user] = await db
+      .select({
+        autoGroupEnabled: users.autoGroupEnabled,
+        createdAt: users.createdAt,
+        bannedUntil: users.bannedUntil,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
 
     if (!user) return { success: false, error: "User not found." };
 
-    const lastToken = await prisma.apiToken.findFirst({
-      where: { userId },
-      orderBy: { lastUsedAt: "desc" },
-      select: { lastUsedAt: true },
-    });
+    const [[{ bookmarkCount }], [{ groupCount }], [{ apiTokenCount }], lastToken] = await Promise.all([
+      db.select({ bookmarkCount: count() }).from(bookmarks).where(eq(bookmarks.userId, userId)),
+      db.select({ groupCount: count() }).from(groups).where(eq(groups.userId, userId)),
+      db.select({ apiTokenCount: count() }).from(apiTokens).where(eq(apiTokens.userId, userId)),
+      db.select({ lastUsedAt: apiTokens.lastUsedAt }).from(apiTokens).where(eq(apiTokens.userId, userId)).orderBy(desc(apiTokens.lastUsedAt)).limit(1),
+    ]);
 
     return {
       success: true,
       data: {
-        bookmarkCount: user._count.bookmarks,
-        groupCount: user._count.groups,
-        apiTokenCount: user._count.apiTokens,
+        bookmarkCount,
+        groupCount,
+        apiTokenCount,
         autoGroupEnabled: user.autoGroupEnabled,
         createdAt: user.createdAt?.toISOString() ?? null,
-        lastTokenUsedAt: lastToken?.lastUsedAt?.toISOString() ?? null,
+        lastTokenUsedAt: lastToken?.[0]?.lastUsedAt?.toISOString() ?? null,
         bannedUntil: user.bannedUntil?.toISOString() ?? null,
       },
     };
@@ -176,33 +152,21 @@ export async function banUserAsAdmin(
   try {
     const session = await requireAdminSession();
 
-    if (session.user.id === userId) {
-      return { success: false, error: "You cannot ban your own account." };
-    }
+    if (session.user.id === userId) return { success: false, error: "You cannot ban your own account." };
 
     const hours = BAN_DURATIONS[durationKey];
     if (!hours) return { success: false, error: "Invalid ban duration." };
 
     const bannedUntil = new Date(Date.now() + hours * 60 * 60 * 1000);
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: { bannedUntil },
-    });
+    const result = await db.update(users).set({ bannedUntil }).where(eq(users.id, userId)).returning({ id: users.id });
+    if (result.length === 0) return { success: false, error: "User not found." };
 
     revalidatePath("/admin");
 
     return { success: true };
   } catch (error) {
     unstable_rethrow(error);
-
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2025"
-    ) {
-      return { success: false, error: "User not found." };
-    }
-
     return { success: false, error: "Failed to ban user." };
   }
 }
@@ -213,24 +177,14 @@ export async function unbanUserAsAdmin(
   try {
     await requireAdminSession();
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: { bannedUntil: null },
-    });
+    const result = await db.update(users).set({ bannedUntil: null }).where(eq(users.id, userId)).returning({ id: users.id });
+    if (result.length === 0) return { success: false, error: "User not found." };
 
     revalidatePath("/admin");
 
     return { success: true };
   } catch (error) {
     unstable_rethrow(error);
-
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2025"
-    ) {
-      return { success: false, error: "User not found." };
-    }
-
     return { success: false, error: "Failed to unban user." };
   }
 }

@@ -4,7 +4,7 @@
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=fff)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=fff)](https://www.typescriptlang.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-4169E1?logo=postgresql&logoColor=fff)](https://www.postgresql.org/)
-[![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma&logoColor=fff)](https://www.prisma.io/)
+[![Drizzle](https://img.shields.io/badge/Drizzle-ORM-C5F74F?logo=drizzle&logoColor=000)](https://orm.drizzle.team/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-38B2AC?logo=tailwindcss&logoColor=fff)](https://tailwindcss.com/)
 [![Node](https://img.shields.io/badge/Node-20+-339933?logo=nodedotjs&logoColor=fff)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/License-Private-gray)](.)
@@ -26,8 +26,8 @@ This README documents the whole application. Extension-specific implementation d
 | **Clients** | Next.js web app (dashboard, timeline, sign-in/up, admin) and Chrome extension (popup + background worker). |
 | **Auth** | NextAuth credentials for web; API tokens (Bearer) for extension and integrations. Tokens hashed in DB. |
 | **API** | App Router route handlers under `app/api/`: bookmarks, groups, categories, sync, export, realtime SSE, settings, NextAuth. Session or Bearer auth per route. |
-| **Server logic** | Server Actions in `app/actions/` for mutations; shared lib (auth, Prisma, realtime, app config, metadata). |
-| **Data** | PostgreSQL via Prisma. Models: `User`, `Bookmark`, `Group`, `ApiToken`, `PasswordResetToken`, `AppConfig`. |
+| **Server logic** | Server Actions in `app/actions/` for mutations; shared lib (auth, Drizzle, realtime, app config, metadata). |
+| **Data** | PostgreSQL via Drizzle ORM. Models: `User`, `Bookmark`, `Group`, `ApiToken`, `PasswordResetToken`, `AppConfig`. |
 | **Realtime** | SSE at `GET /api/realtime/bookmarks`; web app and extension subscribe for live bookmark/group updates. |
 | **AI** | [Vercel AI SDK](https://sdk.vercel.ai/) with OpenRouter for optional auto-grouping of uncategorized bookmarks. |
 | **Email** | Resend for password reset. Optional admin and public-signup control via `AppConfig`. |
@@ -61,9 +61,10 @@ This README documents the whole application. Extension-specific implementation d
 - **TanStack Query** for client caching/invalidation
 
 ### Data layer
-- **PostgreSQL** via Prisma (`prisma/schema.prisma`)
+- **PostgreSQL** via Drizzle ORM (`db/schema.ts`)
 - **Entities:** `User`, `Bookmark`, `Group`, `ApiToken`, `PasswordResetToken`, `AppConfig`
 - **User preferences:** `autoGroupEnabled` for AI categorization; `AppConfig.publicSignupEnabled` for signup gating
+- **Migrations** managed by `drizzle-kit` in `drizzle/`
 
 ### Realtime model
 - **SSE Endpoint:** `GET /api/realtime/bookmarks`
@@ -84,7 +85,7 @@ This README documents the whole application. Extension-specific implementation d
 | Framework | Next.js 16 |
 | UI Library | React 19 |
 | Language | TypeScript |
-| Database | PostgreSQL + Prisma |
+| Database | PostgreSQL + Drizzle ORM |
 | Auth | NextAuth |
 | Styling | Tailwind CSS 4 + shadcn/ui-style components |
 | AI Categorization | [Vercel AI SDK](https://sdk.vercel.ai/) + OpenRouter |
@@ -97,9 +98,10 @@ This README documents the whole application. Extension-specific implementation d
 
 ```
 app/                    Next.js routes, actions, APIs
-components/             Web UI components  
-lib/                    Shared utilities (auth, realtime, metadata, prisma)
-prisma/                 Prisma schema and migrations
+components/             Web UI components
+db/                     Drizzle schema (schema.ts)
+drizzle/                Migration files managed by drizzle-kit
+lib/                    Shared utilities (auth, db, realtime, metadata)
 public/                 Static assets
 extension/              Chrome extension project
 ```
@@ -116,7 +118,7 @@ extension/              Chrome extension project
 ### 1. Install Dependencies
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### 2. Configure Environment
@@ -140,13 +142,13 @@ cp .env.example .env.local
 ### 3. Run Migrations
 
 ```bash
-npx prisma migrate dev
+pnpm db:migrate
 ```
 
 ### 4. Start Development Server
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 Open **http://localhost:3000**.
@@ -157,10 +159,14 @@ Open **http://localhost:3000**.
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Run web app in development mode |
-| `npm run build` | Build web app for production |
-| `npm run start` | Start production server |
-| `npm run lint` | Lint repository |
+| `pnpm dev` | Run web app in development mode |
+| `pnpm build` | Build web app for production |
+| `pnpm start` | Start production server |
+| `pnpm lint` | Lint repository |
+| `pnpm db:generate` | Generate a migration file after editing `db/schema.ts` |
+| `pnpm db:migrate` | Apply pending migrations to the database |
+| `pnpm db:push` | Push schema changes directly (dev only, no migration file) |
+| `pnpm db:studio` | Open Drizzle Studio (visual database browser) |
 
 ---
 
@@ -191,7 +197,7 @@ Open **http://localhost:3000**.
 | `PUT` | `/api/bookmarks` | Update bookmark |
 | `DELETE` | `/api/bookmarks` | Delete bookmark |
 | `DELETE` | `/api/bookmarks/:id` | Delete by ID |
-|Refetch metadata and return updated bookmark |
+| `POST` | `/api/bookmarks/:id` | Refetch metadata and return updated bookmark |
 | `PUT` | `/api/bookmarks/:id/category` | Update category |
 | `GET` | `/api/realtime/bookmarks` | Realtime SSE stream |
 
@@ -324,8 +330,8 @@ Success response:
 
 ```bash
 cd extension
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 ### Load Extension
@@ -345,14 +351,14 @@ For full extension docs (permissions, messaging contract, cache strategy, releas
 ### Web app
 
 ```bash
-npm run build
+pnpm build
 ```
 
 ### Chrome extension
 
 ```bash
 cd extension
-npm run build
+pnpm build
 ```
 
 Zip artifact is generated in `extension/release/`.
@@ -376,7 +382,7 @@ Usually an execution-environment permission issue rather than app code. Retry in
 
 ### PowerShell blocks npm scripts
 ```bash
-cmd /c npm run build
+cmd /c pnpm build
 ```
 
 ### Extension not updating in realtime

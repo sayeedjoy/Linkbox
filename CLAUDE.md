@@ -15,7 +15,7 @@ LinkArena is a full-stack bookmarking platform with two clients:
 | Framework | Next.js 16 (App Router) |
 | UI | React 19, Tailwind CSS 4, shadcn/ui-style components |
 | Language | TypeScript 5 |
-| Database | PostgreSQL + Prisma |
+| Database | PostgreSQL + Drizzle ORM |
 | Auth | NextAuth (web sessions), API tokens (extension) |
 | AI | Vercel AI SDK + OpenRouter for auto-grouping |
 | Email | Resend |
@@ -25,11 +25,16 @@ LinkArena is a full-stack bookmarking platform with two clients:
 
 ```bash
 # Web app
-npm run dev        # Start development server
-npm run build      # Production build
-npm run start      # Start production server
-npm run lint       # Run ESLint
-npx prisma migrate dev  # Run database migrations
+pnpm dev           # Start development server
+pnpm build         # Production build
+pnpm start         # Start production server
+pnpm lint          # Run ESLint
+
+# Database (Drizzle)
+pnpm db:generate   # Generate SQL migration files from schema changes
+pnpm db:migrate    # Apply pending migrations to the database
+pnpm db:push       # Push schema directly (no migration files, for dev)
+pnpm db:studio     # Open Drizzle Studio UI
 
 # Chrome extension
 cd extension && npm run dev    # Dev mode
@@ -44,16 +49,19 @@ There is no test framework configured in this project.
 ```
 app/                    Next.js routes, Server Actions, API endpoints
 components/             Web UI components (organized by feature)
-lib/                    Shared utilities (auth, realtime, metadata, prisma)
-prisma/                 Prisma schema and migrations
+db/                     Drizzle schema (db/schema.ts)
+drizzle/                Generated SQL migrations
+lib/                    Shared utilities (auth, realtime, metadata, db)
 public/                 Static assets
 extension/              Chrome extension (Manifest V3)
 ```
 
 ### Data Layer
-- **Prisma schema** (`prisma/schema.prisma`) with custom output to `app/generated/prisma`
-- **Models**: `User`, `Bookmark`, `Group`, `ApiToken`, `PasswordResetToken`, `AppConfig`
-- User `autoGroupEnabled` flag controls AI categorization; `AppConfig.publicSignupEnabled` gates signup
+- **Schema** (`db/schema.ts`) defines all tables using Drizzle's `pgTable` builder
+- **DB singleton** (`lib/db.ts`) — import `db` from here for all database access; also re-exports all schema tables
+- **Models**: `users`, `bookmarks`, `groups`, `apiTokens`, `passwordResetTokens`, `appConfig`
+- User `autoGroupEnabled` flag controls AI categorization; `appConfig.publicSignupEnabled` gates signup
+- Migration files live in `drizzle/` and are applied with `pnpm db:migrate`
 
 ### API Architecture
 - **Route Handlers** (`app/api/`): Session and bearer-token APIs for extension/integrations
@@ -63,7 +71,7 @@ extension/              Chrome extension (Manifest V3)
 
 ### Dual Auth System
 1. **NextAuth** for web sessions (credentials provider)
-2. **API Tokens** (Bearer auth) for extension and integrations - tokens hashed in DB with prefix/suffix for display
+2. **API Tokens** (Bearer auth) for extension and integrations — tokens hashed in DB with prefix/suffix for display
 
 ### Realtime System
 - In-memory pub/sub in `lib/realtime.ts`
@@ -77,11 +85,11 @@ extension/              Chrome extension (Manifest V3)
 
 ## Key Implementation Details
 
-### Prisma Client
-- Generated client outputs to `app/generated/prisma` (not default `node_modules`)
-- Import from `@/app/generated/prisma/client` in server code
-- Use `lib/prisma.ts` singleton for all database access
-- `prisma.config.ts` loads both `.env` and `.env.local` (with override) and validates `DATABASE_URL` before running commands
+### Database Access
+- Import `{ db }` from `lib/db.ts` for all queries — never instantiate Drizzle directly
+- The `db` export is a lazy Proxy so the pool isn't created until first use (safe for Next.js hot-reload)
+- `lib/db.ts` also re-exports every table from `db/schema.ts`, so you can do `import { db, users, bookmarks } from "@/lib/db"`
+- Use Drizzle's relational query API (`db.query.users.findMany(...)`) for joins; it requires the relations defined at the bottom of `db/schema.ts`
 
 ### Route Protection
 - `proxy.ts` (root) is the Next.js middleware — protects `/dashboard/:path*` and `/admin/:path*`, redirecting unauthenticated users to `/sign-in` with a callback URL
@@ -115,7 +123,7 @@ extension/              Chrome extension (Manifest V3)
 ## Troubleshooting
 
 ### Build fails with `spawn EPERM` on Windows
-Use `cmd /c npm run build` instead of direct execution.
+Use `cmd /c pnpm build` instead of direct execution.
 
 ### Extension realtime not working
 Verify API base URL, token validity, and CORS allows `chrome-extension://` origins.

@@ -1,5 +1,7 @@
-import { Prisma } from "@/app/generated/prisma/client";
-import { prisma } from "@/lib/prisma";
+import { sql } from "drizzle-orm";
+import { db } from "@/lib/db";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import type * as schema from "@/db/schema";
 
 export type AppConfig = {
   id: number;
@@ -9,7 +11,7 @@ export type AppConfig = {
 export class AppConfigMigrationRequiredError extends Error {
   constructor() {
     super(
-      "Public signup settings are unavailable until the latest database migration is applied. Run Prisma migrations and try again."
+      "Public signup settings are unavailable until the latest database migration is applied. Run migrations and try again."
     );
     this.name = "AppConfigMigrationRequiredError";
   }
@@ -22,34 +24,23 @@ const DEFAULT_CONFIG: AppConfig = {
   publicSignupEnabled: true,
 };
 
-type AppConfigQueryClient = Pick<typeof prisma, "$queryRaw">;
+type AnyDb = NodePgDatabase<typeof schema>;
 
 function isAppConfigMissingError(e: unknown): boolean {
-  if (typeof e === "object" && e !== null && "code" in e) {
-    const code = (e as { code?: string }).code;
-    if (code === "P2010" || code === "P2021") return true;
-  }
-
   const msg = e instanceof Error ? e.message : String(e);
   return msg.includes('relation "AppConfig" does not exist');
 }
 
-async function queryAppConfig(db: AppConfigQueryClient): Promise<AppConfig> {
-  const rows = await db.$queryRaw<AppConfig[]>(
-    Prisma.sql`
-      SELECT "id", "publicSignupEnabled"
-      FROM "AppConfig"
-      WHERE "id" = ${APP_CONFIG_ID}
-      LIMIT 1
-    `
+async function queryAppConfig(client: AnyDb): Promise<AppConfig> {
+  const rows = await client.execute<AppConfig>(
+    sql`SELECT "id", "publicSignupEnabled" FROM "AppConfig" WHERE "id" = ${APP_CONFIG_ID} LIMIT 1`
   );
-
-  return rows[0] ?? DEFAULT_CONFIG;
+  return (rows.rows[0] as AppConfig | undefined) ?? DEFAULT_CONFIG;
 }
 
 export async function getAppConfig(): Promise<AppConfig> {
   try {
-    return await queryAppConfig(prisma);
+    return await queryAppConfig(db);
   } catch (e) {
     if (isAppConfigMissingError(e)) return DEFAULT_CONFIG;
     throw e;
@@ -62,10 +53,10 @@ export async function isPublicSignupEnabled(): Promise<boolean> {
 }
 
 export async function isPublicSignupEnabledForClient(
-  db: AppConfigQueryClient
+  client: AnyDb
 ): Promise<boolean> {
   try {
-    const config = await queryAppConfig(db);
+    const config = await queryAppConfig(client);
     return config.publicSignupEnabled;
   } catch (e) {
     if (isAppConfigMissingError(e)) return DEFAULT_CONFIG.publicSignupEnabled;
@@ -77,22 +68,14 @@ export async function setPublicSignupEnabled(
   enabled: boolean
 ): Promise<AppConfig> {
   try {
-    const rows = await prisma.$queryRaw<AppConfig[]>(
-      Prisma.sql`
-        INSERT INTO "AppConfig" ("id", "publicSignupEnabled")
-        VALUES (${APP_CONFIG_ID}, ${enabled})
-        ON CONFLICT ("id")
-        DO UPDATE SET "publicSignupEnabled" = EXCLUDED."publicSignupEnabled"
-        RETURNING "id", "publicSignupEnabled"
-      `
+    const rows = await db.execute<AppConfig>(
+      sql`INSERT INTO "AppConfig" ("id", "publicSignupEnabled") VALUES (${APP_CONFIG_ID}, ${enabled}) ON CONFLICT ("id") DO UPDATE SET "publicSignupEnabled" = EXCLUDED."publicSignupEnabled" RETURNING "id", "publicSignupEnabled"`
     );
-
-    return rows[0] ?? { id: APP_CONFIG_ID, publicSignupEnabled: enabled };
+    return (rows.rows[0] as AppConfig | undefined) ?? { id: APP_CONFIG_ID, publicSignupEnabled: enabled };
   } catch (e) {
     if (isAppConfigMissingError(e)) {
       throw new AppConfigMigrationRequiredError();
     }
-
     throw e;
   }
 }

@@ -1,4 +1,5 @@
-import { prisma } from "@/lib/prisma";
+import { eq, max, count, asc } from "drizzle-orm";
+import { db, bookmarks, groups } from "@/lib/db";
 import { isExtensionOrigin, resolveApiUserId } from "@/lib/api-auth";
 import { subscribeUserEvents, type RealtimeEvent } from "@/lib/realtime";
 
@@ -19,27 +20,31 @@ function encodeSseEvent(event: RealtimeEvent, eventId: string): Uint8Array {
 }
 
 async function getBookmarkSignature(userId: string): Promise<string> {
-  const [bookmarkAgg, groups] = await Promise.all([
-    prisma.bookmark.aggregate({
-      where: { userId },
-      _count: { _all: true },
-      _max: { createdAt: true, updatedAt: true },
-    }),
-    prisma.group.findMany({
-      where: { userId },
-      select: { id: true, name: true, color: true, order: true },
-      orderBy: { order: "asc" },
-    }),
+  const [[bookmarkAgg], groupRows] = await Promise.all([
+    db
+      .select({
+        total: count(),
+        maxCreatedAt: max(bookmarks.createdAt),
+        maxUpdatedAt: max(bookmarks.updatedAt),
+      })
+      .from(bookmarks)
+      .where(eq(bookmarks.userId, userId)),
+    db
+      .select({ id: groups.id, name: groups.name, color: groups.color, order: groups.order })
+      .from(groups)
+      .where(eq(groups.userId, userId))
+      .orderBy(asc(groups.order)),
   ]);
-  // Build a lightweight group fingerprint so polling detects create/update/delete/reorder.
-  const groupSig = groups
+
+  const groupSig = groupRows
     .map((g) => `${g.id}:${g.name}:${g.color ?? ""}:${g.order}`)
     .join(",");
+
   return [
-    bookmarkAgg._count._all ?? 0,
-    bookmarkAgg._max.createdAt?.toISOString() ?? "",
-    bookmarkAgg._max.updatedAt?.toISOString() ?? "",
-    groups.length,
+    bookmarkAgg?.total ?? 0,
+    bookmarkAgg?.maxCreatedAt?.toISOString() ?? "",
+    bookmarkAgg?.maxUpdatedAt?.toISOString() ?? "",
+    groupRows.length,
     groupSig,
   ].join("|");
 }
@@ -109,7 +114,7 @@ export async function GET(request: Request) {
               data: { source: "poll" },
             });
           } catch {
-            // Keep the stream alive and retry on next poll tick.
+            // Keep stream alive; retry on next tick.
           }
         })();
       }, POLL_INTERVAL_MS);

@@ -8,7 +8,8 @@ import {
   FolderIcon,
   UsersIcon,
 } from "lucide-react";
-import { prisma } from "@/lib/prisma";
+import { eq, count, sql, or, ilike, desc, asc } from "drizzle-orm";
+import { db, users, bookmarks, groups } from "@/lib/db";
 import {
   Card,
   CardContent,
@@ -59,10 +60,10 @@ async function getAdminStats() {
   cacheLife("minutes");
   cacheTag("admin-stats");
 
-  const [totalUsers, totalBookmarks, totalGroups] = await Promise.all([
-    prisma.user.count(),
-    prisma.bookmark.count(),
-    prisma.group.count(),
+  const [[{ totalUsers }], [{ totalBookmarks }], [{ totalGroups }]] = await Promise.all([
+    db.select({ totalUsers: count() }).from(users),
+    db.select({ totalBookmarks: count() }).from(bookmarks),
+    db.select({ totalGroups: count() }).from(groups),
   ]);
 
   const avgBookmarks =
@@ -91,8 +92,8 @@ async function getAdminStats() {
 }
 
 interface DayCountRow {
-  day: Date;
-  count: bigint;
+  day: string;
+  count: number;
 }
 
 async function getActivityTimeline(): Promise<{
@@ -105,19 +106,14 @@ async function getActivityTimeline(): Promise<{
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-  const rows = await prisma.$queryRaw<DayCountRow[]>`
-    SELECT
-      DATE_TRUNC('day', "createdAt")::date AS day,
-      COUNT(*)::bigint AS count
-    FROM "Bookmark"
-    WHERE "createdAt" >= ${thirtyDaysAgo}
-    GROUP BY day
-    ORDER BY day ASC
-  `;
+  const result = await db.execute<{ day: string; count: string }>(
+    sql`SELECT DATE_TRUNC('day', "createdAt")::date::text AS day, COUNT(*)::text AS count FROM "Bookmark" WHERE "createdAt" >= ${thirtyDaysAgo} GROUP BY day ORDER BY day ASC`
+  );
+  const rows: DayCountRow[] = result.rows.map((r) => ({ day: r.day, count: Number(r.count) }));
 
   const mapped = rows.map((r) => ({
-    date: r.day.toISOString().split("T")[0] as string,
-    count: Number(r.count),
+    date: r.day.split("T")[0] as string,
+    count: r.count,
   }));
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -136,46 +132,43 @@ async function getAdminUsers(
   totalPages: number;
   page: number;
 }> {
-  const where = query
-    ? {
-        OR: [
-          { name: { contains: query, mode: "insensitive" as const } },
-          { email: { contains: query, mode: "insensitive" as const } },
-        ],
-      }
+  const whereClause = query
+    ? or(ilike(users.name, `%${query}%`), ilike(users.email, `%${query}%`))
     : undefined;
 
-  const totalUsers = await prisma.user.count({ where });
-  const totalPages = Math.max(1, Math.ceil(totalUsers / USERS_PER_PAGE));
+  const [{ totalUsers: totalUsersCount }] = await db.select({ totalUsers: count() }).from(users).where(whereClause);
+  const totalPages = Math.max(1, Math.ceil(totalUsersCount / USERS_PER_PAGE));
   const page = Math.min(requestedPage, totalPages);
   const skip = (page - 1) * USERS_PER_PAGE;
 
-  const users = await prisma.user.findMany({
-    where,
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      bannedUntil: true,
-      _count: { select: { bookmarks: true } },
-    },
-    orderBy: [{ bookmarks: { _count: "desc" } }, { email: "asc" }],
-    skip,
-    take: USERS_PER_PAGE,
-  });
+  const userRows = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      bannedUntil: users.bannedUntil,
+      bookmarkCount: count(bookmarks.id),
+    })
+    .from(users)
+    .leftJoin(bookmarks, eq(bookmarks.userId, users.id))
+    .where(whereClause)
+    .groupBy(users.id)
+    .orderBy(desc(count(bookmarks.id)), asc(users.email))
+    .limit(USERS_PER_PAGE)
+    .offset(skip);
 
   const now = new Date();
 
   return {
-    users: users.map((user) => ({
+    users: userRows.map((user) => ({
       id: user.id,
       name: user.name,
       email: user.email,
-      bookmarkCount: user._count.bookmarks,
+      bookmarkCount: user.bookmarkCount,
       isCurrentAdmin: user.id === currentAdminId,
       isBanned: user.bannedUntil != null && user.bannedUntil > now,
     })),
-    totalUsers,
+    totalUsers: totalUsersCount,
     totalPages,
     page,
   };

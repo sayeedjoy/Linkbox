@@ -2,7 +2,8 @@
 
 import { generateObject } from "ai";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
+import { eq, and, isNull, isNotNull, desc } from "drizzle-orm";
+import { db, users, bookmarks, groups } from "@/lib/db";
 import { categorizationModel, isCategorizationEnabled } from "@/lib/ai";
 import { publishUserEvent } from "@/lib/realtime";
 
@@ -10,48 +11,26 @@ import { publishUserEvent } from "@/lib/realtime";
 /*  Rate-limiting: per-user cooldown + global concurrency cap          */
 /* ------------------------------------------------------------------ */
 
-/** Minimum seconds between AI calls for the same user (single-bookmark path). */
 const USER_COOLDOWN_MS = 5_000;
-
-/** Maximum number of concurrent AI categorization calls across all users. */
 const MAX_CONCURRENT = 5;
-
-/** Delay between sequential backfill items for a user (ms). */
 const BACKFILL_DELAY_MS = 3_000;
 
-/** Tracks the last AI call timestamp per userId (in-memory, resets on restart). */
 const lastCallByUser = new Map<string, number>();
-
-/** Current number of in-flight AI calls. */
 let activeCalls = 0;
-
-/** Tracks active backfill runs per userId to prevent duplicates. */
 const activeBackfills = new Set<string>();
 
 function acquireSlot(userId: string): boolean {
   const now = Date.now();
-
-  // Per-user cooldown check
   const lastCall = lastCallByUser.get(userId);
-  if (lastCall && now - lastCall < USER_COOLDOWN_MS) {
-    return false;
-  }
-
-  // Global concurrency check
-  if (activeCalls >= MAX_CONCURRENT) {
-    return false;
-  }
-
+  if (lastCall && now - lastCall < USER_COOLDOWN_MS) return false;
+  if (activeCalls >= MAX_CONCURRENT) return false;
   lastCallByUser.set(userId, now);
   activeCalls++;
   return true;
 }
 
-/** Acquire a slot for backfill — skips per-user cooldown, only checks global cap. */
 function acquireBackfillSlot(): boolean {
-  if (activeCalls >= MAX_CONCURRENT) {
-    return false;
-  }
+  if (activeCalls >= MAX_CONCURRENT) return false;
   activeCalls++;
   return true;
 }
@@ -65,67 +44,45 @@ function sleep(ms: number) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Core: classify a single bookmark (no preference / cooldown guards) */
+/*  Core: classify a single bookmark                                   */
 /* ------------------------------------------------------------------ */
 
-/**
- * Internal function that runs AI classification on a single bookmark.
- * Assumes caller has already verified: API key is set, user has auto-group
- * enabled, bookmark exists and is ungrouped, and a concurrency slot is held.
- *
- * Returns true if the bookmark was assigned to a group, false otherwise.
- */
-async function classifyBookmark(
-  bookmarkId: string,
-  userId: string
-): Promise<boolean> {
-  const bookmark = await prisma.bookmark.findFirst({
-    where: { id: bookmarkId, userId },
-  });
-  if (!bookmark || bookmark.groupId) {
-    return false;
-  }
+async function classifyBookmark(bookmarkId: string, userId: string): Promise<boolean> {
+  const [bookmark] = await db
+    .select()
+    .from(bookmarks)
+    .where(and(eq(bookmarks.id, bookmarkId), eq(bookmarks.userId, userId)))
+    .limit(1);
+  if (!bookmark || bookmark.groupId) return false;
 
-  const groups = await prisma.group.findMany({
-    where: { userId },
-    orderBy: { order: "asc" },
-    select: { id: true, name: true },
-  });
-  if (groups.length === 0) {
-    return false;
-  }
+  const groupList = await db
+    .select({ id: groups.id, name: groups.name })
+    .from(groups)
+    .where(eq(groups.userId, userId))
+    .orderBy(groups.order);
+  if (groupList.length === 0) return false;
 
-  const recentExamples = await prisma.bookmark.findMany({
-    where: { userId, groupId: { not: null } },
-    orderBy: { createdAt: "desc" },
-    take: 10,
-    select: {
-      url: true,
-      title: true,
-      group: { select: { name: true } },
-    },
+  const recentExamples = await db.query.bookmarks.findMany({
+    where: and(eq(bookmarks.userId, userId), isNotNull(bookmarks.groupId)),
+    orderBy: desc(bookmarks.createdAt),
+    limit: 10,
+    columns: { url: true, title: true },
+    with: { group: { columns: { name: true } } },
   });
 
-  const groupList = groups
-    .map((g, i) => `${i + 1}. "${g.name}" (id: ${g.id})`)
-    .join("\n");
+  const groupListStr = groupList.map((g, i) => `${i + 1}. "${g.name}" (id: ${g.id})`).join("\n");
 
   const examplesSection =
     recentExamples.length > 0
       ? `\nHere are some recent bookmarks and their assigned groups for context:\n${recentExamples
-          .map(
-            (b) =>
-              `- "${b.title ?? b.url ?? "Untitled"}" → ${b.group?.name ?? "Uncategorized"}`
-          )
+          .map((b) => `- "${b.title ?? b.url ?? "Untitled"}" → ${b.group?.name ?? "Uncategorized"}`)
           .join("\n")}\n`
       : "";
 
   const bookmarkInfo = [
     bookmark.url ? `URL: ${bookmark.url}` : null,
     bookmark.title ? `Title: ${bookmark.title}` : null,
-    bookmark.description
-      ? `Description: ${bookmark.description.slice(0, 500)}`
-      : null,
+    bookmark.description ? `Description: ${bookmark.description.slice(0, 500)}` : null,
   ]
     .filter(Boolean)
     .join("\n");
@@ -133,17 +90,13 @@ async function classifyBookmark(
   const { object: result } = await generateObject({
     model: categorizationModel,
     schema: z.object({
-      groupId: z
-        .string()
-        .describe(
-          'The ID of the best matching group, or "none" if no group is a good fit'
-        ),
+      groupId: z.string().describe('The ID of the best matching group, or "none" if no group is a good fit'),
       confidence: z.enum(["high", "medium", "low"]),
     }),
     prompt: `You are a bookmark classifier. Given a bookmark and a list of available groups, pick the single most appropriate group for this bookmark.
 
 Available groups:
-${groupList}
+${groupListStr}
 ${examplesSection}
 Bookmark to classify:
 ${bookmarkInfo}
@@ -157,22 +110,12 @@ Rules:
     temperature: 0,
   });
 
-  if (result.groupId === "none") {
-    return false;
-  }
-  if (result.confidence === "low") {
-    return false;
-  }
+  if (result.groupId === "none" || result.confidence === "low") return false;
 
-  const validGroup = groups.find((g) => g.id === result.groupId);
-  if (!validGroup) {
-    return false;
-  }
+  const validGroup = groupList.find((g) => g.id === result.groupId);
+  if (!validGroup) return false;
 
-  await prisma.bookmark.update({
-    where: { id: bookmarkId },
-    data: { groupId: result.groupId },
-  });
+  await db.update(bookmarks).set({ groupId: result.groupId }).where(eq(bookmarks.id, bookmarkId));
 
   publishUserEvent(userId, {
     type: "bookmark.category.updated",
@@ -188,39 +131,18 @@ Rules:
 /*  Public: categorize a single newly-created bookmark                 */
 /* ------------------------------------------------------------------ */
 
-/**
- * Auto-categorize a bookmark into one of the user's existing groups.
- *
- * Designed to be called fire-and-forget after bookmark creation.
- * Silently no-ops when:
- * - OPENROUTER_API_KEY is not set
- * - The user has auto-grouping disabled
- * - The bookmark already has a group
- * - The user has no groups
- * - Rate-limited (per-user cooldown or global concurrency cap)
- * - The AI returns "none" (no good match)
- * - Any error occurs (never throws)
- */
-export async function categorizeBookmark(
-  bookmarkId: string,
-  userId: string
-): Promise<void> {
+export async function categorizeBookmark(bookmarkId: string, userId: string): Promise<void> {
   try {
-    if (!isCategorizationEnabled()) {
-      return;
-    }
+    if (!isCategorizationEnabled()) return;
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { autoGroupEnabled: true },
-    });
-    if (!user?.autoGroupEnabled) {
-      return;
-    }
+    const [user] = await db
+      .select({ autoGroupEnabled: users.autoGroupEnabled })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    if (!user?.autoGroupEnabled) return;
 
-    if (!acquireSlot(userId)) {
-      return;
-    }
+    if (!acquireSlot(userId)) return;
 
     try {
       await classifyBookmark(bookmarkId, userId);
@@ -236,42 +158,23 @@ export async function categorizeBookmark(
 /*  Public: backfill all ungrouped bookmarks for a user                */
 /* ------------------------------------------------------------------ */
 
-/**
- * Categorize all existing ungrouped bookmarks for a user.
- *
- * Processes bookmarks sequentially with a delay between each call.
- * Respects the global concurrency cap but skips per-user cooldown.
- * Deduplicated: only one backfill can run per user at a time.
- *
- * Designed to be called fire-and-forget when the user enables auto-grouping.
- */
-export async function backfillUngroupedBookmarks(
-  userId: string
-): Promise<void> {
-  if (!isCategorizationEnabled()) {
-    return;
-  }
-
-  if (activeBackfills.has(userId)) {
-    return;
-  }
+export async function backfillUngroupedBookmarks(userId: string): Promise<void> {
+  if (!isCategorizationEnabled()) return;
+  if (activeBackfills.has(userId)) return;
 
   activeBackfills.add(userId);
 
   try {
-    const ungrouped = await prisma.bookmark.findMany({
-      where: { userId, groupId: null },
-      orderBy: { createdAt: "desc" },
-      select: { id: true },
-    });
+    const ungrouped = await db
+      .select({ id: bookmarks.id })
+      .from(bookmarks)
+      .where(and(eq(bookmarks.userId, userId), isNull(bookmarks.groupId)))
+      .orderBy(desc(bookmarks.createdAt));
 
     for (const { id } of ungrouped) {
-      // Wait for a global concurrency slot
       let retries = 0;
       while (!acquireBackfillSlot()) {
-        if (retries++ > 60) {
-          return;
-        }
+        if (retries++ > 60) return;
         await sleep(1_000);
       }
 
@@ -283,7 +186,6 @@ export async function backfillUngroupedBookmarks(
         releaseSlot();
       }
 
-      // Delay between items to avoid hammering the API
       await sleep(BACKFILL_DELAY_MS);
     }
   } catch (err) {

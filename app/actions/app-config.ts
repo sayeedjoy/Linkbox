@@ -1,7 +1,8 @@
 "use server";
 
+import { count } from "drizzle-orm";
 import { requireAdminSession } from "@/lib/admin";
-import { prisma } from "@/lib/prisma";
+import { db, users } from "@/lib/db";
 import {
   AppConfigMigrationRequiredError,
   setPublicSignupEnabled,
@@ -16,12 +17,11 @@ export async function updatePublicSignupEnabled(
   try {
     await requireAdminSession();
     if (!enabled) {
-      const totalUsers = await prisma.user.count();
+      const [{ value: totalUsers }] = await db.select({ value: count() }).from(users);
       if (totalUsers <= 1) {
         return {
           success: false as const,
-          error:
-            "Public signup cannot be disabled while only one account exists.",
+          error: "Public signup cannot be disabled while only one account exists.",
         };
       }
     }
@@ -33,15 +33,9 @@ export async function updatePublicSignupEnabled(
     };
   } catch (error) {
     if (error instanceof AppConfigMigrationRequiredError) {
-      return {
-        success: false as const,
-        error: error.message,
-      };
+      return { success: false as const, error: error.message };
     }
 
-    return {
-      success: false as const,
-      error: "Failed to update signup setting",
-    };
+    return { success: false as const, error: "Failed to update signup setting" };
   }
 }

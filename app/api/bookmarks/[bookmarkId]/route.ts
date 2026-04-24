@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
+import { eq, and } from "drizzle-orm";
 import { userIdFromBearerToken } from "@/lib/api-auth";
 import { refreshBookmarkForUser } from "@/app/actions/bookmarks";
-import { prisma } from "@/lib/prisma";
+import { db, bookmarks } from "@/lib/db";
 import { publishUserEvent } from "@/lib/realtime";
 
 function corsHeaders(request: Request): Record<string, string> {
@@ -21,16 +22,12 @@ export async function DELETE(
   const { bookmarkId } = await params;
   if (!bookmarkId)
     return NextResponse.json({ error: "Bookmark id required" }, { status: 400, headers: corsHeaders(request) });
-  const result = await prisma.bookmark.deleteMany({
-    where: { id: bookmarkId, userId },
-  });
-  if (result.count === 0)
+
+  const result = await db.delete(bookmarks).where(and(eq(bookmarks.id, bookmarkId), eq(bookmarks.userId, userId))).returning({ id: bookmarks.id });
+  if (result.length === 0)
     return NextResponse.json({ error: "Bookmark not found" }, { status: 404, headers: corsHeaders(request) });
-  publishUserEvent(userId, {
-    type: "bookmark.deleted",
-    entity: "bookmark",
-    id: bookmarkId,
-  });
+
+  publishUserEvent(userId, { type: "bookmark.deleted", entity: "bookmark", id: bookmarkId });
   return new NextResponse(null, { status: 204, headers: corsHeaders(request) });
 }
 

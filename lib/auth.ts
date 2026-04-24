@@ -1,6 +1,7 @@
 import { getServerSession, type Session } from "next-auth";
+import { eq } from "drizzle-orm";
 import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { db, users } from "@/lib/db";
 
 type SessionUserRecord = {
   id: string;
@@ -15,17 +16,13 @@ async function getExistingSessionUser(
   const id = session?.user?.id;
   if (!id) return null;
 
-  const user = await prisma.user.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      image: true,
-    },
-  });
+  const [user] = await db
+    .select({ id: users.id, email: users.email, name: users.name, image: users.image })
+    .from(users)
+    .where(eq(users.id, id))
+    .limit(1);
 
-  return user;
+  return user ?? null;
 }
 
 export async function getVerifiedAuthSession(): Promise<Session | null> {

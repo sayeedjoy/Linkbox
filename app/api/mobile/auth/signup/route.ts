@@ -1,7 +1,8 @@
 import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { eq } from "drizzle-orm";
+import { db, users, apiTokens } from "@/lib/db";
 import { hashToken } from "@/lib/api-auth";
 import { isPublicSignupEnabled } from "@/lib/app-config";
 
@@ -16,9 +17,9 @@ export function isSignupBody(body: unknown): body is SignupBody {
   return Boolean(body) && typeof body === "object" && !Array.isArray(body);
 }
 
-export function isPrismaUniqueConstraintError(error: unknown): boolean {
+export function isPgUniqueConstraintError(error: unknown): boolean {
   if (!error || typeof error !== "object" || !("code" in error)) return false;
-  return (error as { code?: string }).code === "P2002";
+  return (error as { code?: string }).code === "23505";
 }
 
 function parseTokenName(input: unknown): string {
@@ -59,10 +60,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Public signups are disabled" }, { status: 403 });
   }
 
-  const existingUser = await prisma.user.findUnique({
-    where: { email },
-    select: { id: true },
-  });
+  const [existingUser] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
   if (existingUser) {
     return NextResponse.json({ error: "User already exists" }, { status: 409 });
   }
@@ -78,41 +76,29 @@ export async function POST(request: Request) {
 
   let createdUser: { id: string; email: string; name: string | null; image: string | null };
   try {
-    createdUser = await prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          email,
-          password: hashedPassword,
-          name,
-        },
-        select: { id: true, email: true, name: true, image: true },
-      });
+    createdUser = await db.transaction(async (tx) => {
+      const [user] = await tx
+        .insert(users)
+        .values({ email, password: hashedPassword, name })
+        .returning({ id: users.id, email: users.email, name: users.name, image: users.image });
 
-      await tx.apiToken.create({
-        data: {
-          userId: user.id,
-          name: tokenName,
-          tokenHash,
-          tokenPrefix,
-          tokenSuffix,
-          lastUsedAt: new Date(),
-        },
+      await tx.insert(apiTokens).values({
+        userId: user.id,
+        name: tokenName,
+        tokenHash,
+        tokenPrefix,
+        tokenSuffix,
+        lastUsedAt: new Date(),
       });
 
       return user;
     });
   } catch (error) {
-    if (isPrismaUniqueConstraintError(error)) {
+    if (isPgUniqueConstraintError(error)) {
       return NextResponse.json({ error: "User already exists" }, { status: 409 });
     }
     throw error;
   }
 
-  return NextResponse.json(
-    {
-      token: plaintext,
-      user: createdUser,
-    },
-    { status: 201 }
-  );
+  return NextResponse.json({ token: plaintext, user: createdUser }, { status: 201 });
 }

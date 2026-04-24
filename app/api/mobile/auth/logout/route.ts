@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { eq } from "drizzle-orm";
+import { db, apiTokens } from "@/lib/db";
 import { hashToken } from "@/lib/api-auth";
 
 function bearerFromAuthHeader(authHeader: string | null): string | null {
@@ -23,8 +24,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Authorization required" }, { status: 401 });
   }
   const tokenHash = hashToken(token);
-  const result = await prisma.apiToken.deleteMany({ where: { tokenHash } });
-  if (result.count === 0) {
+  const result = await db.delete(apiTokens).where(eq(apiTokens.tokenHash, tokenHash)).returning({ id: apiTokens.id });
+  if (result.length === 0) {
     return NextResponse.json({ error: "Invalid or revoked token" }, { status: 401 });
   }
   return NextResponse.json({ ok: true }, { status: 200 });

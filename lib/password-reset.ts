@@ -1,21 +1,20 @@
 import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma";
+import { eq } from "drizzle-orm";
+import { db, users, passwordResetTokens } from "@/lib/db";
 import { hashToken } from "@/lib/api-auth";
 import { sendPasswordResetEmail } from "@/lib/email";
 
 export async function requestPasswordResetByEmail(email: string): Promise<{ ok: true }> {
   const normalized = email.trim().toLowerCase();
-  const user = await prisma.user.findUnique({ where: { email: normalized } });
+  const [user] = await db.select({ id: users.id, email: users.email }).from(users).where(eq(users.email, normalized)).limit(1);
   if (!user) return { ok: true };
 
   const token = randomBytes(32).toString("hex");
   const tokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
-  await prisma.passwordResetToken.create({
-    data: { userId: user.id, tokenHash, expiresAt },
-  });
+  await db.insert(passwordResetTokens).values({ userId: user.id, tokenHash, expiresAt });
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const resetUrl = `${baseUrl}/reset-password?token=${token}`;
@@ -31,9 +30,11 @@ export async function resetPasswordWithToken(
   if (!token?.trim()) return { error: "Invalid or expired reset link" };
 
   const tokenHash = hashToken(token.trim());
-  const record = await prisma.passwordResetToken.findUnique({
-    where: { tokenHash },
-  });
+  const [record] = await db
+    .select()
+    .from(passwordResetTokens)
+    .where(eq(passwordResetTokens.tokenHash, tokenHash))
+    .limit(1);
 
   if (!record || record.expiresAt < new Date()) {
     return { error: "Invalid or expired reset link" };
@@ -41,13 +42,10 @@ export async function resetPasswordWithToken(
 
   const hashed = await bcrypt.hash(newPassword, 12);
 
-  await prisma.$transaction([
-    prisma.user.update({
-      where: { id: record.userId },
-      data: { password: hashed },
-    }),
-    prisma.passwordResetToken.delete({ where: { id: record.id } }),
-  ]);
+  await db.transaction(async (tx) => {
+    await tx.update(users).set({ password: hashed }).where(eq(users.id, record.userId));
+    await tx.delete(passwordResetTokens).where(eq(passwordResetTokens.id, record.id));
+  });
 
   return { ok: true };
 }
