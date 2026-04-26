@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { count, sql } from "drizzle-orm";
 import { UsersIcon, BookmarkIcon, FolderIcon } from "lucide-react";
 import { db, users, bookmarks, groups } from "@/lib/db";
@@ -51,6 +52,7 @@ async function getActivityTimeline(): Promise<{
   data7d: ActivityDataPoint[];
   data30d: ActivityDataPoint[];
 }> {
+  await connection();
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const result = await db.execute<{ day: string; count: string }>(
     sql`SELECT DATE_TRUNC('day', "createdAt")::date::text AS day, COUNT(*)::text AS count FROM "Bookmark" WHERE "createdAt" >= ${thirtyDaysAgo} GROUP BY day ORDER BY day ASC`
