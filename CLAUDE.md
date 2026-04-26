@@ -19,6 +19,8 @@ LinkArena is a full-stack bookmarking platform with two clients:
 | Auth | NextAuth (web sessions), API tokens (extension) |
 | AI | Vercel AI SDK + OpenRouter for auto-grouping |
 | Email | Resend |
+| State/URL | @tanstack/react-query, nuqs (URL search params) |
+| DnD | @dnd-kit (sortable groups) |
 | Extension Build | Vite + CRXJS |
 
 ## Common Commands
@@ -119,6 +121,10 @@ extension/              Chrome extension (Manifest V3)
 - `RESEND_API_KEY`, `RESEND_FROM_EMAIL` - Email
 - `OPENROUTER_API_KEY` - AI categorization
 - `ADMIN_EMAIL` - Admin access
+
+## Deployment
+
+Docker uses a multi-stage build (deps → builder → runner) targeting Next.js standalone output. The runner image copies `.next/standalone`, `.next/static`, and `public/`, then starts with `node server.js` on port 3000. Build migrations separately before deploying — the Docker image does not run `db:migrate` automatically.
 
 ## Troubleshooting
 
