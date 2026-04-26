@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
