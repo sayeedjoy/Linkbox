@@ -9,6 +9,7 @@ import {
   ActivityIcon,
   SmartphoneIcon,
   ArrowLeftIcon,
+  BookOpenIcon,
 } from "lucide-react";
 import {
   Sidebar,
@@ -45,6 +46,7 @@ const NAV = [
     items: [
       { label: "Settings", href: "/admin/settings", icon: Settings2Icon, exact: false },
       { label: "System Health", href: "/admin/system", icon: ActivityIcon, exact: false },
+      { label: "API Reference", href: "/admin/api-docs", icon: BookOpenIcon, exact: false },
     ],
   },
 ];
