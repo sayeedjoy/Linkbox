@@ -19,6 +19,16 @@ export const appConfig = pgTable("AppConfig", {
   publicSignupEnabled: boolean("publicSignupEnabled").notNull().default(true),
 });
 
+export const adsConfig = pgTable("AdsConfig", {
+  id: integer("id").primaryKey(),
+  adsEnabled: boolean("adsEnabled").notNull().default(false),
+  androidAppId: text("androidAppId"),
+  androidBannerId: text("androidBannerId"),
+  androidInterstitialId: text("androidInterstitialId"),
+  androidAppOpenId: text("androidAppOpenId"),
+  androidRewardedId: text("androidRewardedId"),
+});
+
 export const passwordResetTokens = pgTable("PasswordResetToken", {
   id: text("id").primaryKey().$defaultFn(() => createId()),
   userId: text("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
