@@ -29,7 +29,13 @@ export async function PUT(
   const categoryId = raw === undefined ? undefined : (raw === null || raw === "" ? null : (typeof raw === "string" ? raw : null));
   if (categoryId === undefined)
     return NextResponse.json({ error: "categoryId or groupId is required" }, { status: 400, headers: corsHeaders(request) });
-  const updated = await updateBookmarkCategoryForUser(userId, bookmarkId, categoryId);
+  let updated;
+  try {
+    updated = await updateBookmarkCategoryForUser(userId, bookmarkId, categoryId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to update bookmark category";
+    return NextResponse.json({ error: message }, { status: 400, headers: corsHeaders(request) });
+  }
   if (!updated)
     return NextResponse.json({ error: "Bookmark not found" }, { status: 404, headers: corsHeaders(request) });
   return NextResponse.json(

@@ -115,7 +115,7 @@ Rules:
   const validGroup = groupList.find((g) => g.id === result.groupId);
   if (!validGroup) return false;
 
-  await db.update(bookmarks).set({ groupId: result.groupId }).where(eq(bookmarks.id, bookmarkId));
+  await db.update(bookmarks).set({ groupId: result.groupId, updatedAt: new Date() }).where(eq(bookmarks.id, bookmarkId));
 
   publishUserEvent(userId, {
     type: "bookmark.category.updated",

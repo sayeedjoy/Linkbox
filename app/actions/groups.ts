@@ -103,7 +103,7 @@ export async function reorderGroups(orderedIds: string[]) {
 
 export async function deleteGroup(id: string) {
   const userId = await currentUserId();
-  await db.update(bookmarks).set({ groupId: null }).where(and(eq(bookmarks.groupId, id), eq(bookmarks.userId, userId)));
+  await db.update(bookmarks).set({ groupId: null, updatedAt: new Date() }).where(and(eq(bookmarks.groupId, id), eq(bookmarks.userId, userId)));
   await db.delete(groups).where(and(eq(groups.id, id), eq(groups.userId, userId)));
   revalidatePath("/");
   revalidateTag("groups", "max");
@@ -141,7 +141,7 @@ export async function updateGroupForUser(
 }
 
 export async function deleteGroupForUser(userId: string, id: string) {
-  await db.update(bookmarks).set({ groupId: null }).where(and(eq(bookmarks.groupId, id), eq(bookmarks.userId, userId)));
+  await db.update(bookmarks).set({ groupId: null, updatedAt: new Date() }).where(and(eq(bookmarks.groupId, id), eq(bookmarks.userId, userId)));
   await db.delete(groups).where(and(eq(groups.id, id), eq(groups.userId, userId)));
   revalidatePath("/");
   revalidateTag("groups", "max");

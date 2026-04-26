@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq, desc, asc, count } from "drizzle-orm";
+import { and, eq, desc, asc, count, lt, or } from "drizzle-orm";
 import { db, bookmarks, groups } from "@/lib/db";
 import { isExtensionOrigin, resolveApiUserId } from "@/lib/api-auth";
 
@@ -36,6 +36,16 @@ export async function GET(request: Request) {
     MAX_SYNC_LIMIT
   );
 
+  let cursorCreatedAt: Date | null = null;
+  if (cursor) {
+    const [cursorBookmark] = await db
+      .select({ createdAt: bookmarks.createdAt })
+      .from(bookmarks)
+      .where(and(eq(bookmarks.userId, userId), eq(bookmarks.id, cursor)))
+      .limit(1);
+    cursorCreatedAt = cursorBookmark?.createdAt ?? null;
+  }
+
   const bookmarkQuery = db
     .select({
       id: bookmarks.id,
@@ -51,7 +61,15 @@ export async function GET(request: Request) {
     })
     .from(bookmarks)
     .leftJoin(groups, eq(bookmarks.groupId, groups.id))
-    .where(eq(bookmarks.userId, userId))
+    .where(and(
+      eq(bookmarks.userId, userId),
+      cursor && cursorCreatedAt
+        ? or(
+            lt(bookmarks.createdAt, cursorCreatedAt),
+            and(eq(bookmarks.createdAt, cursorCreatedAt), lt(bookmarks.id, cursor))
+          )
+        : undefined
+    ))
     .orderBy(desc(bookmarks.createdAt), desc(bookmarks.id));
 
   if (shouldPaginate) bookmarkQuery.limit(resolvedLimit + 1);

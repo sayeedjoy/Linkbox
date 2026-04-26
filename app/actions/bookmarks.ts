@@ -48,6 +48,21 @@ function publishBookmarkEvent(
   publishUserEvent(userId, { type, entity: "bookmark", id, data });
 }
 
+function touchBookmark() {
+  return { updatedAt: new Date() };
+}
+
+async function resolveGroupIdForUser(userId: string, groupId: string | null | undefined) {
+  if (!groupId) return null;
+  const [group] = await db
+    .select({ id: groups.id })
+    .from(groups)
+    .where(and(eq(groups.id, groupId), eq(groups.userId, userId)))
+    .limit(1);
+  if (!group) throw new Error("Group not found");
+  return group.id;
+}
+
 function normalizeImportBookmarkItem(item: ImportBookmarkItem) {
   const url = typeof item.url === "string" ? item.url.trim() : "";
   const title = typeof item.title === "string" ? item.title : null;
@@ -204,14 +219,16 @@ export async function importBookmarks(items: ImportBookmarkItem[]) {
         const noteKey = `${noteTitle}::${groupId ?? "null"}`;
         const existingNoteId = existingNoteByKey.get(noteKey);
         if (existingNoteId) {
-          await tx.update(bookmarks).set({ groupId, title: noteTitle, description: item.description }).where(eq(bookmarks.id, existingNoteId));
+          await tx.update(bookmarks).set({ groupId, title: noteTitle, description: item.description, ...touchBookmark() }).where(eq(bookmarks.id, existingNoteId));
           updated += 1;
           updatedBookmarkEvents.push({ id: existingNoteId, groupId });
         } else {
+          const timestamp = item.createdAt ?? new Date();
           const [note] = await tx.insert(bookmarks).values({
             userId, groupId, url: null, title: noteTitle, description: item.description,
             faviconUrl: null, previewImageUrl: null,
-            ...(item.createdAt ? { createdAt: item.createdAt } : {}),
+            createdAt: timestamp,
+            updatedAt: timestamp,
           }).returning({ id: bookmarks.id });
           created += 1;
           existingNoteByKey.set(noteKey, note.id);
@@ -223,15 +240,17 @@ export async function importBookmarks(items: ImportBookmarkItem[]) {
       const existingKey = `${item.url}::${groupId ?? "null"}`;
       const existingId = existingByKey.get(existingKey);
       if (existingId) {
-        await tx.update(bookmarks).set({ groupId, title: item.title, description: item.description, faviconUrl: item.faviconUrl, previewImageUrl: item.previewImageUrl }).where(eq(bookmarks.id, existingId));
+        await tx.update(bookmarks).set({ groupId, title: item.title, description: item.description, faviconUrl: item.faviconUrl, previewImageUrl: item.previewImageUrl, ...touchBookmark() }).where(eq(bookmarks.id, existingId));
         updated += 1;
         updatedBookmarkEvents.push({ id: existingId, groupId });
         continue;
       }
+      const timestamp = item.createdAt ?? new Date();
       const [bookmark] = await tx.insert(bookmarks).values({
         userId, groupId, url: item.url, title: item.title, description: item.description,
         faviconUrl: item.faviconUrl, previewImageUrl: item.previewImageUrl,
-        ...(item.createdAt ? { createdAt: item.createdAt } : {}),
+        createdAt: timestamp,
+        updatedAt: timestamp,
       }).returning({ id: bookmarks.id });
       created += 1;
       existingByKey.set(existingKey, bookmark.id);
@@ -389,7 +408,7 @@ export async function createBookmark(
   const userId = await currentUserId();
   const normalized = url.trim();
   if (!normalized.startsWith("http")) throw new Error("Invalid URL");
-  const groupId = options?.groupId ?? null;
+  const groupId = await resolveGroupIdForUser(userId, options?.groupId);
   const unfurled = await unfurlUrl(normalized);
   const data = {
     title: options?.title ?? unfurled.title ?? null,
@@ -409,7 +428,7 @@ export async function createBookmark(
     .limit(1);
 
   if (existingRow) {
-    await db.update(bookmarks).set(data).where(eq(bookmarks.id, existingRow.id));
+    await db.update(bookmarks).set({ ...data, ...touchBookmark() }).where(eq(bookmarks.id, existingRow.id));
     const updated = await findBookmarkWithGroup(existingRow.id, userId);
     revalidateBookmarkData();
     publishBookmarkEvent(userId, "bookmark.updated", existingRow.id, { groupId: updated?.groupId ?? null });
@@ -418,7 +437,7 @@ export async function createBookmark(
 
   const [bookmark] = await db
     .insert(bookmarks)
-    .values({ userId, groupId, url: normalized, ...data })
+    .values({ userId, groupId, url: normalized, ...data, ...touchBookmark() })
     .returning();
   const withGroup = await findBookmarkWithGroup(bookmark.id, userId);
   revalidateBookmarkData();
@@ -444,7 +463,7 @@ export async function createBookmarkFromMetadataForUser(
 ) {
   const normalized = url.trim();
   if (!normalized.startsWith("http")) throw new Error("Invalid URL");
-  const gid = groupId ?? null;
+  const gid = await resolveGroupIdForUser(userId, groupId);
   const [existingRow] = await db
     .select({ id: bookmarks.id })
     .from(bookmarks)
@@ -461,7 +480,7 @@ export async function createBookmarkFromMetadataForUser(
     previewImageUrl: metadata.previewImageUrl ?? null,
   };
   if (existingRow) {
-    await db.update(bookmarks).set(data).where(eq(bookmarks.id, existingRow.id));
+    await db.update(bookmarks).set({ ...data, ...touchBookmark() }).where(eq(bookmarks.id, existingRow.id));
     const updated = await findBookmarkWithGroup(existingRow.id, userId);
     revalidateBookmarkData();
     publishBookmarkEvent(userId, "bookmark.updated", existingRow.id, { groupId: updated?.groupId ?? null });
@@ -469,7 +488,7 @@ export async function createBookmarkFromMetadataForUser(
   }
   const [bookmark] = await db
     .insert(bookmarks)
-    .values({ userId, groupId: gid, url: normalized, ...data })
+    .values({ userId, groupId: gid, url: normalized, ...data, ...touchBookmark() })
     .returning();
   const withGroup = await findBookmarkWithGroup(bookmark.id, userId);
   revalidateBookmarkData();
@@ -498,13 +517,14 @@ export async function createBookmarkFromMetadata(
 
 export async function createNote(content: string, groupId?: string | null) {
   const userId = await currentUserId();
+  const resolvedGroupId = await resolveGroupIdForUser(userId, groupId);
   const trimmed = content.trim();
   if (!trimmed) throw new Error("Empty note");
   const lines = trimmed.split(/\r?\n/);
   const title = lines[0]?.slice(0, 500) ?? "Note";
   const [bookmark] = await db
     .insert(bookmarks)
-    .values({ userId, groupId: groupId ?? null, url: null, title, description: trimmed, faviconUrl: null, previewImageUrl: null })
+    .values({ userId, groupId: resolvedGroupId, url: null, title, description: trimmed, faviconUrl: null, previewImageUrl: null, ...touchBookmark() })
     .returning();
   const withGroup = await findBookmarkWithGroup(bookmark.id, userId);
   revalidateBookmarkData();
@@ -531,8 +551,8 @@ export async function updateBookmark(
   if (data.title !== undefined) updateData.title = data.title;
   if (data.description !== undefined) updateData.description = data.description;
   if (data.url !== undefined) updateData.url = data.url === null || data.url === "" ? null : data.url.trim();
-  if (data.groupId !== undefined) updateData.groupId = data.groupId;
-  await db.update(bookmarks).set(updateData).where(and(eq(bookmarks.id, id), eq(bookmarks.userId, userId)));
+  if (data.groupId !== undefined) updateData.groupId = await resolveGroupIdForUser(userId, data.groupId);
+  await db.update(bookmarks).set({ ...updateData, ...touchBookmark() }).where(and(eq(bookmarks.id, id), eq(bookmarks.userId, userId)));
   revalidateBookmarkData();
   publishBookmarkEvent(userId, "bookmark.updated", id, { groupId: data.groupId ?? null });
   return { ok: true };
@@ -552,10 +572,12 @@ export async function updateBookmarkCategoryForUser(
   categoryId: string | null
 ) {
   const groupId = categoryId === "" ? null : categoryId;
-  await db.update(bookmarks).set({ groupId }).where(and(eq(bookmarks.id, bookmarkId), eq(bookmarks.userId, userId)));
+  const resolvedGroupId = await resolveGroupIdForUser(userId, groupId);
+  const [updatedRow] = await db.update(bookmarks).set({ groupId: resolvedGroupId, ...touchBookmark() }).where(and(eq(bookmarks.id, bookmarkId), eq(bookmarks.userId, userId))).returning({ id: bookmarks.id });
+  if (!updatedRow) return null;
   revalidateBookmarkData();
   const updated = await findBookmarkWithGroup(bookmarkId, userId);
-  publishBookmarkEvent(userId, "bookmark.category.updated", bookmarkId, { groupId: groupId ?? null });
+  publishBookmarkEvent(userId, "bookmark.category.updated", bookmarkId, { groupId: resolvedGroupId });
   return updated;
 }
 
@@ -580,6 +602,7 @@ export async function refreshBookmarkForUser(
     description: unfurled.description ?? bookmark.description,
     faviconUrl: unfurled.faviconUrl ?? bookmark.faviconUrl,
     previewImageUrl: unfurled.previewImageUrl ?? bookmark.previewImageUrl,
+    ...touchBookmark(),
   }).where(eq(bookmarks.id, id));
   revalidateBookmarkData();
   publishBookmarkEvent(userId, "bookmark.updated", id, { groupId: bookmark.groupId ?? null });

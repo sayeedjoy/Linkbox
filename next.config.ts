@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["*.trycloudflare.com"],
   skipTrailingSlashRedirect: true,
   cacheComponents: true,
-  serverExternalPackages: ["bcryptjs", "pg", "@prisma/client"],
+  serverExternalPackages: ["bcryptjs", "pg"],
   experimental: {
     optimizePackageImports: ["lucide-react"],
   },

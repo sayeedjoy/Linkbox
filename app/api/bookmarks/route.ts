@@ -48,10 +48,25 @@ export async function PUT(request: Request) {
   if (!existing)
     return NextResponse.json({ error: "Bookmark not found" }, { status: 404, headers: corsHeaders(request) });
 
-  const updateData: { title?: string | null; description?: string | null; groupId?: string | null; faviconUrl?: string | null } = {};
+  const updateData: { title?: string | null; description?: string | null; groupId?: string | null; faviconUrl?: string | null; updatedAt: Date } = { updatedAt: new Date() };
   if (body.title !== undefined) updateData.title = typeof body.title === "string" ? body.title : null;
   if (body.description !== undefined) updateData.description = typeof body.description === "string" ? body.description : null;
-  if (body.groupId !== undefined) updateData.groupId = body.groupId === null || body.groupId === undefined ? null : (typeof body.groupId === "string" ? body.groupId : null);
+  if (body.groupId !== undefined) {
+    if (body.groupId === null) {
+      updateData.groupId = null;
+    } else if (typeof body.groupId === "string") {
+      const [group] = await db
+        .select({ id: groups.id })
+        .from(groups)
+        .where(and(eq(groups.id, body.groupId), eq(groups.userId, userId)))
+        .limit(1);
+      if (!group)
+        return NextResponse.json({ error: "Group not found" }, { status: 400, headers: corsHeaders(request) });
+      updateData.groupId = group.id;
+    } else {
+      updateData.groupId = null;
+    }
+  }
   if (body.faviconUrl !== undefined) updateData.faviconUrl = body.faviconUrl === null || body.faviconUrl === undefined ? null : (typeof body.faviconUrl === "string" && body.faviconUrl.trim().startsWith("http") ? body.faviconUrl.trim() : null);
 
   await db.update(bookmarks).set(updateData).where(eq(bookmarks.id, existing.id));
