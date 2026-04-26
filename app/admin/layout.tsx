@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { requireAdminSession } from "@/lib/admin";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: { template: "%s · Admin", default: "Admin" },
   robots: { index: false, follow: false },
