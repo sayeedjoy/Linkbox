@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { eq, count, or, ilike, desc, asc } from "drizzle-orm";
 import { db, users, bookmarks } from "@/lib/db";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -104,6 +105,7 @@ async function UsersData({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  await connection();
   const [session, params] = await Promise.all([
     requireAdminSession(),
     searchParams,

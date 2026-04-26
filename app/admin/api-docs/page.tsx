@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from "next";
+import { connection } from "next/server";
 import { BookmarkIcon, SmartphoneIcon, RadioIcon, KeyRoundIcon, FileJsonIcon } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { EndpointCard } from "@/components/admin/api-docs/endpoint-card";
@@ -28,7 +29,9 @@ function SectionHeader({
   );
 }
 
-export default function AdminApiDocsPage() {
+export default async function AdminApiDocsPage() {
+  await connection();
+
   return (
     <div className="flex flex-col">
       <AdminPageHeader

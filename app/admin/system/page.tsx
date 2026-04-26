@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { SystemHealthCard } from "@/components/admin/system-health-card";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
 export const metadata: Metadata = { title: "System Health" };
 
-export default function AdminSystemPage() {
+export default async function AdminSystemPage() {
+  await connection();
+
   return (
     <div className="flex flex-col">
       <AdminPageHeader
