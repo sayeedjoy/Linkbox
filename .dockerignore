@@ -4,6 +4,7 @@ node_modules
 .env*
 *.md
 extension
+drizzle
 .cursor
 .agents
 agent-transcripts
