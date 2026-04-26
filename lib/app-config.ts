@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import { connection } from "next/server";
 import { db } from "@/lib/db";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type * as schema from "@/db/schema";
@@ -39,6 +40,7 @@ async function queryAppConfig(client: AnyDb): Promise<AppConfig> {
 }
 
 export async function getAppConfig(): Promise<AppConfig> {
+  await connection();
   try {
     return await queryAppConfig(db);
   } catch (e) {

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { connection } from "next/server";
 import { isPublicSignupEnabled } from "@/lib/app-config";
 import { PublicSignupCard } from "@/components/admin/public-signup-card";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
@@ -15,7 +14,6 @@ import {
 export const metadata: Metadata = { title: "Settings" };
 
 async function SettingsData() {
-  await connection();
   const publicSignupEnabled = await isPublicSignupEnabled();
 
   return (

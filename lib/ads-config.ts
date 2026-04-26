@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import { connection } from "next/server";
 import { db } from "@/lib/db";
 
 export type AdsConfig = {
@@ -38,6 +39,7 @@ function isAdsConfigMissingError(e: unknown): boolean {
 }
 
 export async function getAdsConfig(): Promise<AdsConfig> {
+  await connection();
   try {
     const rows = await db.execute<AdsConfig>(
       sql`SELECT "id", "adsEnabled", "androidAppId", "androidBannerId", "androidInterstitialId", "androidAppOpenId", "androidRewardedId" FROM "AdsConfig" WHERE "id" = ${ADS_CONFIG_ID} LIMIT 1`
