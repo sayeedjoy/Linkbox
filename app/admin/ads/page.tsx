@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { getAdsConfig } from "@/lib/ads-config";
 import { AdsConfigCard } from "@/components/admin/ads-config-card";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
@@ -7,6 +8,7 @@ import { AdminPageHeader } from "@/components/admin/admin-page-header";
 export const metadata: Metadata = { title: "Ads" };
 
 async function AdsData() {
+  await connection();
   const config = await getAdsConfig();
   return (
     <div className="max-w-lg">
