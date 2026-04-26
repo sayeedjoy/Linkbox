@@ -23,6 +23,7 @@ const statColors = [
 ];
 
 async function getAdminStats() {
+  await connection();
   const [[{ totalUsers }], [{ totalBookmarks }], [{ totalGroups }]] =
     await Promise.all([
       db.select({ totalUsers: count() }).from(users),
