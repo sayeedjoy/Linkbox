@@ -19,12 +19,12 @@ import {
   type UserDetails,
 } from "@/app/actions/admin-users";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,7 +46,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export interface UserDetailSheetProps {
+export interface UserDetailDialogProps {
   userId: string | null;
   userEmail: string | null;
   userName: string | null;
@@ -119,13 +119,13 @@ const BAN_OPTIONS = [
   { value: "30d", label: "30 days" },
 ];
 
-export function UserDetailSheet({
+export function UserDetailDialog({
   userId,
   userEmail,
   userName,
   isCurrentAdmin,
   onClose,
-}: UserDetailSheetProps) {
+}: UserDetailDialogProps) {
   const [details, setDetails] = useState<UserDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -200,27 +200,27 @@ export function UserDetailSheet({
 
   return (
     <>
-      <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <SheetContent className="flex w-full flex-col overflow-y-auto sm:max-w-sm">
-          <SheetHeader className="pb-4">
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="flex max-h-[min(720px,calc(100vh-2rem))] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+          <DialogHeader className="px-5 pb-4 pt-5">
             <div className="flex items-center gap-3">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-sm font-semibold text-muted-foreground">
                 {initialsFor(userName, userEmail)}
               </div>
               <div className="min-w-0">
-                <SheetTitle className="truncate text-base">
+                <DialogTitle className="truncate text-base">
                   {userName ?? "Unnamed"}
-                </SheetTitle>
-                <SheetDescription className="truncate text-xs">
+                </DialogTitle>
+                <DialogDescription className="truncate text-xs">
                   {userEmail}
-                </SheetDescription>
+                </DialogDescription>
               </div>
             </div>
-          </SheetHeader>
+          </DialogHeader>
 
           <Separator />
 
-          <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
+          <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-4">
             {isLoading && (
               <div className="space-y-2">
                 {Array.from({ length: 5 }).map((_, i) => (
@@ -297,11 +297,11 @@ export function UserDetailSheet({
             )}
           </div>
 
-          {/* Ban / Unban controls — shown only for non-admin users once data is loaded */}
+          {/* Ban / Unban controls shown only for non-admin users once data is loaded. */}
           {details && !isLoading && !isCurrentAdmin && (
             <>
               <Separator />
-              <div className="space-y-2 px-4 pb-4 pt-3">
+              <div className="space-y-2 px-5 pb-5 pt-3">
                 <p className="text-xs font-medium text-muted-foreground">
                   Account Suspension
                 </p>
@@ -345,8 +345,8 @@ export function UserDetailSheet({
               </div>
             </>
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={showBanConfirm} onOpenChange={setShowBanConfirm}>
         <AlertDialogContent>

@@ -21,6 +21,8 @@ import {
   DownloadIcon,
   InfoIcon,
   ShieldOffIcon,
+  SlidersHorizontalIcon,
+  UserRoundCheckIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteUserAsAdmin } from "@/app/actions/admin-users";
@@ -44,13 +46,32 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { InviteUserDialog } from "@/components/admin/invite-user-dialog";
-import { UserDetailSheet } from "@/components/admin/user-detail-sheet";
+import { UserDetailDialog } from "@/components/admin/user-detail-sheet";
+
+type UserStatusFilter = "all" | "active" | "banned" | "admin";
+type UserSortOption = "bookmarks" | "newest" | "oldest" | "name";
 
 export type AdminUserRow = {
   id: string;
   name: string | null;
   email: string;
+  createdAt: string;
   bookmarkCount: number;
   isCurrentAdmin: boolean;
   isBanned: boolean;
@@ -59,18 +80,46 @@ export type AdminUserRow = {
 type AdminUsersCardProps = {
   users: AdminUserRow[];
   query: string;
+  status: UserStatusFilter;
+  sort: UserSortOption;
   page: number;
   totalPages: number;
   totalUsers: number;
 };
 
-function buildPageHref(page: number, query: string) {
+const statusLabels: Record<UserStatusFilter, string> = {
+  all: "All users",
+  active: "Active",
+  banned: "Banned",
+  admin: "Current admin",
+};
+
+const sortLabels: Record<UserSortOption, string> = {
+  bookmarks: "Most bookmarks",
+  newest: "Newest first",
+  oldest: "Oldest first",
+  name: "Name A-Z",
+};
+
+function buildUsersHref({
+  page,
+  query,
+  status,
+  sort,
+}: {
+  page: number;
+  query: string;
+  status: UserStatusFilter;
+  sort: UserSortOption;
+}) {
   const params = new URLSearchParams();
   if (query) params.set("q", query);
+  if (status !== "all") params.set("status", status);
+  if (sort !== "bookmarks") params.set("sort", sort);
   if (page > 1) params.set("page", String(page));
 
   const search = params.toString();
-  return search ? `/admin?${search}` : "/admin";
+  return search ? `/admin/users?${search}` : "/admin/users";
 }
 
 function initialsFor(name: string | null, email: string) {
@@ -83,9 +132,19 @@ function initialsFor(name: string | null, email: string) {
   return source.slice(0, 2).toUpperCase();
 }
 
+function formatJoinedDate(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
 export function AdminUsersCard({
   users,
   query,
+  status,
+  sort,
   page,
   totalPages,
   totalUsers,
@@ -129,6 +188,31 @@ export function AdminUsersCard({
     return () => window.clearTimeout(timeoutId);
   }, [deferredSearchValue, pathname, router, searchParams]);
 
+  function updateFilter(key: "status" | "sort", value: string) {
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (
+      (key === "status" && value === "all") ||
+      (key === "sort" && value === "bookmarks")
+    ) {
+      params.delete(key);
+    } else {
+      params.set(key, value);
+    }
+
+    params.delete("page");
+    const nextSearch = params.toString();
+    router.replace(nextSearch ? `${pathname}?${nextSearch}` : pathname, {
+      scroll: false,
+    });
+  }
+
+  function clearFilters() {
+    setSearchValue("");
+    router.replace(pathname, { scroll: false });
+  }
+
+  const hasFilters = query !== "" || status !== "all" || sort !== "bookmarks";
   const summary =
     totalUsers === 0
       ? query
@@ -155,13 +239,13 @@ export function AdminUsersCard({
   return (
     <>
       <Card>
-        <CardHeader className="space-y-3 border-b border-border pb-4">
+        <CardHeader className="space-y-4 border-b border-border pb-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-0.5">
               <CardTitle>User Accounts</CardTitle>
               <CardDescription>
-                Search, review, and manage registered accounts. The current
-                admin account is protected.
+                Search, filter, review, and manage registered accounts. The
+                current admin account is protected.
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -181,49 +265,94 @@ export function AdminUsersCard({
             </div>
           </div>
 
-          {/* Search bar */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                value={searchValue}
-                onChange={(event) => setSearchValue(event.target.value)}
-                placeholder="Search by name or email..."
-                className="pl-9"
-                aria-label="Search users by name or email"
-              />
+          <div className="rounded-xl border border-border bg-muted/20 p-3">
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+              <div className="relative min-w-0 flex-1">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  value={searchValue}
+                  onChange={(event) => setSearchValue(event.target.value)}
+                  placeholder="Search by name or email..."
+                  className="bg-background pl-9"
+                  aria-label="Search users by name or email"
+                />
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Select
+                  value={status}
+                  onValueChange={(value) => updateFilter("status", value)}
+                >
+                  <SelectTrigger className="w-full bg-background sm:w-[160px]">
+                    <SelectValue aria-label="Status filter" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(statusLabels).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={sort}
+                  onValueChange={(value) => updateFilter("sort", value)}
+                >
+                  <SelectTrigger className="w-full bg-background sm:w-[170px]">
+                    <SelectValue aria-label="Sort users" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(sortLabels).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {hasFilters && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearFilters}
+                    className="justify-start"
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
             </div>
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <ShieldCheck className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-              {summary}
-            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <SlidersHorizontalIcon className="size-3.5" />
+                {summary}
+              </span>
+              <Badge variant="outline" className="bg-background">
+                {statusLabels[status]}
+              </Badge>
+              <Badge variant="outline" className="bg-background">
+                {sortLabels[sort]}
+              </Badge>
+            </div>
           </div>
         </CardHeader>
 
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th className="px-4 py-2.5 text-xs font-medium text-muted-foreground">
-                    User
-                  </th>
-                  <th className="px-4 py-2.5 text-xs font-medium text-muted-foreground">
-                    Email
-                  </th>
-                  <th className="px-4 py-2.5 text-xs font-medium text-muted-foreground">
-                    Bookmarks
-                  </th>
-                  <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+          <Table className="min-w-[780px]">
+            <TableHeader>
+              <TableRow className="bg-muted/30 hover:bg-muted/30">
+                <TableHead>User</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Bookmarks</TableHead>
+                <TableHead>Joined</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
                 {users.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-5 py-10">
+                  <TableRow>
+                    <TableCell colSpan={6} className="px-5 py-12">
                       <div className="mx-auto max-w-sm text-center">
                         <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-xl bg-muted">
                           <Search className="size-5 text-muted-foreground" />
@@ -237,17 +366,17 @@ export function AdminUsersCard({
                             : "User accounts will appear here once created."}
                         </p>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   users.map((user, index) => (
-                    <tr
+                    <TableRow
                       key={user.id}
-                      className="border-b border-border/50 transition-colors last:border-0 hover:bg-muted/50"
+                      className="border-border/60"
                     >
-                      <td className="px-4 py-3">
+                      <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground">
+                          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-xs font-semibold text-muted-foreground shadow-sm">
                             {initialsFor(user.name, user.email)}
                           </div>
                           <div className="min-w-0">
@@ -264,13 +393,37 @@ export function AdminUsersCard({
                             </p>
                           </div>
                         </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="font-mono text-xs text-foreground/80">
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-foreground/80">
                           {user.email}
                         </span>
-                      </td>
-                      <td className="px-4 py-3">
+                      </TableCell>
+                      <TableCell>
+                        {user.isCurrentAdmin ? (
+                          <Badge
+                            variant="outline"
+                            className="gap-1 border-emerald-600/20 bg-emerald-500/10 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-400"
+                          >
+                            <ShieldCheck className="size-3" />
+                            Admin
+                          </Badge>
+                        ) : user.isBanned ? (
+                          <Badge
+                            variant="outline"
+                            className="gap-1 border-amber-600/20 bg-amber-500/10 text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-400"
+                          >
+                            <ShieldOffIcon className="size-3" />
+                            Banned
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="gap-1">
+                            <UserRoundCheckIcon className="size-3" />
+                            Active
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
                         <span className="inline-flex items-baseline gap-1 tabular-nums">
                           <span className="text-sm font-semibold text-foreground">
                             {user.bookmarkCount}
@@ -279,8 +432,11 @@ export function AdminUsersCard({
                             saved
                           </span>
                         </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {formatJoinedDate(user.createdAt)}
+                      </TableCell>
+                      <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button
                             type="button"
@@ -315,15 +471,13 @@ export function AdminUsersCard({
                             </Button>
                           )}
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))
                 )}
-              </tbody>
-            </table>
-          </div>
+            </TableBody>
+          </Table>
 
-          {/* Pagination footer */}
           <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-muted-foreground">
               Page{" "}
@@ -343,7 +497,14 @@ export function AdminUsersCard({
                   asChild
                   className="gap-1"
                 >
-                  <Link href={buildPageHref(page - 1, query)}>
+                  <Link
+                    href={buildUsersHref({
+                      page: page - 1,
+                      query,
+                      status,
+                      sort,
+                    })}
+                  >
                     <ChevronLeft className="size-3.5" />
                     Previous
                   </Link>
@@ -366,7 +527,14 @@ export function AdminUsersCard({
                   asChild
                   className="gap-1"
                 >
-                  <Link href={buildPageHref(page + 1, query)}>
+                  <Link
+                    href={buildUsersHref({
+                      page: page + 1,
+                      query,
+                      status,
+                      sort,
+                    })}
+                  >
                     Next
                     <ChevronRight className="size-3.5" />
                   </Link>
@@ -417,7 +585,7 @@ export function AdminUsersCard({
         </AlertDialogContent>
       </AlertDialog>
 
-      <UserDetailSheet
+      <UserDetailDialog
         userId={detailUser?.id ?? null}
         userEmail={detailUser?.email ?? null}
         userName={detailUser?.name ?? null}

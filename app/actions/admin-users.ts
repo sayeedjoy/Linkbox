@@ -28,6 +28,7 @@ export async function deleteUserAsAdmin(
     if (result.length === 0) return { success: false, error: "User not found." };
 
     revalidatePath("/admin");
+    revalidatePath("/admin/users");
     revalidateTag("admin-stats", "max");
 
     return { success: true };
@@ -74,6 +75,7 @@ export async function inviteUserAsAdmin(
     }
 
     revalidatePath("/admin");
+    revalidatePath("/admin/users");
     revalidateTag("admin-stats", "max");
 
     return { success: true, resetUrl };
@@ -163,6 +165,7 @@ export async function banUserAsAdmin(
     if (result.length === 0) return { success: false, error: "User not found." };
 
     revalidatePath("/admin");
+    revalidatePath("/admin/users");
 
     return { success: true };
   } catch (error) {
@@ -181,6 +184,7 @@ export async function unbanUserAsAdmin(
     if (result.length === 0) return { success: false, error: "User not found." };
 
     revalidatePath("/admin");
+    revalidatePath("/admin/users");
 
     return { success: true };
   } catch (error) {

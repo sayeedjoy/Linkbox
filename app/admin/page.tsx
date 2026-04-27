@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
+import { redirect } from "next/navigation";
 import { count, sql } from "drizzle-orm";
-import { UsersIcon, BookmarkIcon, FolderIcon } from "lucide-react";
+import { UsersIcon, BookmarkIcon, FolderIcon, RatioIcon } from "lucide-react";
 import { db, users, bookmarks, groups } from "@/lib/db";
 import {
   Card,
@@ -12,15 +13,23 @@ import {
 } from "@/components/ui/card";
 import { ActivityChart, type ActivityDataPoint } from "@/components/admin/activity-chart";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { TopDomainsCard } from "@/components/admin/top-domains-card";
 
 export const metadata: Metadata = { title: "Overview" };
 
-const statIcons = [UsersIcon, BookmarkIcon, FolderIcon];
+const statIcons = [UsersIcon, BookmarkIcon, FolderIcon, RatioIcon];
 const statColors = [
   "bg-blue-500/10 text-blue-600 dark:text-blue-400",
   "bg-violet-500/10 text-violet-600 dark:text-violet-400",
   "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
 ];
+
+function firstParam(value: string | string[] | undefined): string | null {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value) && value.length > 0) return value[0] ?? null;
+  return null;
+}
 
 async function getAdminStats() {
   await connection();
@@ -39,8 +48,12 @@ async function getAdminStats() {
       { label: "Total Users", value: totalUsers, note: "Registered accounts" },
       { label: "Bookmarks", value: totalBookmarks, note: "Across all users" },
       { label: "Groups", value: totalGroups, note: "Organizational folders" },
+      {
+        label: "Avg/User",
+        value: avgBookmarks,
+        note: "Bookmarks per account",
+      },
     ],
-    avgBookmarks,
   };
 }
 
@@ -90,44 +103,67 @@ function StatsSkeleton() {
 }
 
 async function OverviewData() {
-  const [{ stats, avgBookmarks }, activityData] = await Promise.all([
+  const [{ stats }, activityData] = await Promise.all([
     getAdminStats(),
     getActivityTimeline(),
   ]);
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-      {stats.map((stat, index) => {
-        const Icon = statIcons[index] ?? UsersIcon;
-        const colorClass = statColors[index] ?? statColors[0];
-        return (
-          <Card key={stat.label} size="sm">
-            <CardHeader className="flex-row items-center justify-between space-y-0 pb-0">
-              <CardDescription className="text-xs font-medium uppercase tracking-widest">
-                {stat.label}
-              </CardDescription>
-              <div
-                className={`flex size-7 items-center justify-center rounded-md ${colorClass}`}
-              >
-                <Icon className="size-3.5" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xl font-semibold tabular-nums tracking-tight text-foreground sm:text-2xl">
-                {stat.value.toLocaleString()}
-              </p>
-              <p className="text-xs text-muted-foreground">{stat.note}</p>
-            </CardContent>
-          </Card>
-        );
-      })}
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {stats.map((stat, index) => {
+          const Icon = statIcons[index] ?? UsersIcon;
+          const colorClass = statColors[index] ?? statColors[0];
+          return (
+            <Card key={stat.label} size="sm">
+              <CardHeader className="flex-row items-center justify-between space-y-0 pb-0">
+                <CardDescription className="text-xs font-medium uppercase tracking-widest">
+                  {stat.label}
+                </CardDescription>
+                <div
+                  className={`flex size-7 items-center justify-center rounded-md ${colorClass}`}
+                >
+                  <Icon className="size-3.5" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xl font-semibold tabular-nums tracking-tight text-foreground sm:text-2xl">
+                  {typeof stat.value === "number"
+                    ? stat.value.toLocaleString()
+                    : stat.value}
+                </p>
+                <p className="text-xs text-muted-foreground">{stat.note}</p>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
 
-      <ActivityChart data7d={activityData.data7d} data30d={activityData.data30d} />
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <ActivityChart data7d={activityData.data7d} data30d={activityData.data30d} />
+        <TopDomainsCard />
+      </div>
     </div>
   );
 }
 
-export default function AdminOverviewPage() {
+export default async function AdminOverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const legacyUserParams = new URLSearchParams();
+
+  for (const key of ["q", "page", "status", "sort"]) {
+    const value = firstParam(params[key]);
+    if (value) legacyUserParams.set(key, value);
+  }
+
+  if (legacyUserParams.size > 0) {
+    redirect(`/admin/users?${legacyUserParams.toString()}`);
+  }
+
   return (
     <div className="flex flex-col">
       <AdminPageHeader title="Overview" />
