@@ -1,9 +1,21 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { and, asc, count, desc, eq, gt, ilike, isNull, lte, or } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  ilike,
+  isNull,
+  lte,
+  or,
+} from "drizzle-orm";
 import { db, users, bookmarks } from "@/lib/db";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   AdminUsersCard,
   type AdminUserRow,
@@ -14,11 +26,13 @@ import { requireAdminSession } from "@/lib/admin";
 export const metadata: Metadata = { title: "Users" };
 
 const USERS_PER_PAGE = 20;
-const STATUS_FILTERS = ["all", "active", "banned", "admin"] as const;
-const SORT_OPTIONS = ["bookmarks", "newest", "oldest", "name"] as const;
+const STATUS_FILTERS = ["all", "active", "banned"] as const;
+const SORT_BY_COLUMNS = ["name", "email", "bookmarks", "joined"] as const;
+const SORT_DIRS = ["asc", "desc"] as const;
 
 type UserStatusFilter = (typeof STATUS_FILTERS)[number];
-type UserSortOption = (typeof SORT_OPTIONS)[number];
+type SortByColumn = (typeof SORT_BY_COLUMNS)[number];
+type SortDir = (typeof SORT_DIRS)[number];
 
 function firstParam(value: string | string[] | undefined): string | null {
   if (typeof value === "string") return value;
@@ -37,16 +51,21 @@ function parseStatus(value: string | null): UserStatusFilter {
     : "all";
 }
 
-function parseSort(value: string | null): UserSortOption {
-  return SORT_OPTIONS.includes(value as UserSortOption)
-    ? (value as UserSortOption)
-    : "bookmarks";
+function parseSortBy(value: string | null): SortByColumn | null {
+  return SORT_BY_COLUMNS.includes(value as SortByColumn)
+    ? (value as SortByColumn)
+    : null;
+}
+
+function parseSortDir(value: string | null): SortDir | null {
+  return SORT_DIRS.includes(value as SortDir) ? (value as SortDir) : null;
 }
 
 async function getAdminUsers(
   query: string,
   status: UserStatusFilter,
-  sort: UserSortOption,
+  sortBy: SortByColumn | null,
+  sortDir: SortDir | null,
   requestedPage: number,
   currentAdminId: string
 ): Promise<{
@@ -54,6 +73,12 @@ async function getAdminUsers(
   totalUsers: number;
   totalPages: number;
   page: number;
+  stats: {
+    totalUsers: number;
+    activeCount: number;
+    bannedCount: number;
+    totalBookmarks: number;
+  };
 }> {
   const now = new Date();
   const searchClause = query
@@ -64,24 +89,56 @@ async function getAdminUsers(
       ? gt(users.bannedUntil, now)
       : status === "active"
         ? or(isNull(users.bannedUntil), lte(users.bannedUntil, now))
-        : status === "admin"
-          ? eq(users.id, currentAdminId)
-          : undefined;
+        : undefined;
   const whereClause = and(searchClause, statusClause);
-  const bookmarkCount = count(bookmarks.id);
-  const orderBy =
-    sort === "newest"
-      ? [desc(users.createdAt), asc(users.email)]
-      : sort === "oldest"
-        ? [asc(users.createdAt), asc(users.email)]
-        : sort === "name"
-          ? [asc(users.name), asc(users.email)]
-          : [desc(bookmarkCount), asc(users.email)];
 
-  const [{ totalUsers: totalUsersCount }] = await db
-    .select({ totalUsers: count() })
-    .from(users)
-    .where(whereClause);
+  const activeClause = or(isNull(users.bannedUntil), lte(users.bannedUntil, now));
+  const bannedClause = gt(users.bannedUntil, now);
+
+  const bookmarkCount = count(bookmarks.id);
+
+  const effectiveSortBy = sortBy ?? "joined";
+  const effectiveSortDir = sortDir ?? "desc";
+
+  const orderBy =
+    effectiveSortBy === "name"
+      ? effectiveSortDir === "asc"
+        ? [asc(users.name), asc(users.email)]
+        : [desc(users.name), asc(users.email)]
+      : effectiveSortBy === "email"
+        ? effectiveSortDir === "asc"
+          ? [asc(users.email), asc(users.name)]
+          : [desc(users.email), asc(users.name)]
+        : effectiveSortBy === "bookmarks"
+          ? effectiveSortDir === "asc"
+            ? [asc(bookmarkCount), asc(users.email)]
+            : [desc(bookmarkCount), asc(users.email)]
+          : effectiveSortDir === "asc"
+            ? [asc(users.createdAt), asc(users.email)]
+            : [desc(users.createdAt), asc(users.email)];
+
+  const [
+    [{ totalUsers: totalUsersCount }],
+    [{ totalBookmarks }],
+    [{ activeCount }],
+    [{ bannedCount }],
+  ] = await Promise.all([
+    db.select({ totalUsers: count() }).from(users).where(whereClause),
+    db
+      .select({ totalBookmarks: count(bookmarks.id) })
+      .from(users)
+      .leftJoin(bookmarks, eq(bookmarks.userId, users.id))
+      .where(whereClause),
+    db
+      .select({ activeCount: count() })
+      .from(users)
+      .where(and(searchClause, activeClause)),
+    db
+      .select({ bannedCount: count() })
+      .from(users)
+      .where(and(searchClause, bannedClause)),
+  ]);
+
   const totalPages = Math.max(1, Math.ceil(totalUsersCount / USERS_PER_PAGE));
   const page = Math.min(requestedPage, totalPages);
   const skip = (page - 1) * USERS_PER_PAGE;
@@ -116,20 +173,38 @@ async function getAdminUsers(
     totalUsers: totalUsersCount,
     totalPages,
     page,
+    stats: {
+      totalUsers: totalUsersCount,
+      activeCount,
+      bannedCount,
+      totalBookmarks: Number(totalBookmarks),
+    },
   };
 }
 
 function UsersSkeleton() {
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Card key={i} size="sm">
+            <CardContent className="flex flex-col gap-2 py-3">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-7 w-16" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
       <Card>
-        <CardHeader>
-          <div className="h-5 w-32 animate-pulse rounded bg-muted" />
-          <div className="h-3 w-64 animate-pulse rounded bg-muted" />
+        <CardHeader className="gap-4 border-b border-border pb-4">
+          <div className="flex flex-col gap-0.5">
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-3 w-64" />
+          </div>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="flex flex-col gap-3 p-0">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-12 w-full animate-pulse rounded-lg bg-muted" />
+            <Skeleton key={i} className="h-12 w-full rounded-lg" />
           ))}
         </CardContent>
       </Card>
@@ -150,26 +225,30 @@ async function UsersData({
 
   const query = (firstParam(params.q) ?? "").trim();
   const status = parseStatus(firstParam(params.status));
-  const sort = parseSort(firstParam(params.sort));
+  const sortBy = parseSortBy(firstParam(params.sortBy));
+  const sortDir = parseSortDir(firstParam(params.sortDir));
   const requestedPage = parsePage(firstParam(params.page));
   const userData = await getAdminUsers(
     query,
     status,
-    sort,
+    sortBy,
+    sortDir,
     requestedPage,
     session.user.id
   );
 
   return (
-    <div>
+    <div className="flex flex-col gap-4">
       <AdminUsersCard
         users={userData.users}
         query={query}
         status={status}
-        sort={sort}
+        sortBy={sortBy}
+        sortDir={sortDir}
         page={userData.page}
         totalPages={userData.totalPages}
         totalUsers={userData.totalUsers}
+        stats={userData.stats}
       />
     </div>
   );

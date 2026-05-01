@@ -31,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -45,6 +46,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 
 export interface UserDetailDialogProps {
   userId: string | null;
@@ -222,9 +225,9 @@ export function UserDetailDialog({
 
           <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-4">
             {isLoading && (
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="h-12 animate-pulse rounded-lg bg-muted" />
+                  <Skeleton key={i} className="h-12 rounded-lg" />
                 ))}
               </div>
             )}
@@ -236,12 +239,12 @@ export function UserDetailDialog({
             )}
 
             {details && !isLoading && (
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 {banned && (
-                  <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
-                    <ShieldOffIcon className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <div className="flex items-center gap-2 rounded-lg border border-warning/20 bg-warning/10 px-3 py-2">
+                    <ShieldOffIcon className="size-4 shrink-0 text-warning-foreground" />
                     <div className="min-w-0">
-                      <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
+                      <p className="text-xs font-medium text-warning-foreground">
                         Suspended until {bannedUntilLabel}
                       </p>
                     </div>
@@ -268,12 +271,7 @@ export function UserDetailDialog({
                   label="AI Auto-Group"
                   value={
                     details.autoGroupEnabled ? (
-                      <Badge
-                        variant="outline"
-                        className="border-emerald-600/20 bg-emerald-500/10 text-xs text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-400"
-                      >
-                        Enabled
-                      </Badge>
+                      <Badge className="bg-success/10 text-success">Enabled</Badge>
                     ) : (
                       <span className="text-sm text-muted-foreground">Disabled</span>
                     )
@@ -301,7 +299,7 @@ export function UserDetailDialog({
           {details && !isLoading && !isCurrentAdmin && (
             <>
               <Separator />
-              <div className="space-y-2 px-5 pb-5 pt-3">
+              <div className="flex flex-col gap-2 px-5 pb-5 pt-3">
                 <p className="text-xs font-medium text-muted-foreground">
                   Account Suspension
                 </p>
@@ -309,11 +307,15 @@ export function UserDetailDialog({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full gap-1.5"
+                    className="w-full"
                     disabled={isPending}
                     onClick={handleUnban}
                   >
-                    <ShieldCheckIcon className="size-3.5 text-emerald-500" />
+                    {isPending ? (
+                      <Spinner data-icon="inline-start" />
+                    ) : (
+                      <ShieldCheckIcon data-icon="inline-start" />
+                    )}
                     {isPending ? "Lifting ban..." : "Lift suspension"}
                   </Button>
                 ) : (
@@ -323,21 +325,30 @@ export function UserDetailDialog({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {BAN_OPTIONS.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                            {opt.label}
-                          </SelectItem>
-                        ))}
+                        <SelectGroup>
+                          {BAN_OPTIONS.map((opt) => (
+                            <SelectItem
+                              key={opt.value}
+                              value={opt.value}
+                              className="text-xs"
+                            >
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
                       </SelectContent>
                     </Select>
                     <Button
-                      variant="outline"
+                      variant="destructive"
                       size="sm"
-                      className="gap-1.5 text-amber-700 hover:bg-amber-500/10 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
                       disabled={isPending}
                       onClick={() => setShowBanConfirm(true)}
                     >
-                      <ShieldOffIcon className="size-3.5" />
+                      {isPending ? (
+                        <Spinner data-icon="inline-start" />
+                      ) : (
+                        <ShieldOffIcon data-icon="inline-start" />
+                      )}
                       Suspend
                     </Button>
                   </div>
@@ -361,13 +372,18 @@ export function UserDetailDialog({
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction
+              variant="destructive"
               disabled={isPending}
               onClick={(e) => {
                 e.preventDefault();
                 handleBan();
               }}
             >
-              <ShieldOffIcon className="size-3.5" />
+              {isPending ? (
+                <Spinner data-icon="inline-start" />
+              ) : (
+                <ShieldOffIcon data-icon="inline-start" />
+              )}
               {isPending ? "Suspending..." : "Suspend"}
             </AlertDialogAction>
           </AlertDialogFooter>
