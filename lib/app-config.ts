@@ -49,7 +49,12 @@ async function queryAppConfig(client: AnyDb): Promise<AppConfig> {
   );
   const row = rows.rows[0] as AppConfig | undefined;
   if (!row) return DEFAULT_CONFIG;
-  return row;
+  return {
+    ...row,
+    openrouterApiKey: row.openrouterApiKey ?? DEFAULT_CONFIG.openrouterApiKey,
+    resendApiKey: row.resendApiKey ?? DEFAULT_CONFIG.resendApiKey,
+    resendFromEmail: row.resendFromEmail ?? DEFAULT_CONFIG.resendFromEmail,
+  };
 }
 
 export async function getAppConfig(): Promise<AppConfig> {
