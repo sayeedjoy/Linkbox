@@ -61,8 +61,9 @@ extension/              Chrome extension (Manifest V3)
 ### Data Layer
 - **Schema** (`db/schema.ts`) defines all tables using Drizzle's `pgTable` builder
 - **DB singleton** (`lib/db.ts`) — import `db` from here for all database access; also re-exports all schema tables
-- **Models**: `users`, `bookmarks`, `groups`, `apiTokens`, `passwordResetTokens`, `appConfig`
+- **Models**: `users`, `bookmarks`, `groups`, `apiTokens`, `passwordResetTokens`, `appConfig`, `adsConfig`
 - User `autoGroupEnabled` flag controls AI categorization; `appConfig.publicSignupEnabled` gates signup
+- **Runtime service config**: `appConfig` also stores `openrouterApiKey`, `resendApiKey`, `resendFromEmail`. These are managed from the admin panel and override env vars at runtime — env vars are used as fallbacks. When adding new third-party integrations, follow this DB-first / env-fallback pattern.
 - Migration files live in `drizzle/` and are applied with `pnpm db:migrate`
 
 ### API Architecture
@@ -94,7 +95,12 @@ extension/              Chrome extension (Manifest V3)
 - Use Drizzle's relational query API (`db.query.users.findMany(...)`) for joins; it requires the relations defined at the bottom of `db/schema.ts`
 
 ### Route Protection
-- `proxy.ts` (root) is the Next.js middleware — protects `/dashboard/:path*` and `/admin/:path*`, redirecting unauthenticated users to `/sign-in` with a callback URL
+- `proxy.ts` (root) is the Next.js middleware file — note the unconventional name (not `middleware.ts`). It protects `/dashboard/:path*` and `/admin/:path*`, redirecting unauthenticated users to `/sign-in` with a callback URL.
+
+### Admin Panel
+- Admin access is gated by the `ADMIN_EMAIL` env var (matched against the session user's email)
+- `app/admin/page.tsx` is the entry point; admin-only UI lives under `components/admin/`
+- Admin can manage users (filter/sort, ban via `bannedUntil`), toggle public signup, and edit runtime service config (OpenRouter / Resend keys) stored in `appConfig`
 
 ### Auth Flow
 - `lib/auth.ts` exports `getVerifiedAuthSession()` and `currentUserId()` helpers
