@@ -500,6 +500,10 @@ async function startRealtimeSync(): Promise<void> {
       if (eventId) realtimeLastEventId = eventId
       try {
         const parsed = JSON.parse(eventData) as { type?: string; id?: string }
+        if (parsed.type === 'user.deleted') {
+          await clearAuthState()
+          return
+        }
         if (parsed.id && parsed.type && parsed.type.startsWith('bookmark.')) {
           await handleRealtimeMutationEvent()
         }

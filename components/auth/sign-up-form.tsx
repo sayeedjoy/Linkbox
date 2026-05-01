@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { JSX, SVGProps, useEffect, useState } from "react";
-import { signIn, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { JSX, SVGProps, useState } from "react";
+import { signIn } from "next-auth/react";
 import { Eye, EyeOff } from "lucide-react";
 import { register } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
@@ -37,8 +36,6 @@ const Logo = (props: JSX.IntrinsicAttributes & SVGProps<SVGSVGElement>) => (
 );
 
 export function SignUpForm() {
-  const { status } = useSession();
-  const router = useRouter();
   const publicSignupEnabled = useSignupConfig();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -48,12 +45,6 @@ export function SignUpForm() {
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (status === "authenticated") {
-      router.replace("/dashboard");
-    }
-  }, [status, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

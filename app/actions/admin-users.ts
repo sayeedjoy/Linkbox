@@ -6,10 +6,11 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
 import { eq, desc, count, asc, and } from "drizzle-orm";
 import { requireAdminSession } from "@/lib/admin";
-import { db, users, apiTokens, groups, bookmarks, passwordResetTokens, subscriptionPlans } from "@/lib/db";
+import { db, users, apiTokens, groups, bookmarks, passwordResetTokens, subscriptionPlans, userPlaySubscriptions } from "@/lib/db";
 import { getFreePlanId, PLAN_SOURCE_ADMIN, PLAN_SOURCE_DEFAULT } from "@/lib/plan-entitlements";
 import { hashToken } from "@/lib/api-auth";
 import { sendPasswordResetEmail } from "@/lib/email";
+import { publishUserEvent } from "@/lib/realtime";
 
 
 export async function deleteUserAsAdmin(
@@ -27,6 +28,12 @@ export async function deleteUserAsAdmin(
 
     const result = await db.delete(users).where(eq(users.id, targetUserId)).returning({ id: users.id });
     if (result.length === 0) return { success: false, error: "User not found." };
+
+    publishUserEvent(targetUserId, {
+      type: "user.deleted",
+      entity: "user",
+      id: targetUserId,
+    });
 
     revalidatePath("/admin");
     revalidatePath("/admin/users");
@@ -104,6 +111,15 @@ export type UserDetails = {
   planSource: string;
   planSlug: string;
   planDisplayName: string;
+  playSubscription: {
+    productId: string;
+    purchaseToken: string;
+    transactionId: string | null;
+    purchaseDate: string | null;
+    expiryTime: string | null;
+    autoRenewing: boolean;
+    lastVerifiedAt: string | null;
+  } | null;
   availablePlans: { id: string; displayName: string; slug: string }[];
 };
 
@@ -130,7 +146,7 @@ export async function getUserDetailsAsAdmin(
 
     if (!user) return { success: false, error: "User not found." };
 
-    const [[{ bookmarkCount }], [{ groupCount }], [{ apiTokenCount }], lastToken, availablePlans] =
+    const [[{ bookmarkCount }], [{ groupCount }], [{ apiTokenCount }], lastToken, availablePlans, latestPlaySubscription] =
       await Promise.all([
         db.select({ bookmarkCount: count() }).from(bookmarks).where(eq(bookmarks.userId, userId)),
         db.select({ groupCount: count() }).from(groups).where(eq(groups.userId, userId)),
@@ -149,6 +165,20 @@ export async function getUserDetailsAsAdmin(
           })
           .from(subscriptionPlans)
           .orderBy(asc(subscriptionPlans.sortOrder)),
+        db
+          .select({
+            productId: userPlaySubscriptions.productId,
+            purchaseToken: userPlaySubscriptions.purchaseToken,
+            transactionId: userPlaySubscriptions.transactionId,
+            purchaseDate: userPlaySubscriptions.purchaseDate,
+            expiryTime: userPlaySubscriptions.expiryTime,
+            autoRenewing: userPlaySubscriptions.autoRenewing,
+            lastVerifiedAt: userPlaySubscriptions.lastVerifiedAt,
+          })
+          .from(userPlaySubscriptions)
+          .where(eq(userPlaySubscriptions.userId, userId))
+          .orderBy(desc(userPlaySubscriptions.lastVerifiedAt), desc(userPlaySubscriptions.purchaseDate))
+          .limit(1),
       ]);
 
     return {
@@ -165,6 +195,17 @@ export async function getUserDetailsAsAdmin(
         planSource: user.planSource,
         planSlug: user.planSlug,
         planDisplayName: user.planDisplayName,
+        playSubscription: latestPlaySubscription?.[0]
+          ? {
+              productId: latestPlaySubscription[0].productId,
+              purchaseToken: latestPlaySubscription[0].purchaseToken,
+              transactionId: latestPlaySubscription[0].transactionId,
+              purchaseDate: latestPlaySubscription[0].purchaseDate?.toISOString() ?? null,
+              expiryTime: latestPlaySubscription[0].expiryTime?.toISOString() ?? null,
+              autoRenewing: latestPlaySubscription[0].autoRenewing,
+              lastVerifiedAt: latestPlaySubscription[0].lastVerifiedAt?.toISOString() ?? null,
+            }
+          : null,
         availablePlans,
       },
     };

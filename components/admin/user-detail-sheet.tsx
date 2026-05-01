@@ -98,6 +98,17 @@ function formatDate(iso: string | null) {
   });
 }
 
+function formatDateTime(iso: string | null) {
+  if (!iso) return "â€”";
+  return new Date(iso).toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 function formatBannedUntil(iso: string | null): string {
   if (!iso) return "";
   const date = new Date(iso);
@@ -322,6 +333,48 @@ export function UserDetailDialog({
                       {details.planSource}
                     </Badge>
                     <span className="text-xs text-muted-foreground">({details.planSlug})</span>
+                  </div>
+                  <div className="mb-2 rounded-md border border-border/70 bg-background/60 p-2">
+                    <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                      Google Play
+                    </p>
+                    {details.playSubscription ? (
+                      <div className="space-y-1 text-xs">
+                        <p>
+                          Product: <span className="font-medium">{details.playSubscription.productId}</span>
+                        </p>
+                        <p>
+                          Transaction ID:{" "}
+                          <span className="font-medium">{details.playSubscription.transactionId ?? "â€”"}</span>
+                        </p>
+                        <p>
+                          Purchase:{" "}
+                          <span className="font-medium">
+                            {formatDateTime(details.playSubscription.purchaseDate)}
+                          </span>
+                        </p>
+                        <p>
+                          Expiry:{" "}
+                          <span className="font-medium">
+                            {formatDateTime(details.playSubscription.expiryTime)}
+                          </span>
+                        </p>
+                        <p>
+                          Auto-renew:{" "}
+                          <span className="font-medium">
+                            {details.playSubscription.autoRenewing ? "Enabled" : "Disabled"}
+                          </span>
+                        </p>
+                        <p>
+                          Last verified:{" "}
+                          <span className="font-medium">
+                            {formatDateTime(details.playSubscription.lastVerifiedAt)}
+                          </span>
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No Play subscription record.</p>
+                    )}
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                     <div className="min-w-0 flex-1 space-y-1">

@@ -66,6 +66,32 @@ export function PlanApiDocsSection() {
       />
 
       <EndpointCard
+        method="GET"
+        path="/api/mobile/plans"
+        auth="bearer"
+        description="Returns the plan catalog for the app plan page."
+        responseBody={`{
+  "plans": [
+    {
+      "id": "plan_id",
+      "slug": "premium",
+      "displayName": "Pro",
+      "googlePlayProductId": "your_subscription_product_id",
+      "aiGroupingAllowed": true,
+      "groupColoringAllowed": true,
+      "apiQuotaPerDay": null,
+      "sortOrder": 1
+    }
+  ]
+}`}
+        notes={[
+          "Authenticated endpoint.",
+          "Result is ordered by sortOrder.",
+          "Use this endpoint to render plan options in mobile or web app plan pages.",
+        ]}
+      />
+
+      <EndpointCard
         method="POST"
         path="/api/mobile/billing/google-play"
         auth="bearer"
@@ -92,7 +118,7 @@ export function PlanApiDocsSection() {
           "Requires server env: GOOGLE_PLAY_PACKAGE_NAME and GOOGLE_PLAY_SERVICE_ACCOUNT_JSON (service account JSON string).",
           "503 if Play env is not configured; 502 if Google's API rejects the token.",
           "400 if productId does not match any plan's Google Play product ID.",
-          "Stores or updates the row in UserPlaySubscription keyed by purchaseToken.",
+          "Always appends a UserPlayPurchaseEvent row and upserts UserPlaySubscription by purchaseToken.",
         ]}
       />
     </section>

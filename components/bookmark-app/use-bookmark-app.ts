@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useDeferredValue } from "react";
 import { useQueryState } from "nuqs";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
@@ -104,6 +104,12 @@ export function useBookmarkApp({
       try {
         const payload = JSON.parse(evt.data) as RealtimeEvent;
         if (payload.userId !== userId) return;
+        if (payload.type === "user.deleted") {
+          eventSource.close();
+          void signOut({ redirect: false });
+          window.location.href = "/sign-in";
+          return;
+        }
         scheduleInvalidate();
       } catch {
         // Ignore malformed events and keep the stream alive.

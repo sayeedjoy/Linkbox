@@ -1,4 +1,4 @@
-export type RealtimeEntity = "bookmark" | "group";
+export type RealtimeEntity = "bookmark" | "group" | "user";
 
 export type RealtimeEventType =
   | "bookmark.created"
@@ -7,7 +7,8 @@ export type RealtimeEventType =
   | "bookmark.category.updated"
   | "group.created"
   | "group.updated"
-  | "group.deleted";
+  | "group.deleted"
+  | "user.deleted";
 
 export interface RealtimeEvent {
   type: RealtimeEventType;

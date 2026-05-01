@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { userIdFromBearerToken } from "@/lib/api-auth";
-import { db, users, userPlaySubscriptions } from "@/lib/db";
+import { db, users, userPlayPurchaseEvents, userPlaySubscriptions } from "@/lib/db";
 import { getEntitlementsPayload, getFreePlanId, getPremiumPlanForPlayProduct, PLAN_SOURCE_ADMIN, PLAN_SOURCE_DEFAULT, PLAN_SOURCE_PLAY } from "@/lib/plan-entitlements";
 import { isPlaySubscriptionEntitled, verifyPlaySubscription } from "@/lib/google-play";
 
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "purchaseToken and productId are required" }, { status: 400 });
   }
 
-  const verified = await verifyPlaySubscription(purchaseToken);
+  const verified = await verifyPlaySubscription(purchaseToken, productId);
   if (!verified.ok) {
     const status = verified.reason === "env" ? 503 : 502;
     const message =
@@ -62,42 +62,71 @@ export async function POST(request: Request) {
     .limit(1);
   if (!u) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
+  const now = new Date();
+  const purchaseDate = verified.purchaseDate ?? now;
+  const rawPayload = JSON.stringify(verified.raw ?? {});
+  let nextPlanId: string | null = null;
+  let nextPlanSource: string | null = null;
+
   if (u.planSource !== PLAN_SOURCE_ADMIN) {
     if (entitled) {
-      await db
-        .update(users)
-        .set({ subscriptionPlanId: planRow.id, planSource: PLAN_SOURCE_PLAY })
-        .where(eq(users.id, userId));
+      nextPlanId = planRow.id;
+      nextPlanSource = PLAN_SOURCE_PLAY;
     } else if (u.planSource === PLAN_SOURCE_PLAY) {
-      const freeId = await getFreePlanId();
-      await db
-        .update(users)
-        .set({ subscriptionPlanId: freeId, planSource: PLAN_SOURCE_DEFAULT })
-        .where(eq(users.id, userId));
+      nextPlanId = await getFreePlanId();
+      nextPlanSource = PLAN_SOURCE_DEFAULT;
     }
   }
 
-  await db
-    .insert(userPlaySubscriptions)
-    .values({
+  await db.transaction(async (tx) => {
+    if (nextPlanId && nextPlanSource) {
+      await tx
+        .update(users)
+        .set({ subscriptionPlanId: nextPlanId, planSource: nextPlanSource })
+        .where(eq(users.id, userId));
+    }
+
+    await tx.insert(userPlayPurchaseEvents).values({
       id: createId(),
       userId,
-      productId,
+      transactionId: verified.transactionId,
       purchaseToken,
-      expiryTime: null,
-      autoRenewing: false,
-      lastVerifiedAt: new Date(),
-      rawPayload: JSON.stringify(verified.raw ?? {}),
-    })
-    .onConflictDoUpdate({
-      target: userPlaySubscriptions.purchaseToken,
-      set: {
+      productId,
+      purchaseDate,
+      expiryDate: verified.expiryDate,
+      rawReceipt: rawPayload,
+      verificationSource: "play_api",
+      createdAt: now,
+    });
+
+    await tx
+      .insert(userPlaySubscriptions)
+      .values({
+        id: createId(),
         userId,
         productId,
-        lastVerifiedAt: new Date(),
-        rawPayload: JSON.stringify(verified.raw ?? {}),
-      },
-    });
+        purchaseToken,
+        transactionId: verified.transactionId,
+        purchaseDate,
+        expiryTime: verified.expiryDate,
+        autoRenewing: verified.autoRenewing,
+        lastVerifiedAt: now,
+        rawPayload,
+      })
+      .onConflictDoUpdate({
+        target: userPlaySubscriptions.purchaseToken,
+        set: {
+          userId,
+          productId,
+          transactionId: verified.transactionId,
+          purchaseDate,
+          expiryTime: verified.expiryDate,
+          autoRenewing: verified.autoRenewing,
+          lastVerifiedAt: now,
+          rawPayload,
+        },
+      });
+  });
 
   try {
     const entitlements = await getEntitlementsPayload(userId);

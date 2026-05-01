@@ -4,6 +4,7 @@ import {
   boolean,
   integer,
   timestamp,
+  index,
   uniqueIndex,
   date,
 } from "drizzle-orm/pg-core";
@@ -44,11 +45,36 @@ export const userPlaySubscriptions = pgTable("UserPlaySubscription", {
     .references(() => users.id, { onDelete: "cascade" }),
   productId: text("productId").notNull(),
   purchaseToken: text("purchaseToken").notNull().unique(),
+  transactionId: text("transactionId"),
+  purchaseDate: timestamp("purchaseDate", { precision: 3 }),
   expiryTime: timestamp("expiryTime", { precision: 3 }),
   autoRenewing: boolean("autoRenewing").notNull().default(false),
   lastVerifiedAt: timestamp("lastVerifiedAt", { precision: 3 }),
   rawPayload: text("rawPayload"),
 });
+
+export const userPlayPurchaseEvents = pgTable(
+  "UserPlayPurchaseEvent",
+  {
+    id: text("id").primaryKey().$defaultFn(() => createId()),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    transactionId: text("transactionId"),
+    purchaseToken: text("purchaseToken").notNull(),
+    productId: text("productId").notNull(),
+    purchaseDate: timestamp("purchaseDate", { precision: 3 }).notNull(),
+    expiryDate: timestamp("expiryDate", { precision: 3 }),
+    rawReceipt: text("rawReceipt").notNull(),
+    verificationSource: text("verificationSource").notNull().default("play_api"),
+    createdAt: timestamp("createdAt", { precision: 3 }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("UserPlayPurchaseEvent_userId_productId_idx").on(t.userId, t.productId),
+    index("UserPlayPurchaseEvent_purchaseToken_idx").on(t.purchaseToken),
+    index("UserPlayPurchaseEvent_transactionId_idx").on(t.transactionId),
+  ]
+);
 
 export const apiUsageDaily = pgTable(
   "ApiUsageDaily",
@@ -138,6 +164,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     references: [subscriptionPlans.id],
   }),
   playSubscriptions: many(userPlaySubscriptions),
+  playPurchaseEvents: many(userPlayPurchaseEvents),
   groups: many(groups),
   bookmarks: many(bookmarks),
   apiTokens: many(apiTokens),
@@ -146,6 +173,10 @@ export const usersRelations = relations(users, ({ one, many }) => ({
 
 export const userPlaySubscriptionsRelations = relations(userPlaySubscriptions, ({ one }) => ({
   user: one(users, { fields: [userPlaySubscriptions.userId], references: [users.id] }),
+}));
+
+export const userPlayPurchaseEventsRelations = relations(userPlayPurchaseEvents, ({ one }) => ({
+  user: one(users, { fields: [userPlayPurchaseEvents.userId], references: [users.id] }),
 }));
 
 export const apiUsageDailyRelations = relations(apiUsageDaily, ({ one }) => ({

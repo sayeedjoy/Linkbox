@@ -95,6 +95,9 @@ export function EndpointCard({
   defaultOpen = false,
 }: EndpointCardProps) {
   const [open, setOpen] = useState(defaultOpen);
+  const baseUrl =
+    typeof window === "undefined" ? "https://your-domain.com" : window.location.origin;
+  const fullEndpoint = `${method} ${baseUrl}${path}`;
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">
@@ -121,6 +124,7 @@ export function EndpointCard({
       {open && (
         <div className="space-y-4 border-t border-border px-4 py-4">
           <p className="text-sm text-muted-foreground">{description}</p>
+          <CodeBlock code={fullEndpoint} label="Full Endpoint" />
 
           {auth === "bearer" && (
             <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-400">
