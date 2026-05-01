@@ -1,0 +1,616 @@
+{
+    "id":  "d46d72b9-27d7-4a31-8195-4edfe3dfc39c",
+    "prevId":  "36765e31-b2f5-4432-9133-883385eabe13",
+    "version":  "7",
+    "dialect":  "postgresql",
+    "tables":  {
+                   "public.AdsConfig":  {
+                                            "name":  "AdsConfig",
+                                            "schema":  "",
+                                            "columns":  {
+                                                            "id":  {
+                                                                       "name":  "id",
+                                                                       "type":  "integer",
+                                                                       "primaryKey":  true,
+                                                                       "notNull":  true
+                                                                   },
+                                                            "adsEnabled":  {
+                                                                               "name":  "adsEnabled",
+                                                                               "type":  "boolean",
+                                                                               "primaryKey":  false,
+                                                                               "notNull":  true,
+                                                                               "default":  false
+                                                                           },
+                                                            "androidAppId":  {
+                                                                                 "name":  "androidAppId",
+                                                                                 "type":  "text",
+                                                                                 "primaryKey":  false,
+                                                                                 "notNull":  false
+                                                                             },
+                                                            "androidBannerId":  {
+                                                                                    "name":  "androidBannerId",
+                                                                                    "type":  "text",
+                                                                                    "primaryKey":  false,
+                                                                                    "notNull":  false
+                                                                                },
+                                                            "androidInterstitialId":  {
+                                                                                          "name":  "androidInterstitialId",
+                                                                                          "type":  "text",
+                                                                                          "primaryKey":  false,
+                                                                                          "notNull":  false
+                                                                                      },
+                                                            "androidAppOpenId":  {
+                                                                                     "name":  "androidAppOpenId",
+                                                                                     "type":  "text",
+                                                                                     "primaryKey":  false,
+                                                                                     "notNull":  false
+                                                                                 },
+                                                            "androidRewardedId":  {
+                                                                                      "name":  "androidRewardedId",
+                                                                                      "type":  "text",
+                                                                                      "primaryKey":  false,
+                                                                                      "notNull":  false
+                                                                                  }
+                                                        },
+                                            "indexes":  {
+
+                                                        },
+                                            "foreignKeys":  {
+
+                                                            },
+                                            "compositePrimaryKeys":  {
+
+                                                                     },
+                                            "uniqueConstraints":  {
+
+                                                                  },
+                                            "policies":  {
+
+                                                         },
+                                            "checkConstraints":  {
+
+                                                                 },
+                                            "isRLSEnabled":  false
+                                        },
+                   "public.ApiToken":  {
+                                           "name":  "ApiToken",
+                                           "schema":  "",
+                                           "columns":  {
+                                                           "id":  {
+                                                                      "name":  "id",
+                                                                      "type":  "text",
+                                                                      "primaryKey":  true,
+                                                                      "notNull":  true
+                                                                  },
+                                                           "userId":  {
+                                                                          "name":  "userId",
+                                                                          "type":  "text",
+                                                                          "primaryKey":  false,
+                                                                          "notNull":  true
+                                                                      },
+                                                           "name":  {
+                                                                        "name":  "name",
+                                                                        "type":  "text",
+                                                                        "primaryKey":  false,
+                                                                        "notNull":  true
+                                                                    },
+                                                           "tokenHash":  {
+                                                                             "name":  "tokenHash",
+                                                                             "type":  "text",
+                                                                             "primaryKey":  false,
+                                                                             "notNull":  true
+                                                                         },
+                                                           "tokenPrefix":  {
+                                                                               "name":  "tokenPrefix",
+                                                                               "type":  "text",
+                                                                               "primaryKey":  false,
+                                                                               "notNull":  false
+                                                                           },
+                                                           "tokenSuffix":  {
+                                                                               "name":  "tokenSuffix",
+                                                                               "type":  "text",
+                                                                               "primaryKey":  false,
+                                                                               "notNull":  false
+                                                                           },
+                                                           "lastUsedAt":  {
+                                                                              "name":  "lastUsedAt",
+                                                                              "type":  "timestamp (3)",
+                                                                              "primaryKey":  false,
+                                                                              "notNull":  false
+                                                                          },
+                                                           "createdAt":  {
+                                                                             "name":  "createdAt",
+                                                                             "type":  "timestamp (3)",
+                                                                             "primaryKey":  false,
+                                                                             "notNull":  true,
+                                                                             "default":  "now()"
+                                                                         }
+                                                       },
+                                           "indexes":  {
+
+                                                       },
+                                           "foreignKeys":  {
+                                                               "ApiToken_userId_User_id_fk":  {
+                                                                                                  "name":  "ApiToken_userId_User_id_fk",
+                                                                                                  "tableFrom":  "ApiToken",
+                                                                                                  "tableTo":  "User",
+                                                                                                  "columnsFrom":  [
+                                                                                                                      "userId"
+                                                                                                                  ],
+                                                                                                  "columnsTo":  [
+                                                                                                                    "id"
+                                                                                                                ],
+                                                                                                  "onDelete":  "cascade",
+                                                                                                  "onUpdate":  "no action"
+                                                                                              }
+                                                           },
+                                           "compositePrimaryKeys":  {
+
+                                                                    },
+                                           "uniqueConstraints":  {
+                                                                     "ApiToken_tokenHash_unique":  {
+                                                                                                       "name":  "ApiToken_tokenHash_unique",
+                                                                                                       "nullsNotDistinct":  false,
+                                                                                                       "columns":  [
+                                                                                                                       "tokenHash"
+                                                                                                                   ]
+                                                                                                   }
+                                                                 },
+                                           "policies":  {
+
+                                                        },
+                                           "checkConstraints":  {
+
+                                                                },
+                                           "isRLSEnabled":  false
+                                       },
+                   "public.AppConfig":  {
+                                            "name":  "AppConfig",
+                                            "schema":  "",
+                                            "columns":  {
+                                                            "id":  {
+                                                                       "name":  "id",
+                                                                       "type":  "integer",
+                                                                       "primaryKey":  true,
+                                                                       "notNull":  true
+                                                                   },
+                                                            "publicSignupEnabled":  {
+                                                                                        "name":  "publicSignupEnabled",
+                                                                                        "type":  "boolean",
+                                                                                        "primaryKey":  false,
+                                                                                        "notNull":  true,
+                                                                                        "default":  true
+                                                                                    },
+                                                            "openrouterApiKey":  {
+                                                                                     "name":  "openrouterApiKey",
+                                                                                     "type":  "text",
+                                                                                     "primaryKey":  false,
+                                                                                     "notNull":  false
+                                                                                 },
+                                                            "resendApiKey":  {
+                                                                                 "name":  "resendApiKey",
+                                                                                 "type":  "text",
+                                                                                 "primaryKey":  false,
+                                                                                 "notNull":  false
+                                                                             },
+                                                            "resendFromEmail":  {
+                                                                                    "name":  "resendFromEmail",
+                                                                                    "type":  "text",
+                                                                                    "primaryKey":  false,
+                                                                                    "notNull":  false
+                                                                                }
+                                                        },
+                                            "indexes":  {
+
+                                                        },
+                                            "foreignKeys":  {
+
+                                                            },
+                                            "compositePrimaryKeys":  {
+
+                                                                     },
+                                            "uniqueConstraints":  {
+
+                                                                  },
+                                            "policies":  {
+
+                                                         },
+                                            "checkConstraints":  {
+
+                                                                 },
+                                            "isRLSEnabled":  false
+                                        },
+                   "public.Bookmark":  {
+                                           "name":  "Bookmark",
+                                           "schema":  "",
+                                           "columns":  {
+                                                           "id":  {
+                                                                      "name":  "id",
+                                                                      "type":  "text",
+                                                                      "primaryKey":  true,
+                                                                      "notNull":  true
+                                                                  },
+                                                           "userId":  {
+                                                                          "name":  "userId",
+                                                                          "type":  "text",
+                                                                          "primaryKey":  false,
+                                                                          "notNull":  true
+                                                                      },
+                                                           "groupId":  {
+                                                                           "name":  "groupId",
+                                                                           "type":  "text",
+                                                                           "primaryKey":  false,
+                                                                           "notNull":  false
+                                                                       },
+                                                           "url":  {
+                                                                       "name":  "url",
+                                                                       "type":  "text",
+                                                                       "primaryKey":  false,
+                                                                       "notNull":  false
+                                                                   },
+                                                           "title":  {
+                                                                         "name":  "title",
+                                                                         "type":  "text",
+                                                                         "primaryKey":  false,
+                                                                         "notNull":  false
+                                                                     },
+                                                           "description":  {
+                                                                               "name":  "description",
+                                                                               "type":  "text",
+                                                                               "primaryKey":  false,
+                                                                               "notNull":  false
+                                                                           },
+                                                           "faviconUrl":  {
+                                                                              "name":  "faviconUrl",
+                                                                              "type":  "text",
+                                                                              "primaryKey":  false,
+                                                                              "notNull":  false
+                                                                          },
+                                                           "previewImageUrl":  {
+                                                                                   "name":  "previewImageUrl",
+                                                                                   "type":  "text",
+                                                                                   "primaryKey":  false,
+                                                                                   "notNull":  false
+                                                                               },
+                                                           "createdAt":  {
+                                                                             "name":  "createdAt",
+                                                                             "type":  "timestamp (3)",
+                                                                             "primaryKey":  false,
+                                                                             "notNull":  true,
+                                                                             "default":  "now()"
+                                                                         },
+                                                           "updatedAt":  {
+                                                                             "name":  "updatedAt",
+                                                                             "type":  "timestamp (3)",
+                                                                             "primaryKey":  false,
+                                                                             "notNull":  true,
+                                                                             "default":  "now()"
+                                                                         }
+                                                       },
+                                           "indexes":  {
+
+                                                       },
+                                           "foreignKeys":  {
+                                                               "Bookmark_userId_User_id_fk":  {
+                                                                                                  "name":  "Bookmark_userId_User_id_fk",
+                                                                                                  "tableFrom":  "Bookmark",
+                                                                                                  "tableTo":  "User",
+                                                                                                  "columnsFrom":  [
+                                                                                                                      "userId"
+                                                                                                                  ],
+                                                                                                  "columnsTo":  [
+                                                                                                                    "id"
+                                                                                                                ],
+                                                                                                  "onDelete":  "cascade",
+                                                                                                  "onUpdate":  "no action"
+                                                                                              },
+                                                               "Bookmark_groupId_Group_id_fk":  {
+                                                                                                    "name":  "Bookmark_groupId_Group_id_fk",
+                                                                                                    "tableFrom":  "Bookmark",
+                                                                                                    "tableTo":  "Group",
+                                                                                                    "columnsFrom":  [
+                                                                                                                        "groupId"
+                                                                                                                    ],
+                                                                                                    "columnsTo":  [
+                                                                                                                      "id"
+                                                                                                                  ],
+                                                                                                    "onDelete":  "set null",
+                                                                                                    "onUpdate":  "no action"
+                                                                                                }
+                                                           },
+                                           "compositePrimaryKeys":  {
+
+                                                                    },
+                                           "uniqueConstraints":  {
+
+                                                                 },
+                                           "policies":  {
+
+                                                        },
+                                           "checkConstraints":  {
+
+                                                                },
+                                           "isRLSEnabled":  false
+                                       },
+                   "public.Group":  {
+                                        "name":  "Group",
+                                        "schema":  "",
+                                        "columns":  {
+                                                        "id":  {
+                                                                   "name":  "id",
+                                                                   "type":  "text",
+                                                                   "primaryKey":  true,
+                                                                   "notNull":  true
+                                                               },
+                                                        "userId":  {
+                                                                       "name":  "userId",
+                                                                       "type":  "text",
+                                                                       "primaryKey":  false,
+                                                                       "notNull":  true
+                                                                   },
+                                                        "name":  {
+                                                                     "name":  "name",
+                                                                     "type":  "text",
+                                                                     "primaryKey":  false,
+                                                                     "notNull":  true
+                                                                 },
+                                                        "color":  {
+                                                                      "name":  "color",
+                                                                      "type":  "text",
+                                                                      "primaryKey":  false,
+                                                                      "notNull":  false
+                                                                  },
+                                                        "order":  {
+                                                                      "name":  "order",
+                                                                      "type":  "integer",
+                                                                      "primaryKey":  false,
+                                                                      "notNull":  true,
+                                                                      "default":  0
+                                                                  }
+                                                    },
+                                        "indexes":  {
+                                                        "Group_userId_name_key":  {
+                                                                                      "name":  "Group_userId_name_key",
+                                                                                      "columns":  [
+                                                                                                      {
+                                                                                                          "expression":  "userId",
+                                                                                                          "isExpression":  false,
+                                                                                                          "asc":  true,
+                                                                                                          "nulls":  "last"
+                                                                                                      },
+                                                                                                      {
+                                                                                                          "expression":  "name",
+                                                                                                          "isExpression":  false,
+                                                                                                          "asc":  true,
+                                                                                                          "nulls":  "last"
+                                                                                                      }
+                                                                                                  ],
+                                                                                      "isUnique":  true,
+                                                                                      "concurrently":  false,
+                                                                                      "method":  "btree",
+                                                                                      "with":  {
+
+                                                                                               }
+                                                                                  }
+                                                    },
+                                        "foreignKeys":  {
+                                                            "Group_userId_User_id_fk":  {
+                                                                                            "name":  "Group_userId_User_id_fk",
+                                                                                            "tableFrom":  "Group",
+                                                                                            "tableTo":  "User",
+                                                                                            "columnsFrom":  [
+                                                                                                                "userId"
+                                                                                                            ],
+                                                                                            "columnsTo":  [
+                                                                                                              "id"
+                                                                                                          ],
+                                                                                            "onDelete":  "cascade",
+                                                                                            "onUpdate":  "no action"
+                                                                                        }
+                                                        },
+                                        "compositePrimaryKeys":  {
+
+                                                                 },
+                                        "uniqueConstraints":  {
+
+                                                              },
+                                        "policies":  {
+
+                                                     },
+                                        "checkConstraints":  {
+
+                                                             },
+                                        "isRLSEnabled":  false
+                                    },
+                   "public.PasswordResetToken":  {
+                                                     "name":  "PasswordResetToken",
+                                                     "schema":  "",
+                                                     "columns":  {
+                                                                     "id":  {
+                                                                                "name":  "id",
+                                                                                "type":  "text",
+                                                                                "primaryKey":  true,
+                                                                                "notNull":  true
+                                                                            },
+                                                                     "userId":  {
+                                                                                    "name":  "userId",
+                                                                                    "type":  "text",
+                                                                                    "primaryKey":  false,
+                                                                                    "notNull":  true
+                                                                                },
+                                                                     "tokenHash":  {
+                                                                                       "name":  "tokenHash",
+                                                                                       "type":  "text",
+                                                                                       "primaryKey":  false,
+                                                                                       "notNull":  true
+                                                                                   },
+                                                                     "expiresAt":  {
+                                                                                       "name":  "expiresAt",
+                                                                                       "type":  "timestamp (3)",
+                                                                                       "primaryKey":  false,
+                                                                                       "notNull":  true
+                                                                                   },
+                                                                     "createdAt":  {
+                                                                                       "name":  "createdAt",
+                                                                                       "type":  "timestamp (3)",
+                                                                                       "primaryKey":  false,
+                                                                                       "notNull":  true,
+                                                                                       "default":  "now()"
+                                                                                   }
+                                                                 },
+                                                     "indexes":  {
+
+                                                                 },
+                                                     "foreignKeys":  {
+                                                                         "PasswordResetToken_userId_User_id_fk":  {
+                                                                                                                      "name":  "PasswordResetToken_userId_User_id_fk",
+                                                                                                                      "tableFrom":  "PasswordResetToken",
+                                                                                                                      "tableTo":  "User",
+                                                                                                                      "columnsFrom":  [
+                                                                                                                                          "userId"
+                                                                                                                                      ],
+                                                                                                                      "columnsTo":  [
+                                                                                                                                        "id"
+                                                                                                                                    ],
+                                                                                                                      "onDelete":  "cascade",
+                                                                                                                      "onUpdate":  "no action"
+                                                                                                                  }
+                                                                     },
+                                                     "compositePrimaryKeys":  {
+
+                                                                              },
+                                                     "uniqueConstraints":  {
+                                                                               "PasswordResetToken_tokenHash_unique":  {
+                                                                                                                           "name":  "PasswordResetToken_tokenHash_unique",
+                                                                                                                           "nullsNotDistinct":  false,
+                                                                                                                           "columns":  [
+                                                                                                                                           "tokenHash"
+                                                                                                                                       ]
+                                                                                                                       }
+                                                                           },
+                                                     "policies":  {
+
+                                                                  },
+                                                     "checkConstraints":  {
+
+                                                                          },
+                                                     "isRLSEnabled":  false
+                                                 },
+                   "public.User":  {
+                                       "name":  "User",
+                                       "schema":  "",
+                                       "columns":  {
+                                                       "id":  {
+                                                                  "name":  "id",
+                                                                  "type":  "text",
+                                                                  "primaryKey":  true,
+                                                                  "notNull":  true
+                                                              },
+                                                       "email":  {
+                                                                     "name":  "email",
+                                                                     "type":  "text",
+                                                                     "primaryKey":  false,
+                                                                     "notNull":  true
+                                                                 },
+                                                       "emailVerified":  {
+                                                                             "name":  "emailVerified",
+                                                                             "type":  "timestamp (3)",
+                                                                             "primaryKey":  false,
+                                                                             "notNull":  false
+                                                                         },
+                                                       "name":  {
+                                                                    "name":  "name",
+                                                                    "type":  "text",
+                                                                    "primaryKey":  false,
+                                                                    "notNull":  false
+                                                                },
+                                                       "image":  {
+                                                                     "name":  "image",
+                                                                     "type":  "text",
+                                                                     "primaryKey":  false,
+                                                                     "notNull":  false
+                                                                 },
+                                                       "password":  {
+                                                                        "name":  "password",
+                                                                        "type":  "text",
+                                                                        "primaryKey":  false,
+                                                                        "notNull":  true
+                                                                    },
+                                                       "autoGroupEnabled":  {
+                                                                                "name":  "autoGroupEnabled",
+                                                                                "type":  "boolean",
+                                                                                "primaryKey":  false,
+                                                                                "notNull":  true,
+                                                                                "default":  false
+                                                                            },
+                                                       "createdAt":  {
+                                                                         "name":  "createdAt",
+                                                                         "type":  "timestamp (3)",
+                                                                         "primaryKey":  false,
+                                                                         "notNull":  true,
+                                                                         "default":  "now()"
+                                                                     },
+                                                       "bannedUntil":  {
+                                                                           "name":  "bannedUntil",
+                                                                           "type":  "timestamp (3)",
+                                                                           "primaryKey":  false,
+                                                                           "notNull":  false
+                                                                       }
+                                                   },
+                                       "indexes":  {
+
+                                                   },
+                                       "foreignKeys":  {
+
+                                                       },
+                                       "compositePrimaryKeys":  {
+
+                                                                },
+                                       "uniqueConstraints":  {
+                                                                 "User_email_unique":  {
+                                                                                           "name":  "User_email_unique",
+                                                                                           "nullsNotDistinct":  false,
+                                                                                           "columns":  [
+                                                                                                           "email"
+                                                                                                       ]
+                                                                                       }
+                                                             },
+                                       "policies":  {
+
+                                                    },
+                                       "checkConstraints":  {
+
+                                                            },
+                                       "isRLSEnabled":  false
+                                   }
+               },
+    "enums":  {
+
+              },
+    "schemas":  {
+
+                },
+    "sequences":  {
+
+                  },
+    "roles":  {
+
+              },
+    "policies":  {
+
+                 },
+    "views":  {
+
+              },
+    "_meta":  {
+                  "columns":  {
+
+                              },
+                  "schemas":  {
+
+                              },
+                  "tables":  {
+
+                             }
+              }
+}

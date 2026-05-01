@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { isPublicSignupEnabled } from "@/lib/app-config";
+import { getServiceConfigForAdmin, isPublicSignupEnabled } from "@/lib/app-config";
 import { PublicSignupCard } from "@/components/admin/public-signup-card";
+import { ServiceConfigCard } from "@/components/admin/service-config-card";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import {
   Card,
@@ -14,11 +15,15 @@ import {
 export const metadata: Metadata = { title: "Settings" };
 
 async function SettingsData() {
-  const publicSignupEnabled = await isPublicSignupEnabled();
+  const [publicSignupEnabled, serviceConfig] = await Promise.all([
+    isPublicSignupEnabled(),
+    getServiceConfigForAdmin(),
+  ]);
 
   return (
-    <div className="max-w-lg space-y-4">
+    <div className="max-w-2xl space-y-4">
       <PublicSignupCard initialEnabled={publicSignupEnabled} />
+      <ServiceConfigCard initialConfig={serviceConfig} />
 
       <Card size="sm">
         <CardHeader className="pb-2">
@@ -38,6 +43,10 @@ async function SettingsData() {
             The current admin account is protected in both the UI and the server
             action.
           </p>
+          <p>
+            Service API keys saved here take precedence over environment
+            variables. Leave a key field blank to keep the current saved value.
+          </p>
         </CardContent>
       </Card>
     </div>
@@ -54,8 +63,9 @@ export default function AdminSettingsPage() {
       <div className="flex-1 p-4 sm:p-6">
         <Suspense
           fallback={
-            <div className="max-w-lg space-y-3">
+            <div className="max-w-2xl space-y-3">
               <div className="h-28 w-full animate-pulse rounded-xl bg-muted" />
+              <div className="h-80 w-full animate-pulse rounded-xl bg-muted" />
               <div className="h-40 w-full animate-pulse rounded-xl bg-muted" />
             </div>
           }

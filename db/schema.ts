@@ -17,6 +17,9 @@ export const users = pgTable("User", {
 export const appConfig = pgTable("AppConfig", {
   id: integer("id").primaryKey(),
   publicSignupEnabled: boolean("publicSignupEnabled").notNull().default(true),
+  openrouterApiKey: text("openrouterApiKey"),
+  resendApiKey: text("resendApiKey"),
+  resendFromEmail: text("resendFromEmail"),
 });
 
 export const adsConfig = pgTable("AdsConfig", {

@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { getServiceConfigForAdmin } from "@/lib/app-config";
 import {
   Card,
   CardContent,
@@ -33,20 +34,26 @@ async function getSystemHealth(): Promise<{
     // db error handled below
   }
 
+  const serviceConfig = await getServiceConfigForAdmin();
   const services: HealthItem[] = [
     {
       label: "Email (Resend)",
-      status: process.env.RESEND_API_KEY ? "ok" : "warning",
-      detail: process.env.RESEND_API_KEY
+      status: serviceConfig.resendConfigured ? "ok" : "warning",
+      detail: serviceConfig.resendConfigured
         ? "Configured"
-        : "RESEND_API_KEY missing — password reset emails disabled",
+        : "Resend API key missing - password reset emails disabled",
     },
     {
       label: "AI Auto-Group (OpenRouter)",
-      status: process.env.OPENROUTER_API_KEY ? "ok" : "warning",
-      detail: process.env.OPENROUTER_API_KEY
+      status: serviceConfig.openrouterConfigured ? "ok" : "warning",
+      detail: serviceConfig.openrouterConfigured
         ? "Configured"
-        : "OPENROUTER_API_KEY missing — AI categorization disabled",
+        : "OpenRouter API key missing - AI categorization disabled",
+    },
+    {
+      label: "Sender Email",
+      status: serviceConfig.resendFromEmail ? "ok" : "warning",
+      detail: serviceConfig.resendFromEmail || "Using Resend default sender",
     },
     {
       label: "Admin Email",
@@ -69,7 +76,7 @@ async function getSystemHealth(): Promise<{
       status: dbOk ? "ok" : "error",
       detail: dbOk
         ? dbSize
-          ? `Connected · ${dbSize}`
+          ? `Connected - ${dbSize}`
           : "Connected"
         : "Connection failed",
     },

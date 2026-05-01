@@ -1,13 +1,15 @@
 import { Resend } from "resend";
+import { getAppConfig } from "@/lib/app-config";
 
 export async function sendPasswordResetEmail(to: string, resetUrl: string) {
-  const apiKey = process.env.RESEND_API_KEY;
+  const config = await getAppConfig();
+  const apiKey = config.resendApiKey;
   if (!apiKey) {
     throw new Error("RESEND_API_KEY is not configured");
   }
 
   const resend = new Resend(apiKey);
-  const from = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
+  const from = config.resendFromEmail ?? "onboarding@resend.dev";
   await resend.emails.send({
     from,
     to,

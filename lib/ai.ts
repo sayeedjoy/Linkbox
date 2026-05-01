@@ -1,13 +1,15 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import { getAppConfig } from "@/lib/app-config";
 
-const openrouter = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY ?? "",
-});
+export async function getCategorizationModel() {
+  const config = await getAppConfig();
+  const apiKey = config.openrouterApiKey;
+  if (!apiKey) return null;
 
-export const categorizationModel = openrouter.chat(
-  "google/gemini-2.0-flash-001"
-);
+  return createOpenRouter({ apiKey }).chat("google/gemini-2.0-flash-001");
+}
 
-export function isCategorizationEnabled(): boolean {
-  return !!process.env.OPENROUTER_API_KEY;
+export async function isCategorizationEnabled(): Promise<boolean> {
+  const config = await getAppConfig();
+  return !!config.openrouterApiKey;
 }

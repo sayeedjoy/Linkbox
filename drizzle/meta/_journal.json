@@ -15,6 +15,13 @@
       "when": 1777227122290,
       "tag": "0001_medical_lady_mastermind",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777240000000,
+      "tag": "0002_admin_service_config",
+      "breakpoints": true
     }
   ]
 }

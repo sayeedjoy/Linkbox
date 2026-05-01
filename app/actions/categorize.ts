@@ -4,7 +4,7 @@ import { generateObject } from "ai";
 import { z } from "zod";
 import { eq, and, isNull, isNotNull, desc } from "drizzle-orm";
 import { db, users, bookmarks, groups } from "@/lib/db";
-import { categorizationModel, isCategorizationEnabled } from "@/lib/ai";
+import { getCategorizationModel, isCategorizationEnabled } from "@/lib/ai";
 import { publishUserEvent } from "@/lib/realtime";
 
 /* ------------------------------------------------------------------ */
@@ -86,6 +86,8 @@ async function classifyBookmark(bookmarkId: string, userId: string): Promise<boo
   ]
     .filter(Boolean)
     .join("\n");
+  const categorizationModel = await getCategorizationModel();
+  if (!categorizationModel) return false;
 
   const { object: result } = await generateObject({
     model: categorizationModel,
@@ -133,7 +135,7 @@ Rules:
 
 export async function categorizeBookmark(bookmarkId: string, userId: string): Promise<void> {
   try {
-    if (!isCategorizationEnabled()) return;
+    if (!(await isCategorizationEnabled())) return;
 
     const [user] = await db
       .select({ autoGroupEnabled: users.autoGroupEnabled })
@@ -159,7 +161,7 @@ export async function categorizeBookmark(bookmarkId: string, userId: string): Pr
 /* ------------------------------------------------------------------ */
 
 export async function backfillUngroupedBookmarks(userId: string): Promise<void> {
-  if (!isCategorizationEnabled()) return;
+  if (!(await isCategorizationEnabled())) return;
   if (activeBackfills.has(userId)) return;
 
   activeBackfills.add(userId);
