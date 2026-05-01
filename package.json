@@ -13,6 +13,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@ai-sdk/groq": "^3.0.37",
     "@ai-sdk/react": "^3.0.160",
     "@base-ui/react": "^1.4.0",
     "@clerk/nextjs": "^6.39.1",
@@ -31,6 +32,7 @@
     "drizzle-orm": "^0.45.2",
     "framer-motion": "^12.38.0",
     "geist": "^1.7.0",
+    "googleapis": "^171.4.0",
     "lucide-react": "^0.575.0",
     "motion": "^12.38.0",
     "next": "16.1.6",

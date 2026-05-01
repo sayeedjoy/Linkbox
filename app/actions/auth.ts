@@ -3,6 +3,7 @@
 import bcrypt from "bcryptjs";
 import { eq, count } from "drizzle-orm";
 import { db, users } from "@/lib/db";
+import { getFreePlanId } from "@/lib/plan-entitlements";
 import { currentUserId } from "@/lib/auth";
 import {
   isPublicSignupEnabled,
@@ -26,10 +27,12 @@ export async function register(email: string, password: string, name?: string) {
     .limit(1);
   if (existing) throw new Error("User already exists");
   const hashed = await bcrypt.hash(password, 12);
+  const freePlanId = await getFreePlanId();
   await db.insert(users).values({
     email: email.trim().toLowerCase(),
     password: hashed,
     name: name?.trim() || null,
+    subscriptionPlanId: freePlanId,
   });
 }
 

@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { GroupDropdown } from "@/components/group-dropdown";
 import { UserMenu } from "@/components/user-menu";
 import { cn } from "@/lib/utils";
 import type { GroupWithCount } from "@/lib/types";
+import { getWebDashboardEntitlements } from "@/app/actions/settings";
 
 type ProfileHeaderProps = {
   groups: GroupWithCount[];
@@ -22,6 +24,14 @@ export function ProfileHeader({
   onGroupsChange,
   className,
 }: ProfileHeaderProps) {
+  const [groupColoringAllowed, setGroupColoringAllowed] = useState(true);
+
+  useEffect(() => {
+    getWebDashboardEntitlements()
+      .then((e) => setGroupColoringAllowed(e.groupColoringAllowed))
+      .catch(() => setGroupColoringAllowed(true));
+  }, []);
+
   return (
     <header className={cn(className)}>
       <div className="flex items-center justify-between gap-2 sm:gap-4 px-4 py-3 sm:px-6 sm:py-4 max-w-4xl w-full mx-auto">
@@ -31,6 +41,7 @@ export function ProfileHeader({
           selectedGroupId={selectedGroupId}
           onSelectGroupId={onSelectGroupId}
           onGroupsChange={onGroupsChange}
+          groupColoringAllowed={groupColoringAllowed}
         />
         <UserMenu />
       </div>

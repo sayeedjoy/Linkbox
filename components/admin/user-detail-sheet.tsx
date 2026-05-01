@@ -10,12 +10,15 @@ import {
   CalendarIcon,
   ShieldOffIcon,
   ShieldCheckIcon,
+  CrownIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   getUserDetailsAsAdmin,
   banUserAsAdmin,
   unbanUserAsAdmin,
+  setUserSubscriptionPlanAsAdmin,
+  clearManualPlanOverrideAsAdmin,
   type UserDetails,
 } from "@/app/actions/admin-users";
 import {
@@ -48,6 +51,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  getUserAvatarSeed,
+  getUserAvatarStyle,
+  getUserInitials,
+} from "@/lib/avatar-gradient";
 
 export interface UserDetailDialogProps {
   userId: string | null;
@@ -107,14 +115,6 @@ function isBanned(iso: string | null): boolean {
   return new Date(iso) > new Date();
 }
 
-function initialsFor(name: string | null, email: string | null) {
-  const source = name?.trim() || email?.trim() || "?";
-  const parts = source.split(/\s+/).filter(Boolean);
-  if (parts.length >= 2)
-    return `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`.toUpperCase();
-  return source.slice(0, 2).toUpperCase();
-}
-
 const BAN_OPTIONS = [
   { value: "1h", label: "1 hour" },
   { value: "24h", label: "24 hours" },
@@ -135,6 +135,7 @@ export function UserDetailDialog({
   const [banDuration, setBanDuration] = useState("24h");
   const [showBanConfirm, setShowBanConfirm] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [planDraft, setPlanDraft] = useState<string>("");
 
   const isOpen = userId !== null;
 
@@ -149,6 +150,7 @@ export function UserDetailDialog({
           setError(result.error);
         } else {
           setDetails(result.data);
+          setPlanDraft(result.data.subscriptionPlanId);
         }
       })
       .catch(() => {
@@ -198,6 +200,32 @@ export function UserDetailDialog({
     });
   }
 
+  function handleAssignPlanManual() {
+    if (!userId) return;
+    startTransition(async () => {
+      const result = await setUserSubscriptionPlanAsAdmin(userId, planDraft);
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Plan assigned (manual lock)");
+      loadDetails(userId);
+    });
+  }
+
+  function handleClearManualPlan() {
+    if (!userId) return;
+    startTransition(async () => {
+      const result = await clearManualPlanOverrideAsAdmin(userId);
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Manual override cleared — user is on Free until Play verifies again.");
+      loadDetails(userId);
+    });
+  }
+
   const banned = isBanned(details?.bannedUntil ?? null);
   const bannedUntilLabel = formatBannedUntil(details?.bannedUntil ?? null);
 
@@ -207,8 +235,12 @@ export function UserDetailDialog({
         <DialogContent className="flex max-h-[min(720px,calc(100vh-2rem))] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
           <DialogHeader className="px-5 pb-4 pt-5">
             <div className="flex items-center gap-3">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-sm font-semibold text-muted-foreground">
-                {initialsFor(userName, userEmail)}
+              <div
+                className="flex size-10 shrink-0 items-center justify-center rounded-xl text-sm font-semibold shadow-sm"
+                style={getUserAvatarStyle(getUserAvatarSeed(userName, userEmail))}
+                aria-label={`${userName ?? userEmail ?? "User"} avatar`}
+              >
+                {getUserInitials(userName, userEmail)}
               </div>
               <div className="min-w-0">
                 <DialogTitle className="truncate text-base">
@@ -277,6 +309,62 @@ export function UserDetailDialog({
                     )
                   }
                 />
+                <div className="rounded-lg border border-border bg-muted/20 p-3">
+                  <div className="mb-2 flex items-center gap-2">
+                    <CrownIcon className="size-3.5 text-muted-foreground" />
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                      Subscription
+                    </p>
+                  </div>
+                  <div className="mb-2 flex flex-wrap items-center gap-2 text-sm">
+                    <span className="font-semibold text-foreground">{details.planDisplayName}</span>
+                    <Badge variant="outline" className="text-[10px] capitalize">
+                      {details.planSource}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">({details.planSlug})</span>
+                  </div>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <p className="text-[10px] text-muted-foreground">Change plan</p>
+                      <Select value={planDraft} onValueChange={setPlanDraft}>
+                        <SelectTrigger className="h-9 w-full sm:max-w-xs">
+                          <SelectValue placeholder="Plan" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            {details.availablePlans.map((p) => (
+                              <SelectItem key={p.id} value={p.id}>
+                                {`${p.displayName} (${p.slug})`}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="shrink-0"
+                      disabled={isPending || !planDraft}
+                      onClick={handleAssignPlanManual}
+                    >
+                      Lock manual
+                    </Button>
+                  </div>
+                  {details.planSource === "admin" && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-2 w-full sm:w-auto"
+                      disabled={isPending}
+                      onClick={handleClearManualPlan}
+                    >
+                      Clear manual override
+                    </Button>
+                  )}
+                </div>
                 <Stat
                   icon={CalendarIcon}
                   label="Member Since"

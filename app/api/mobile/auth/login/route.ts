@@ -2,7 +2,7 @@ import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { eq, and } from "drizzle-orm";
-import { db, users, apiTokens } from "@/lib/db";
+import { db, users, apiTokens, subscriptionPlans } from "@/lib/db";
 import { hashToken } from "@/lib/api-auth";
 
 type LoginBody = {
@@ -71,8 +71,36 @@ export async function POST(request: Request) {
     });
   });
 
+  const [entRow] = await db
+    .select({
+      autoGroupEnabled: users.autoGroupEnabled,
+      aiGroupingAllowed: subscriptionPlans.aiGroupingAllowed,
+      groupColoringAllowed: subscriptionPlans.groupColoringAllowed,
+      apiQuotaPerDay: subscriptionPlans.apiQuotaPerDay,
+      planSource: users.planSource,
+      planSlug: subscriptionPlans.slug,
+      planDisplayName: subscriptionPlans.displayName,
+    })
+    .from(users)
+    .innerJoin(subscriptionPlans, eq(users.subscriptionPlanId, subscriptionPlans.id))
+    .where(eq(users.id, user.id))
+    .limit(1);
+
   return NextResponse.json(
-    { token: plaintext, user: { id: user.id, email: user.email, name: user.name, image: user.image } },
+    {
+      token: plaintext,
+      user: { id: user.id, email: user.email, name: user.name, image: user.image },
+      entitlements: entRow
+        ? {
+            autoGroupEnabled: entRow.autoGroupEnabled,
+            aiGroupingAllowed: entRow.aiGroupingAllowed,
+            groupColoringAllowed: entRow.groupColoringAllowed,
+            apiQuotaPerDay: entRow.apiQuotaPerDay,
+            planSource: entRow.planSource,
+            plan: { slug: entRow.planSlug, displayName: entRow.planDisplayName },
+          }
+        : undefined,
+    },
     { status: 200 }
   );
 }

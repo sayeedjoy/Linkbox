@@ -2,7 +2,8 @@ import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import { db, users, apiTokens } from "@/lib/db";
+import { db, users, apiTokens, subscriptionPlans } from "@/lib/db";
+import { getFreePlanId } from "@/lib/plan-entitlements";
 import { hashToken } from "@/lib/api-auth";
 import { isPublicSignupEnabled } from "@/lib/app-config";
 
@@ -76,10 +77,11 @@ export async function POST(request: Request) {
 
   let createdUser: { id: string; email: string; name: string | null; image: string | null };
   try {
+    const freePlanId = await getFreePlanId();
     createdUser = await db.transaction(async (tx) => {
       const [user] = await tx
         .insert(users)
-        .values({ email, password: hashedPassword, name })
+        .values({ email, password: hashedPassword, name, subscriptionPlanId: freePlanId })
         .returning({ id: users.id, email: users.email, name: users.name, image: users.image });
 
       await tx.insert(apiTokens).values({
@@ -100,5 +102,36 @@ export async function POST(request: Request) {
     throw error;
   }
 
-  return NextResponse.json({ token: plaintext, user: createdUser }, { status: 201 });
+  const [entRow] = await db
+    .select({
+      autoGroupEnabled: users.autoGroupEnabled,
+      aiGroupingAllowed: subscriptionPlans.aiGroupingAllowed,
+      groupColoringAllowed: subscriptionPlans.groupColoringAllowed,
+      apiQuotaPerDay: subscriptionPlans.apiQuotaPerDay,
+      planSource: users.planSource,
+      planSlug: subscriptionPlans.slug,
+      planDisplayName: subscriptionPlans.displayName,
+    })
+    .from(users)
+    .innerJoin(subscriptionPlans, eq(users.subscriptionPlanId, subscriptionPlans.id))
+    .where(eq(users.id, createdUser.id))
+    .limit(1);
+
+  return NextResponse.json(
+    {
+      token: plaintext,
+      user: createdUser,
+      entitlements: entRow
+        ? {
+            autoGroupEnabled: entRow.autoGroupEnabled,
+            aiGroupingAllowed: entRow.aiGroupingAllowed,
+            groupColoringAllowed: entRow.groupColoringAllowed,
+            apiQuotaPerDay: entRow.apiQuotaPerDay,
+            planSource: entRow.planSource,
+            plan: { slug: entRow.planSlug, displayName: entRow.planDisplayName },
+          }
+        : undefined,
+    },
+    { status: 201 }
+  );
 }

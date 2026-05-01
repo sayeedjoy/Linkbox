@@ -5,6 +5,8 @@ import { eq, and, asc, count, sql } from "drizzle-orm";
 import { db, groups, bookmarks } from "@/lib/db";
 import { currentUserId } from "@/lib/auth";
 import { publishUserEvent } from "@/lib/realtime";
+import { consumeApiQuotaOrThrow } from "@/lib/api-quota";
+import { getPlanFeaturesForUser, resolveGroupColorForPlan } from "@/lib/plan-entitlements";
 
 export type GroupWithCount = {
   id: string;
@@ -60,10 +62,15 @@ export async function getGroups(): Promise<GroupWithCount[]> {
 
 export async function createGroup(name: string, color?: string) {
   const userId = await currentUserId();
+  const trimmedName = name.trim();
+  if (!trimmedName) throw new Error("Group name is required");
+  const plan = await getPlanFeaturesForUser(userId);
+  await consumeApiQuotaOrThrow(userId, plan);
+  const resolvedColor = resolveGroupColorForPlan(plan.groupColoringAllowed, color ?? null);
   const maxOrder = await getMaxGroupOrder(userId);
   const [group] = await db
     .insert(groups)
-    .values({ userId, name: name.trim(), color: color ?? null, order: maxOrder + 1 })
+    .values({ userId, name: trimmedName, color: resolvedColor, order: maxOrder + 1 })
     .returning();
   revalidatePath("/");
   revalidateTag("groups", "max");
@@ -76,7 +83,19 @@ export async function updateGroup(
   data: { name?: string; color?: string | null; order?: number }
 ) {
   const userId = await currentUserId();
-  await db.update(groups).set(data).where(and(eq(groups.id, id), eq(groups.userId, userId)));
+  const updatePayload: { name?: string; color?: string | null; order?: number } = {};
+  if (data.name !== undefined) {
+    const trimmedName = data.name.trim();
+    if (!trimmedName) throw new Error("Group name is required");
+    updatePayload.name = trimmedName;
+  }
+  const needsPlanFeatures = data.color !== undefined;
+  const plan = needsPlanFeatures ? await getPlanFeaturesForUser(userId) : null;
+  if (data.color !== undefined) updatePayload.color = resolveGroupColorForPlan(plan!.groupColoringAllowed, data.color);
+  if (data.order !== undefined) updatePayload.order = data.order;
+  if (Object.keys(updatePayload).length === 0) return { ok: true };
+  await consumeApiQuotaOrThrow(userId, plan ?? undefined);
+  await db.update(groups).set(updatePayload).where(and(eq(groups.id, id), eq(groups.userId, userId)));
   revalidatePath("/");
   revalidateTag("groups", "max");
   publishUserEvent(userId, { type: "group.updated", entity: "group", id });
@@ -85,6 +104,7 @@ export async function updateGroup(
 
 export async function reorderGroups(orderedIds: string[]) {
   const userId = await currentUserId();
+  await consumeApiQuotaOrThrow(userId);
   await db.transaction(async (tx) => {
     for (let i = 0; i < orderedIds.length; i++) {
       await tx
@@ -103,6 +123,7 @@ export async function reorderGroups(orderedIds: string[]) {
 
 export async function deleteGroup(id: string) {
   const userId = await currentUserId();
+  await consumeApiQuotaOrThrow(userId);
   await db.update(bookmarks).set({ groupId: null, updatedAt: new Date() }).where(and(eq(bookmarks.groupId, id), eq(bookmarks.userId, userId)));
   await db.delete(groups).where(and(eq(groups.id, id), eq(groups.userId, userId)));
   revalidatePath("/");
@@ -112,10 +133,15 @@ export async function deleteGroup(id: string) {
 }
 
 export async function createGroupForUser(userId: string, name: string, color?: string | null) {
+  const trimmedName = name.trim();
+  if (!trimmedName) throw new Error("Group name is required");
+  const plan = await getPlanFeaturesForUser(userId);
+  await consumeApiQuotaOrThrow(userId, plan);
+  const resolvedColor = resolveGroupColorForPlan(plan.groupColoringAllowed, color ?? null);
   const maxOrder = await getMaxGroupOrder(userId);
   const [group] = await db
     .insert(groups)
-    .values({ userId, name: name.trim(), color: color ?? null, order: maxOrder + 1 })
+    .values({ userId, name: trimmedName, color: resolvedColor, order: maxOrder + 1 })
     .returning();
   revalidatePath("/");
   revalidateTag("groups", "max");
@@ -129,10 +155,17 @@ export async function updateGroupForUser(
   data: { name?: string; color?: string | null; order?: number }
 ) {
   const updatePayload: { name?: string; color?: string | null; order?: number } = {};
-  if (data.name !== undefined) updatePayload.name = data.name.trim();
-  if (data.color !== undefined) updatePayload.color = data.color;
+  if (data.name !== undefined) {
+    const trimmedName = data.name.trim();
+    if (!trimmedName) throw new Error("Group name is required");
+    updatePayload.name = trimmedName;
+  }
+  const needsPlanFeatures = data.color !== undefined;
+  const plan = needsPlanFeatures ? await getPlanFeaturesForUser(userId) : null;
+  if (data.color !== undefined) updatePayload.color = resolveGroupColorForPlan(plan!.groupColoringAllowed, data.color);
   if (data.order !== undefined) updatePayload.order = data.order;
   if (Object.keys(updatePayload).length === 0) return { ok: true };
+  await consumeApiQuotaOrThrow(userId, plan ?? undefined);
   await db.update(groups).set(updatePayload).where(and(eq(groups.id, id), eq(groups.userId, userId)));
   revalidatePath("/");
   revalidateTag("groups", "max");
@@ -141,6 +174,7 @@ export async function updateGroupForUser(
 }
 
 export async function deleteGroupForUser(userId: string, id: string) {
+  await consumeApiQuotaOrThrow(userId);
   await db.update(bookmarks).set({ groupId: null, updatedAt: new Date() }).where(and(eq(bookmarks.groupId, id), eq(bookmarks.userId, userId)));
   await db.delete(groups).where(and(eq(groups.id, id), eq(groups.userId, userId)));
   revalidatePath("/");

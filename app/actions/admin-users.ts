@@ -4,9 +4,10 @@ import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
-import { eq, desc, count } from "drizzle-orm";
+import { eq, desc, count, asc, and } from "drizzle-orm";
 import { requireAdminSession } from "@/lib/admin";
-import { db, users, apiTokens, groups, bookmarks, passwordResetTokens } from "@/lib/db";
+import { db, users, apiTokens, groups, bookmarks, passwordResetTokens, subscriptionPlans } from "@/lib/db";
+import { getFreePlanId, PLAN_SOURCE_ADMIN, PLAN_SOURCE_DEFAULT } from "@/lib/plan-entitlements";
 import { hashToken } from "@/lib/api-auth";
 import { sendPasswordResetEmail } from "@/lib/email";
 
@@ -53,10 +54,16 @@ export async function inviteUserAsAdmin(
 
     const randomPassword = randomBytes(32).toString("hex");
     const hashedPassword = await bcrypt.hash(randomPassword, 12);
+    const freePlanId = await getFreePlanId();
 
     const [user] = await db
       .insert(users)
-      .values({ email: normalized, password: hashedPassword, name: name?.trim() || null })
+      .values({
+        email: normalized,
+        password: hashedPassword,
+        name: name?.trim() || null,
+        subscriptionPlanId: freePlanId,
+      })
       .returning({ id: users.id });
 
     const token = randomBytes(32).toString("hex");
@@ -93,6 +100,11 @@ export type UserDetails = {
   createdAt: string | null;
   lastTokenUsedAt: string | null;
   bannedUntil: string | null;
+  subscriptionPlanId: string;
+  planSource: string;
+  planSlug: string;
+  planDisplayName: string;
+  availablePlans: { id: string; displayName: string; slug: string }[];
 };
 
 export async function getUserDetailsAsAdmin(
@@ -106,19 +118,38 @@ export async function getUserDetailsAsAdmin(
         autoGroupEnabled: users.autoGroupEnabled,
         createdAt: users.createdAt,
         bannedUntil: users.bannedUntil,
+        subscriptionPlanId: users.subscriptionPlanId,
+        planSource: users.planSource,
+        planSlug: subscriptionPlans.slug,
+        planDisplayName: subscriptionPlans.displayName,
       })
       .from(users)
+      .innerJoin(subscriptionPlans, eq(users.subscriptionPlanId, subscriptionPlans.id))
       .where(eq(users.id, userId))
       .limit(1);
 
     if (!user) return { success: false, error: "User not found." };
 
-    const [[{ bookmarkCount }], [{ groupCount }], [{ apiTokenCount }], lastToken] = await Promise.all([
-      db.select({ bookmarkCount: count() }).from(bookmarks).where(eq(bookmarks.userId, userId)),
-      db.select({ groupCount: count() }).from(groups).where(eq(groups.userId, userId)),
-      db.select({ apiTokenCount: count() }).from(apiTokens).where(eq(apiTokens.userId, userId)),
-      db.select({ lastUsedAt: apiTokens.lastUsedAt }).from(apiTokens).where(eq(apiTokens.userId, userId)).orderBy(desc(apiTokens.lastUsedAt)).limit(1),
-    ]);
+    const [[{ bookmarkCount }], [{ groupCount }], [{ apiTokenCount }], lastToken, availablePlans] =
+      await Promise.all([
+        db.select({ bookmarkCount: count() }).from(bookmarks).where(eq(bookmarks.userId, userId)),
+        db.select({ groupCount: count() }).from(groups).where(eq(groups.userId, userId)),
+        db.select({ apiTokenCount: count() }).from(apiTokens).where(eq(apiTokens.userId, userId)),
+        db
+          .select({ lastUsedAt: apiTokens.lastUsedAt })
+          .from(apiTokens)
+          .where(eq(apiTokens.userId, userId))
+          .orderBy(desc(apiTokens.lastUsedAt))
+          .limit(1),
+        db
+          .select({
+            id: subscriptionPlans.id,
+            displayName: subscriptionPlans.displayName,
+            slug: subscriptionPlans.slug,
+          })
+          .from(subscriptionPlans)
+          .orderBy(asc(subscriptionPlans.sortOrder)),
+      ]);
 
     return {
       success: true,
@@ -130,6 +161,11 @@ export async function getUserDetailsAsAdmin(
         createdAt: user.createdAt?.toISOString() ?? null,
         lastTokenUsedAt: lastToken?.[0]?.lastUsedAt?.toISOString() ?? null,
         bannedUntil: user.bannedUntil?.toISOString() ?? null,
+        subscriptionPlanId: user.subscriptionPlanId,
+        planSource: user.planSource,
+        planSlug: user.planSlug,
+        planDisplayName: user.planDisplayName,
+        availablePlans,
       },
     };
   } catch (error) {
@@ -190,5 +226,68 @@ export async function unbanUserAsAdmin(
   } catch (error) {
     unstable_rethrow(error);
     return { success: false, error: "Failed to unban user." };
+  }
+}
+
+export async function setUserSubscriptionPlanAsAdmin(
+  userId: string,
+  planId: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    await requireAdminSession();
+    const targetUserId = userId.trim();
+    const trimmedPlan = planId.trim();
+    if (!targetUserId) return { success: false, error: "User not found." };
+    if (!trimmedPlan) return { success: false, error: "Plan is required." };
+
+    const [plan] = await db
+      .select({ id: subscriptionPlans.id })
+      .from(subscriptionPlans)
+      .where(eq(subscriptionPlans.id, trimmedPlan))
+      .limit(1);
+    if (!plan) return { success: false, error: "Plan not found." };
+
+    const updated = await db
+      .update(users)
+      .set({ subscriptionPlanId: trimmedPlan, planSource: PLAN_SOURCE_ADMIN })
+      .where(eq(users.id, targetUserId))
+      .returning({ id: users.id });
+    if (updated.length === 0) return { success: false, error: "User not found." };
+
+    revalidatePath("/admin/users");
+    return { success: true };
+  } catch (error) {
+    unstable_rethrow(error);
+    return { success: false, error: "Failed to update plan." };
+  }
+}
+
+export async function clearManualPlanOverrideAsAdmin(
+  userId: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    await requireAdminSession();
+    const targetUserId = userId.trim();
+    if (!targetUserId) return { success: false, error: "User not found." };
+
+    const freePlanId = await getFreePlanId();
+    const updated = await db
+      .update(users)
+      .set({ subscriptionPlanId: freePlanId, planSource: PLAN_SOURCE_DEFAULT })
+      .where(
+        and(eq(users.id, targetUserId), eq(users.planSource, PLAN_SOURCE_ADMIN))
+      )
+      .returning({ id: users.id });
+    if (updated.length === 0) {
+      const [exists] = await db.select({ id: users.id }).from(users).where(eq(users.id, targetUserId)).limit(1);
+      if (!exists) return { success: false, error: "User not found." };
+      return { success: false, error: "User has no manual admin override." };
+    }
+
+    revalidatePath("/admin/users");
+    return { success: true };
+  } catch (error) {
+    unstable_rethrow(error);
+    return { success: false, error: "Failed to clear manual assignment." };
   }
 }

@@ -4,6 +4,7 @@ import { BookmarkIcon, SmartphoneIcon, RadioIcon, KeyRoundIcon, FileJsonIcon } f
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { EndpointCard } from "@/components/admin/api-docs/endpoint-card";
 import { BaseUrlBanner } from "@/components/admin/api-docs/base-url-banner";
+import { PlanApiDocsSection } from "@/components/admin/api-docs/plan-api-section";
 
 export const metadata: Metadata = { title: "API Reference" };
 
@@ -67,8 +68,20 @@ export default async function AdminApiDocsPage() {
     "email": "user@example.com",
     "name": "Jane",
     "image": null
+  },
+  "entitlements": {
+    "autoGroupEnabled": false,
+    "aiGroupingAllowed": true,
+    "groupColoringAllowed": true,
+    "apiQuotaPerDay": null,
+    "planSource": "default",
+    "plan": { "slug": "free", "displayName": "Free" }
   }
 }`}
+            notes={[
+              "entitlements reflects the user's subscription plan (Free/Pro) and feature flags configured in Admin → Plans.",
+              "Clients should refresh after billing verification or admin plan changes.",
+            ]}
           />
 
           <EndpointCard
@@ -86,11 +99,20 @@ export default async function AdminApiDocsPage() {
 
 {
   "token": "a3f8c2...",
-  "user": { "id": "clx...", "email": "...", "name": "Jane", "image": null }
+  "user": { "id": "clx...", "email": "...", "name": "Jane", "image": null },
+  "entitlements": {
+    "autoGroupEnabled": false,
+    "aiGroupingAllowed": true,
+    "groupColoringAllowed": true,
+    "apiQuotaPerDay": null,
+    "planSource": "default",
+    "plan": { "slug": "free", "displayName": "Free" }
+  }
 }`}
             notes={[
               "Returns 403 if public signup is disabled.",
               "Returns 409 if the email already exists.",
+              "New accounts start on the Free plan unless changed by Play billing or an admin.",
             ]}
           />
 
@@ -125,12 +147,14 @@ export default async function AdminApiDocsPage() {
           />
         </section>
 
+        <PlanApiDocsSection />
+
         {/* -- Bookmarks ---------------------------------- */}
         <section className="space-y-3">
           <SectionHeader
             icon={BookmarkIcon}
             title="Bookmarks"
-            description="Create, update, and delete bookmarks - all endpoints require Bearer auth"
+            description="Create, update, and delete bookmarks — Bearer auth. Writes count toward the user's daily API quota when set on their plan (429 Too Many Requests with limit and resetsAt)."
           />
 
           <EndpointCard
@@ -219,7 +243,7 @@ export default async function AdminApiDocsPage() {
             method="GET"
             path="/api/sync"
             auth="bearer"
-            description="Fetch bookmarks and groups in a single request. Supports cursor-based pagination for the initial sync of large libraries."
+            description="Fetch bookmarks and groups in a single request. Supports cursor-based pagination for the initial sync of large libraries. Each successful GET consumes one unit of the user's daily API quota when configured."
             queryParams={[
               { name: "mode", type: "string", required: false, description: '"initial" fetches up to 150 bookmarks by default; omit for a full sync (up to 2000)' },
               { name: "cursor", type: "string", required: false, description: "Bookmark ID from the previous page's nextCursor to fetch the next page" },
@@ -247,6 +271,10 @@ export default async function AdminApiDocsPage() {
   "hasMore": true,
   "nextCursor": "clx..."
 }`}
+            notes={[
+              "Returns 429 with { error, limit, resetsAt } when the daily quota is exceeded.",
+              "Realtime SSE (/api/realtime/bookmarks) does not use this quota counter.",
+            ]}
           />
 
           <EndpointCard

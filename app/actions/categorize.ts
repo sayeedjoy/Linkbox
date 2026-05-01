@@ -5,6 +5,7 @@ import { z } from "zod";
 import { eq, and, isNull, isNotNull, desc } from "drizzle-orm";
 import { db, users, bookmarks, groups } from "@/lib/db";
 import { getCategorizationModel, isCategorizationEnabled } from "@/lib/ai";
+import { getPlanFeaturesForUser } from "@/lib/plan-entitlements";
 import { publishUserEvent } from "@/lib/realtime";
 
 /* ------------------------------------------------------------------ */
@@ -137,6 +138,9 @@ export async function categorizeBookmark(bookmarkId: string, userId: string): Pr
   try {
     if (!(await isCategorizationEnabled())) return;
 
+    const plan = await getPlanFeaturesForUser(userId);
+    if (!plan.aiGroupingAllowed) return;
+
     const [user] = await db
       .select({ autoGroupEnabled: users.autoGroupEnabled })
       .from(users)
@@ -162,6 +166,10 @@ export async function categorizeBookmark(bookmarkId: string, userId: string): Pr
 
 export async function backfillUngroupedBookmarks(userId: string): Promise<void> {
   if (!(await isCategorizationEnabled())) return;
+
+  const plan = await getPlanFeaturesForUser(userId);
+  if (!plan.aiGroupingAllowed) return;
+
   if (activeBackfills.has(userId)) return;
 
   activeBackfills.add(userId);

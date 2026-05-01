@@ -2,6 +2,7 @@
 
 import { useCallback, useState, useEffect, useRef } from "react";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
+import { getWebDashboardEntitlements } from "@/app/actions/settings";
 import { BookmarkStatusHeader } from "./bookmark-status-header";
 import { BookmarkEditCard } from "./bookmark-edit-card";
 import { BookmarkRow } from "./bookmark-row";
@@ -58,6 +59,7 @@ export function BookmarkList({
     url: "",
     groupId: "" as string | null,
   });
+  const [groupColoringAllowed, setGroupColoringAllowed] = useState(true);
   const editCardRef = useRef<HTMLLIElement | null>(null);
 
   const editing = editingId ? bookmarks.find((b) => b.id === editingId) : null;
@@ -77,6 +79,12 @@ export function BookmarkList({
     if (openEditId && bookmarks.some((b) => b.id === openEditId))
       setEditingId(openEditId);
   }, [openEditId, bookmarks]);
+
+  useEffect(() => {
+    getWebDashboardEntitlements()
+      .then((e) => setGroupColoringAllowed(e.groupColoringAllowed))
+      .catch(() => setGroupColoringAllowed(true));
+  }, []);
 
   const handleDelete = useCallback(
     async (id: string) => {
@@ -153,6 +161,7 @@ export function BookmarkList({
               onSave={handleSaveEdit}
               onCancel={() => setEditingId(null)}
               onGroupsChange={onGroupsChange}
+              groupColoringAllowed={groupColoringAllowed}
             />
           ) : (
             <BookmarkRow

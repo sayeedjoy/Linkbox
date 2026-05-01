@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { updateBookmark } from "@/app/actions/bookmarks";
 import { createGroup } from "@/app/actions/groups";
+import { getWebDashboardEntitlements } from "@/app/actions/settings";
 import { ColorPicker } from "@/components/color";
 import { toast } from "sonner";
 import type { Bookmark } from "./types";
@@ -46,6 +47,14 @@ export function TimelineEditDialog({
   const [newGroupColor, setNewGroupColor] = useState(DEFAULT_GROUP_COLOR);
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [groupColoringAllowed, setGroupColoringAllowed] = useState(true);
+
+  useEffect(() => {
+    if (!open) return;
+    getWebDashboardEntitlements()
+      .then((e) => setGroupColoringAllowed(e.groupColoringAllowed))
+      .catch(() => setGroupColoringAllowed(true));
+  }, [open]);
 
   useEffect(() => {
     if (bookmark) {
@@ -189,11 +198,20 @@ export function TimelineEditDialog({
             ) : (
               <div className="rounded-lg border border-border bg-muted/30 p-2">
                 <div className="flex items-center gap-2">
-                  <ColorPicker
-                    value={newGroupColor}
-                    onChange={setNewGroupColor}
-                    aria-label="New category color"
-                  />
+                  {groupColoringAllowed ? (
+                    <ColorPicker
+                      value={newGroupColor}
+                      onChange={setNewGroupColor}
+                      aria-label="New category color"
+                    />
+                  ) : (
+                    <span
+                      className="inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-muted/50 text-[10px] text-muted-foreground"
+                      title="Colors are not available on your plan"
+                    >
+                      —
+                    </span>
+                  )}
                   <Input
                     value={newGroupName}
                     onChange={(e) => setNewGroupName(e.target.value)}

@@ -22,6 +22,20 @@
       "when": 1777240000000,
       "tag": "0002_admin_service_config",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1777243600000,
+      "tag": "0003_ai_provider_model_and_groq",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1777626552312,
+      "tag": "0004_subscription_plans_entitlements",
+      "breakpoints": true
     }
   ]
 }

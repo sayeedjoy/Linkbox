@@ -36,7 +36,7 @@ import {
   type ImportBookmarkItem,
 } from "@/app/actions/bookmarks";
 import {
-  getAutoGroupEnabled,
+  getWebDashboardEntitlements,
   updateAutoGroupEnabled,
 } from "@/app/actions/settings";
 
@@ -62,6 +62,8 @@ export function SettingsModal({
   const { theme, setTheme } = useTheme();
   const [autoGroup, setAutoGroup] = useState(false);
   const [autoGroupLoading, setAutoGroupLoading] = useState(false);
+  const [aiGroupingAllowed, setAiGroupingAllowed] = useState(true);
+  const [planLabel, setPlanLabel] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -84,8 +86,12 @@ export function SettingsModal({
       return;
     }
     setAutoGroupLoading(true);
-    getAutoGroupEnabled()
-      .then(setAutoGroup)
+    getWebDashboardEntitlements()
+      .then((e) => {
+        setAutoGroup(e.autoGroupEnabled);
+        setAiGroupingAllowed(e.aiGroupingAllowed);
+        setPlanLabel(e.displayName);
+      })
       .catch(() => {})
       .finally(() => setAutoGroupLoading(false));
   }, [open]);
@@ -100,14 +106,15 @@ export function SettingsModal({
   const displayTheme = (theme ?? "system") as "light" | "dark" | "system";
 
   const handleAutoGroupChange = useCallback(async (checked: boolean) => {
+    if (checked && !aiGroupingAllowed) return;
     setAutoGroup(checked);
     try {
       await updateAutoGroupEnabled(checked);
-    } catch {
+    } catch (e) {
       setAutoGroup(!checked);
-      toast.error("Failed to update setting");
+      toast.error(e instanceof Error ? e.message : "Failed to update setting");
     }
-  }, []);
+  }, [aiGroupingAllowed]);
 
   const handleExport = useCallback(() => {
     window.open("/api/export", "_blank");
@@ -270,13 +277,18 @@ export function SettingsModal({
                     className="text-xs text-muted-foreground"
                   >
                     Turning this on will automatically categorize new bookmarks using AI.
+                    {!aiGroupingAllowed && planLabel ? (
+                      <span className="mt-1 block text-amber-600 dark:text-amber-500">
+                        Not included in the {planLabel} plan.
+                      </span>
+                    ) : null}
                   </p>
                 </div>
                 <Switch
                   id="auto-group"
                   checked={autoGroup}
                   onCheckedChange={handleAutoGroupChange}
-                  disabled={autoGroupLoading}
+                  disabled={autoGroupLoading || !aiGroupingAllowed}
                   aria-describedby="auto-group-desc"
                   className="h-[1.15rem] w-8 shrink-0"
                 />

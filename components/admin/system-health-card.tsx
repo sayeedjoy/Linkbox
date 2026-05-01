@@ -44,11 +44,23 @@ async function getSystemHealth(): Promise<{
         : "Resend API key missing - password reset emails disabled",
     },
     {
-      label: "AI Auto-Group (OpenRouter)",
-      status: serviceConfig.openrouterConfigured ? "ok" : "warning",
-      detail: serviceConfig.openrouterConfigured
-        ? "Configured"
-        : "OpenRouter API key missing - AI categorization disabled",
+      label: `AI Auto-Group (${serviceConfig.aiProvider === "groq" ? "Groq" : "OpenRouter"})`,
+      status:
+        serviceConfig.aiProvider === "groq"
+          ? serviceConfig.groqConfigured
+            ? "ok"
+            : "warning"
+          : serviceConfig.openrouterConfigured
+            ? "ok"
+            : "warning",
+      detail:
+        serviceConfig.aiProvider === "groq"
+          ? serviceConfig.groqConfigured
+            ? `Configured (${serviceConfig.aiModel})`
+            : "Groq API key missing - AI categorization disabled"
+          : serviceConfig.openrouterConfigured
+            ? `Configured (${serviceConfig.aiModel})`
+            : "OpenRouter API key missing - AI categorization disabled",
     },
     {
       label: "Sender Email",

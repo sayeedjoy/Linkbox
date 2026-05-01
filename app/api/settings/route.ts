@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { resolveApiUserId } from "@/lib/api-auth";
 import { db, users } from "@/lib/db";
 import { backfillUngroupedBookmarks } from "@/app/actions/categorize";
+import { getEntitlementsPayload, getPlanFeaturesForUser } from "@/lib/plan-entitlements";
 
 function corsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get("Origin");
@@ -16,15 +17,22 @@ export async function GET(request: Request) {
   if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders(request) });
 
-  const [user] = await db
-    .select({ autoGroupEnabled: users.autoGroupEnabled })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-
-  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404, headers: corsHeaders(request) });
-
-  return NextResponse.json({ autoGroupEnabled: user.autoGroupEnabled }, { headers: corsHeaders(request) });
+  try {
+    const entitlements = await getEntitlementsPayload(userId);
+    return NextResponse.json(
+      {
+        autoGroupEnabled: entitlements.autoGroupEnabled,
+        aiGroupingAllowed: entitlements.aiGroupingAllowed,
+        groupColoringAllowed: entitlements.groupColoringAllowed,
+        apiQuotaPerDay: entitlements.apiQuotaPerDay,
+        planSource: entitlements.planSource,
+        plan: { slug: entitlements.slug, displayName: entitlements.displayName },
+      },
+      { headers: corsHeaders(request) }
+    );
+  } catch {
+    return NextResponse.json({ error: "User not found" }, { status: 404, headers: corsHeaders(request) });
+  }
 }
 
 export async function PATCH(request: Request) {
@@ -46,13 +54,38 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "No valid fields to update" }, { status: 400, headers: corsHeaders(request) });
   }
 
-  const [user] = await db.update(users).set(data).where(eq(users.id, userId)).returning({ autoGroupEnabled: users.autoGroupEnabled });
+  if (data.autoGroupEnabled === true) {
+    const plan = await getPlanFeaturesForUser(userId);
+    if (!plan.aiGroupingAllowed) {
+      return NextResponse.json(
+        { error: "Auto grouping is not available on your plan." },
+        { status: 403, headers: corsHeaders(request) }
+      );
+    }
+  }
+
+  await db.update(users).set(data).where(eq(users.id, userId));
 
   if (data.autoGroupEnabled === true) {
     backfillUngroupedBookmarks(userId).catch(() => {});
   }
 
-  return NextResponse.json({ autoGroupEnabled: user.autoGroupEnabled }, { headers: corsHeaders(request) });
+  try {
+    const entitlements = await getEntitlementsPayload(userId);
+    return NextResponse.json(
+      {
+        autoGroupEnabled: entitlements.autoGroupEnabled,
+        aiGroupingAllowed: entitlements.aiGroupingAllowed,
+        groupColoringAllowed: entitlements.groupColoringAllowed,
+        apiQuotaPerDay: entitlements.apiQuotaPerDay,
+        planSource: entitlements.planSource,
+        plan: { slug: entitlements.slug, displayName: entitlements.displayName },
+      },
+      { headers: corsHeaders(request) }
+    );
+  } catch {
+    return NextResponse.json({ error: "User not found" }, { status: 404, headers: corsHeaders(request) });
+  }
 }
 
 export async function OPTIONS(request: Request) {

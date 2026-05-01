@@ -13,7 +13,7 @@ import {
   lte,
   or,
 } from "drizzle-orm";
-import { db, users, bookmarks } from "@/lib/db";
+import { db, users, bookmarks, subscriptionPlans } from "@/lib/db";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -31,6 +31,7 @@ const SORT_BY_COLUMNS = ["name", "email", "bookmarks", "joined"] as const;
 const SORT_DIRS = ["asc", "desc"] as const;
 
 type UserStatusFilter = (typeof STATUS_FILTERS)[number];
+type UserPlanFilter = string;
 type SortByColumn = (typeof SORT_BY_COLUMNS)[number];
 type SortDir = (typeof SORT_DIRS)[number];
 
@@ -51,6 +52,12 @@ function parseStatus(value: string | null): UserStatusFilter {
     : "all";
 }
 
+function parsePlan(value: string | null, allowedPlanSlugs: string[]): UserPlanFilter {
+  if (value === "all") return "all";
+  if (!value) return "all";
+  return allowedPlanSlugs.includes(value) ? value : "all";
+}
+
 function parseSortBy(value: string | null): SortByColumn | null {
   return SORT_BY_COLUMNS.includes(value as SortByColumn)
     ? (value as SortByColumn)
@@ -64,6 +71,7 @@ function parseSortDir(value: string | null): SortDir | null {
 async function getAdminUsers(
   query: string,
   status: UserStatusFilter,
+  plan: UserPlanFilter,
   sortBy: SortByColumn | null,
   sortDir: SortDir | null,
   requestedPage: number,
@@ -90,7 +98,9 @@ async function getAdminUsers(
       : status === "active"
         ? or(isNull(users.bannedUntil), lte(users.bannedUntil, now))
         : undefined;
-  const whereClause = and(searchClause, statusClause);
+  const planClause =
+    plan === "all" ? undefined : eq(subscriptionPlans.slug, plan);
+  const whereClause = and(searchClause, statusClause, planClause);
 
   const activeClause = or(isNull(users.bannedUntil), lte(users.bannedUntil, now));
   const bannedClause = gt(users.bannedUntil, now);
@@ -123,20 +133,27 @@ async function getAdminUsers(
     [{ activeCount }],
     [{ bannedCount }],
   ] = await Promise.all([
-    db.select({ totalUsers: count() }).from(users).where(whereClause),
+    db
+      .select({ totalUsers: count() })
+      .from(users)
+      .innerJoin(subscriptionPlans, eq(users.subscriptionPlanId, subscriptionPlans.id))
+      .where(whereClause),
     db
       .select({ totalBookmarks: count(bookmarks.id) })
       .from(users)
+      .innerJoin(subscriptionPlans, eq(users.subscriptionPlanId, subscriptionPlans.id))
       .leftJoin(bookmarks, eq(bookmarks.userId, users.id))
       .where(whereClause),
     db
       .select({ activeCount: count() })
       .from(users)
-      .where(and(searchClause, activeClause)),
+      .innerJoin(subscriptionPlans, eq(users.subscriptionPlanId, subscriptionPlans.id))
+      .where(and(searchClause, activeClause, planClause)),
     db
       .select({ bannedCount: count() })
       .from(users)
-      .where(and(searchClause, bannedClause)),
+      .innerJoin(subscriptionPlans, eq(users.subscriptionPlanId, subscriptionPlans.id))
+      .where(and(searchClause, bannedClause, planClause)),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(totalUsersCount / USERS_PER_PAGE));
@@ -151,11 +168,14 @@ async function getAdminUsers(
       createdAt: users.createdAt,
       bannedUntil: users.bannedUntil,
       bookmarkCount,
+      planSlug: subscriptionPlans.slug,
+      planDisplayName: subscriptionPlans.displayName,
     })
     .from(users)
+    .innerJoin(subscriptionPlans, eq(users.subscriptionPlanId, subscriptionPlans.id))
     .leftJoin(bookmarks, eq(bookmarks.userId, users.id))
     .where(whereClause)
-    .groupBy(users.id)
+    .groupBy(users.id, subscriptionPlans.slug, subscriptionPlans.displayName)
     .orderBy(...orderBy)
     .limit(USERS_PER_PAGE)
     .offset(skip);
@@ -169,6 +189,8 @@ async function getAdminUsers(
       bookmarkCount: user.bookmarkCount,
       isCurrentAdmin: user.id === currentAdminId,
       isBanned: user.bannedUntil != null && user.bannedUntil > now,
+      planSlug: user.planSlug,
+      planDisplayName: user.planDisplayName,
     })),
     totalUsers: totalUsersCount,
     totalPages,
@@ -222,15 +244,22 @@ async function UsersData({
     requireAdminSession(),
     searchParams,
   ]);
+  const availablePlans = await db
+    .select({ slug: subscriptionPlans.slug, displayName: subscriptionPlans.displayName })
+    .from(subscriptionPlans)
+    .orderBy(subscriptionPlans.sortOrder);
+  const planFilters = availablePlans.map((p) => ({ value: p.slug, label: p.displayName }));
 
   const query = (firstParam(params.q) ?? "").trim();
   const status = parseStatus(firstParam(params.status));
+  const plan = parsePlan(firstParam(params.plan), planFilters.map((p) => p.value));
   const sortBy = parseSortBy(firstParam(params.sortBy));
   const sortDir = parseSortDir(firstParam(params.sortDir));
   const requestedPage = parsePage(firstParam(params.page));
   const userData = await getAdminUsers(
     query,
     status,
+    plan,
     sortBy,
     sortDir,
     requestedPage,
@@ -243,12 +272,14 @@ async function UsersData({
         users={userData.users}
         query={query}
         status={status}
+        plan={plan}
         sortBy={sortBy}
         sortDir={sortDir}
         page={userData.page}
         totalPages={userData.totalPages}
         totalUsers={userData.totalUsers}
         stats={userData.stats}
+        planFilters={planFilters}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { eq, and } from "drizzle-orm";
 import { userIdFromBearerToken } from "@/lib/api-auth";
+import { tryConsumeApiQuota } from "@/lib/api-quota";
 import { createBookmarkFromMetadataForUser } from "@/app/actions/bookmarks";
 import { db, bookmarks, groups } from "@/lib/db";
 import { publishUserEvent } from "@/lib/realtime";
@@ -16,6 +17,13 @@ export async function PUT(request: Request) {
   const userId = await userIdFromBearerToken(request.headers.get("Authorization"));
   if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders(request) });
+  const quota = await tryConsumeApiQuota(userId);
+  if (!quota.ok) {
+    return NextResponse.json(
+      { error: "Daily API limit reached", limit: quota.limit, resetsAt: quota.resetsAt },
+      { status: 429, headers: corsHeaders(request) }
+    );
+  }
   let body: { url?: string; title?: string; description?: string; groupId?: string | null; faviconUrl?: string | null };
   try {
     body = await request.json();
@@ -133,6 +141,13 @@ export async function DELETE(request: Request) {
   const userId = await userIdFromBearerToken(request.headers.get("Authorization"));
   if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders(request) });
+  const quota = await tryConsumeApiQuota(userId);
+  if (!quota.ok) {
+    return NextResponse.json(
+      { error: "Daily API limit reached", limit: quota.limit, resetsAt: quota.resetsAt },
+      { status: 429, headers: corsHeaders(request) }
+    );
+  }
   let body: { url?: string };
   try {
     body = await request.json();

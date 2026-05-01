@@ -39,12 +39,14 @@ export function GroupDropdown({
   selectedGroupId,
   onSelectGroupId,
   onGroupsChange,
+  groupColoringAllowed = true,
 }: {
   groups: GroupWithCount[];
   totalBookmarkCount: number;
   selectedGroupId: string | null;
   onSelectGroupId: (id: string | null) => void;
   onGroupsChange: () => void;
+  groupColoringAllowed?: boolean;
 }) {
   const safeGroups = groups ?? [];
   const safeTotal = totalBookmarkCount ?? 0;
@@ -291,6 +293,7 @@ export function GroupDropdown({
         onCancel={() => setCreateOpen(false)}
         open={createOpen}
         onOpenChange={setCreateOpen}
+        coloringAllowed={groupColoringAllowed}
       />
       <GroupFormDialog
         mode="edit"
@@ -302,6 +305,7 @@ export function GroupDropdown({
         onCancel={() => setEditingGroup(null)}
         open={editingGroup !== null}
         onOpenChange={(open) => !open && setEditingGroup(null)}
+        coloringAllowed={groupColoringAllowed}
       />
       <GroupDeleteDialog
         group={deleteTarget}

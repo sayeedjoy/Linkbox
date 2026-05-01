@@ -24,6 +24,7 @@ export function GroupFormDialog({
   onCancel,
   open,
   onOpenChange,
+  coloringAllowed = true,
 }: {
   mode: "create" | "edit";
   name: string;
@@ -34,6 +35,7 @@ export function GroupFormDialog({
   onCancel: () => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  coloringAllowed?: boolean;
 }) {
   const submitLabel = mode === "create" ? "Create" : "Save";
   const id = mode === "create" ? "group-name" : "edit-group-name";
@@ -48,11 +50,19 @@ export function GroupFormDialog({
           {/* Color dot + name input row */}
           <div className="flex min-w-0 items-center gap-2.5">
             <div>
-              <ColorPicker
-                value={color || "#6b7280"}
-                onChange={onColorChange}
-                className="h-2.5 w-2.5 shrink-0 rounded-full transition-transform hover:scale-125 focus:outline-none"
-              />
+              {coloringAllowed ? (
+                <ColorPicker
+                  value={color || "#6b7280"}
+                  onChange={onColorChange}
+                  className="h-2.5 w-2.5 shrink-0 rounded-full transition-transform hover:scale-125 focus:outline-none"
+                />
+              ) : (
+                <span
+                  className="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-muted-foreground/40"
+                  title="Group colors are not available on your plan"
+                  aria-hidden
+                />
+              )}
             </div>
             <input
               id={id}

@@ -14,6 +14,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Key, Settings, LogOut } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import {
+  getUserAvatarSeed,
+  getUserAvatarStyle,
+  getUserInitials,
+} from "@/lib/avatar-gradient";
 
 function TimelineIcon({ className }: { className?: string }) {
   return (
@@ -68,23 +73,29 @@ export function UserMenu() {
   if (status !== "authenticated" || !session?.user) return null;
 
   const user = session.user;
-  const initial = user.name?.slice(0, 1).toUpperCase() ?? user.email?.slice(0, 1).toUpperCase() ?? "?";
-  const avatarId = encodeURIComponent(user.email ?? user.name ?? "user");
+  const initials = getUserInitials(user.name, user.email);
+  const avatarStyle = getUserAvatarStyle(getUserAvatarSeed(user.name, user.email));
+  const userImage = typeof user.image === "string" && user.image.trim() ? user.image.trim() : null;
 
   return (
     <>
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen} modal={false}>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="rounded-full">
-            {(user.image || avatarId) ? (
+            {userImage ? (
               <img
-                src={user.image ?? `https://avatar.vercel.sh/${avatarId}?size=32`}
-                alt=""
+                src={userImage}
+                alt={`${user.name ?? user.email ?? "User"} avatar`}
                 className="size-8 rounded-full object-cover"
+                referrerPolicy="no-referrer"
               />
             ) : (
-              <span className="flex size-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
-                {initial}
+              <span
+                className="flex size-8 items-center justify-center rounded-full text-xs font-semibold"
+                style={avatarStyle}
+                aria-label={`${user.name ?? user.email ?? "User"} avatar`}
+              >
+                {initials}
               </span>
             )}
           </Button>

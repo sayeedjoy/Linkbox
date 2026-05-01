@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq, desc, asc, count, lt, or } from "drizzle-orm";
 import { db, bookmarks, groups } from "@/lib/db";
 import { isExtensionOrigin, resolveApiUserId } from "@/lib/api-auth";
+import { tryConsumeApiQuota } from "@/lib/api-quota";
 
 const DEFAULT_INITIAL_SYNC_LIMIT = 150;
 const MAX_SYNC_LIMIT = 2000;
@@ -29,6 +30,14 @@ export async function GET(request: Request) {
   const userId = await resolveApiUserId(request);
   if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders(request) });
+
+  const quota = await tryConsumeApiQuota(userId);
+  if (!quota.ok) {
+    return NextResponse.json(
+      { error: "Daily API limit reached", limit: quota.limit, resetsAt: quota.resetsAt },
+      { status: 429, headers: corsHeaders(request) }
+    );
+  }
 
   const shouldPaginate = mode === "initial" || !!cursor || requestedLimit !== null;
   const resolvedLimit = Math.min(

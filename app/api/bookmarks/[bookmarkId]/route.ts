@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { eq, and } from "drizzle-orm";
 import { userIdFromBearerToken } from "@/lib/api-auth";
+import { tryConsumeApiQuota } from "@/lib/api-quota";
 import { refreshBookmarkForUser } from "@/app/actions/bookmarks";
 import { db, bookmarks } from "@/lib/db";
 import { publishUserEvent } from "@/lib/realtime";
@@ -19,6 +20,13 @@ export async function DELETE(
   const userId = await userIdFromBearerToken(request.headers.get("Authorization"));
   if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders(request) });
+  const quota = await tryConsumeApiQuota(userId);
+  if (!quota.ok) {
+    return NextResponse.json(
+      { error: "Daily API limit reached", limit: quota.limit, resetsAt: quota.resetsAt },
+      { status: 429, headers: corsHeaders(request) }
+    );
+  }
   const { bookmarkId } = await params;
   if (!bookmarkId)
     return NextResponse.json({ error: "Bookmark id required" }, { status: 400, headers: corsHeaders(request) });

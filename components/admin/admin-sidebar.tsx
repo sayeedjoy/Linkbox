@@ -6,10 +6,12 @@ import {
   LayoutDashboardIcon,
   UsersIcon,
   Settings2Icon,
+  BrainCircuitIcon,
   ActivityIcon,
   SmartphoneIcon,
   ArrowLeftIcon,
   BookOpenIcon,
+  CrownIcon,
 } from "lucide-react";
 import {
   Sidebar,
@@ -38,6 +40,7 @@ const NAV = [
     group: "Management",
     items: [
       { label: "Users", href: "/admin/users", icon: UsersIcon, exact: false },
+      { label: "Plans", href: "/admin/plan", icon: CrownIcon, exact: false },
       { label: "Ads (AdMob)", href: "/admin/ads", icon: SmartphoneIcon, exact: false },
     ],
   },
@@ -45,6 +48,8 @@ const NAV = [
     group: "System",
     items: [
       { label: "Settings", href: "/admin/settings", icon: Settings2Icon, exact: false },
+      { label: "SMTP", href: "/admin/smtp", icon: Settings2Icon, exact: false },
+      { label: "AI Providers", href: "/admin/ai-providers", icon: BrainCircuitIcon, exact: false },
       { label: "System Health", href: "/admin/system", icon: ActivityIcon, exact: false },
       { label: "API Reference", href: "/admin/api-docs", icon: BookOpenIcon, exact: false },
     ],

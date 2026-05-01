@@ -97,8 +97,14 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { InviteUserDialog } from "@/components/admin/invite-user-dialog";
 import { UserDetailDialog } from "@/components/admin/user-detail-sheet";
+import {
+  getUserAvatarSeed,
+  getUserAvatarStyle,
+  getUserInitials,
+} from "@/lib/avatar-gradient";
 
 type UserStatusFilter = "all" | "active" | "banned";
+type UserPlanFilter = string;
 type SortByColumn = "name" | "email" | "bookmarks" | "joined";
 type SortDir = "asc" | "desc";
 
@@ -110,12 +116,15 @@ export type AdminUserRow = {
   bookmarkCount: number;
   isCurrentAdmin: boolean;
   isBanned: boolean;
+  planSlug: string;
+  planDisplayName: string;
 };
 
 type AdminUsersCardProps = {
   users: AdminUserRow[];
   query: string;
   status: UserStatusFilter;
+  plan: UserPlanFilter;
   sortBy: SortByColumn | null;
   sortDir: SortDir | null;
   page: number;
@@ -127,6 +136,7 @@ type AdminUsersCardProps = {
     bannedCount: number;
     totalBookmarks: number;
   };
+  planFilters: Array<{ value: string; label: string }>;
 };
 
 const statusLabels: Record<UserStatusFilter, string> = {
@@ -146,18 +156,21 @@ function buildUsersHref({
   page,
   query,
   status,
+  plan,
   sortBy,
   sortDir,
 }: {
   page: number;
   query: string;
   status: UserStatusFilter;
+  plan: UserPlanFilter;
   sortBy: SortByColumn | null;
   sortDir: SortDir | null;
 }) {
   const params = new URLSearchParams();
   if (query) params.set("q", query);
   if (status !== "all") params.set("status", status);
+  if (plan !== "all") params.set("plan", plan);
   if (sortBy) params.set("sortBy", sortBy);
   if (sortDir) params.set("sortDir", sortDir);
   if (page > 1) params.set("page", String(page));
@@ -171,11 +184,13 @@ function getSortHref(
   currentSortBy: SortByColumn | null,
   currentSortDir: SortDir | null,
   query: string,
-  status: UserStatusFilter
+  status: UserStatusFilter,
+  plan: UserPlanFilter
 ) {
   const params = new URLSearchParams();
   if (query) params.set("q", query);
   if (status !== "all") params.set("status", status);
+  if (plan !== "all") params.set("plan", plan);
 
   if (currentSortBy === column) {
     // toggle direction
@@ -189,15 +204,6 @@ function getSortHref(
 
   const search = params.toString();
   return search ? `/admin/users?${search}` : "/admin/users";
-}
-
-function initialsFor(name: string | null, email: string) {
-  const source = name?.trim() || email.trim();
-  const parts = source.split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`.toUpperCase();
-  }
-  return source.slice(0, 2).toUpperCase();
 }
 
 function formatJoinedDate(value: string) {
@@ -232,6 +238,7 @@ function SortHeader({
   sortDir,
   query,
   status,
+  plan,
 }: {
   column: SortByColumn;
   label: string;
@@ -240,9 +247,10 @@ function SortHeader({
   sortDir: SortDir | null;
   query: string;
   status: UserStatusFilter;
+  plan: UserPlanFilter;
 }) {
   const isActive = sortBy === column;
-  const href = getSortHref(column, sortBy, sortDir, query, status);
+  const href = getSortHref(column, sortBy, sortDir, query, status, plan);
 
   return (
     <TableHead className={align === "right" ? "text-right" : undefined}>
@@ -270,12 +278,14 @@ export function AdminUsersCard({
   users,
   query,
   status,
+  plan,
   sortBy,
   sortDir,
   page,
   totalPages,
   totalUsers,
   stats,
+  planFilters,
 }: AdminUsersCardProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -318,11 +328,11 @@ export function AdminUsersCard({
     return () => window.clearTimeout(timeoutId);
   }, [deferredSearchValue, pathname, router, searchParams, startTransition]);
 
-  function updateFilter(key: "status", value: string) {
+  function updateFilter(key: "status" | "plan", value: string) {
     startTransition(() => {
       const params = new URLSearchParams(searchParams.toString());
 
-      if (key === "status" && value === "all") {
+      if (value === "all") {
         params.delete(key);
       } else {
         params.set(key, value);
@@ -343,7 +353,7 @@ export function AdminUsersCard({
     });
   }
 
-  const hasFilters = query !== "" || status !== "all";
+  const hasFilters = query !== "" || status !== "all" || plan !== "all";
   const summary =
     totalUsers === 0
       ? query
@@ -518,6 +528,21 @@ export function AdminUsersCard({
                   <ToggleGroupItem value="active">Active</ToggleGroupItem>
                   <ToggleGroupItem value="banned">Banned</ToggleGroupItem>
                 </ToggleGroup>
+                <ToggleGroup
+                  type="single"
+                  value={plan}
+                  onValueChange={(value) => updateFilter("plan", value)}
+                  spacing={0}
+                  variant="outline"
+                  size="sm"
+                >
+                  <ToggleGroupItem value="all">All plans</ToggleGroupItem>
+                  {planFilters.map((planFilter) => (
+                    <ToggleGroupItem key={planFilter.value} value={planFilter.value}>
+                      {planFilter.label}
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
                 {hasFilters && (
                   <Button
                     type="button"
@@ -551,6 +576,7 @@ export function AdminUsersCard({
                       sortDir={sortDir}
                       query={query}
                       status={status}
+                      plan={plan}
                     />
                     <SortHeader
                       column="email"
@@ -559,8 +585,10 @@ export function AdminUsersCard({
                       sortDir={sortDir}
                       query={query}
                       status={status}
+                      plan={plan}
                     />
                     <TableHead>Status</TableHead>
+                    <TableHead>Plan</TableHead>
                     <SortHeader
                       column="bookmarks"
                       label="Bookmarks"
@@ -569,6 +597,7 @@ export function AdminUsersCard({
                       sortDir={sortDir}
                       query={query}
                       status={status}
+                      plan={plan}
                     />
                     <SortHeader
                       column="joined"
@@ -577,6 +606,7 @@ export function AdminUsersCard({
                       sortDir={sortDir}
                       query={query}
                       status={status}
+                      plan={plan}
                     />
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -584,7 +614,7 @@ export function AdminUsersCard({
                 <TableBody>
                   {users.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="px-5 py-12">
+                      <TableCell colSpan={7} className="px-5 py-12">
                         <Empty className="py-8">
                           <EmptyHeader>
                             <EmptyMedia variant="icon">
@@ -605,8 +635,12 @@ export function AdminUsersCard({
                       <TableRow key={user.id} className="border-border/60">
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-xs font-semibold text-muted-foreground shadow-sm">
-                              {initialsFor(user.name, user.email)}
+                            <div
+                              className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border text-xs font-semibold shadow-sm"
+                              style={getUserAvatarStyle(getUserAvatarSeed(user.name, user.email))}
+                              aria-label={`${user.name ?? user.email} avatar`}
+                            >
+                              {getUserInitials(user.name, user.email)}
                             </div>
                             <div className="min-w-0">
                               <p className="truncate text-sm font-medium text-foreground">
@@ -640,6 +674,16 @@ export function AdminUsersCard({
                               Active
                             </Badge>
                           )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              user.planSlug === "premium" ? "default" : "secondary"
+                            }
+                            className="capitalize"
+                          >
+                            {user.planDisplayName}
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <span className="inline-flex items-baseline gap-1 tabular-nums">
@@ -732,6 +776,7 @@ export function AdminUsersCard({
                         page: page - 1,
                         query,
                         status,
+                        plan,
                         sortBy,
                         sortDir,
                       })}
@@ -760,6 +805,7 @@ export function AdminUsersCard({
                           page: item,
                           query,
                           status,
+                          plan,
                           sortBy,
                           sortDir,
                         })}
@@ -777,6 +823,7 @@ export function AdminUsersCard({
                         page: page + 1,
                         query,
                         status,
+                        plan,
                         sortBy,
                         sortDir,
                       })}

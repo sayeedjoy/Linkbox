@@ -9,6 +9,8 @@ import { currentUserId } from "@/lib/auth";
 import { unfurlUrl } from "@/app/actions/parse";
 import { publishUserEvent, type RealtimeEventType } from "@/lib/realtime";
 import { categorizeBookmark } from "@/app/actions/categorize";
+import { consumeApiQuotaOrThrow } from "@/lib/api-quota";
+import { getPlanFeaturesForUser, resolveGroupColorForPlan } from "@/lib/plan-entitlements";
 
 export type BookmarkWithGroup = typeof bookmarks.$inferSelect & {
   group: { id: string; name: string; color: string | null } | null;
@@ -156,6 +158,8 @@ export async function importBookmarks(items: ImportBookmarkItem[]) {
   const userId = await currentUserId();
   if (!Array.isArray(items)) return { error: "Invalid import payload" };
   if (items.length > MAX_IMPORT_ITEMS) return { error: `Import exceeds maximum of ${MAX_IMPORT_ITEMS} items` };
+  const planFeatures = await getPlanFeaturesForUser(userId);
+  await consumeApiQuotaOrThrow(userId, planFeatures);
 
   const groupList = await db.select({ id: groups.id, name: groups.name }).from(groups).where(eq(groups.userId, userId));
   const groupByName = new Map<string, string>();
@@ -168,7 +172,10 @@ export async function importBookmarks(items: ImportBookmarkItem[]) {
     if (!item.groupName) continue;
     const key = item.groupName.toLowerCase();
     if (groupByName.has(key) || pendingGroupCreates.has(key)) continue;
-    pendingGroupCreates.set(key, { name: item.groupName, color: item.groupColor });
+    pendingGroupCreates.set(key, {
+      name: item.groupName,
+      color: resolveGroupColorForPlan(planFeatures.groupColoringAllowed, item.groupColor),
+    });
   }
 
   const existingBookmarkRows = validUrls.length
@@ -409,6 +416,7 @@ export async function createBookmark(
   const normalized = url.trim();
   if (!normalized.startsWith("http")) throw new Error("Invalid URL");
   const groupId = await resolveGroupIdForUser(userId, options?.groupId);
+  await consumeApiQuotaOrThrow(userId);
   const unfurled = await unfurlUrl(normalized);
   const data = {
     title: options?.title ?? unfurled.title ?? null,
@@ -464,6 +472,7 @@ export async function createBookmarkFromMetadataForUser(
   const normalized = url.trim();
   if (!normalized.startsWith("http")) throw new Error("Invalid URL");
   const gid = await resolveGroupIdForUser(userId, groupId);
+  await consumeApiQuotaOrThrow(userId);
   const [existingRow] = await db
     .select({ id: bookmarks.id })
     .from(bookmarks)
@@ -517,9 +526,10 @@ export async function createBookmarkFromMetadata(
 
 export async function createNote(content: string, groupId?: string | null) {
   const userId = await currentUserId();
-  const resolvedGroupId = await resolveGroupIdForUser(userId, groupId);
   const trimmed = content.trim();
   if (!trimmed) throw new Error("Empty note");
+  const resolvedGroupId = await resolveGroupIdForUser(userId, groupId);
+  await consumeApiQuotaOrThrow(userId);
   const lines = trimmed.split(/\r?\n/);
   const title = lines[0]?.slice(0, 500) ?? "Note";
   const [bookmark] = await db
@@ -547,6 +557,7 @@ export async function updateBookmark(
   }
 ) {
   const userId = await currentUserId();
+  await consumeApiQuotaOrThrow(userId);
   const updateData: Partial<typeof bookmarks.$inferInsert> = {};
   if (data.title !== undefined) updateData.title = data.title;
   if (data.description !== undefined) updateData.description = data.description;
@@ -560,6 +571,7 @@ export async function updateBookmark(
 
 export async function deleteBookmark(id: string) {
   const userId = await currentUserId();
+  await consumeApiQuotaOrThrow(userId);
   await db.delete(bookmarks).where(and(eq(bookmarks.id, id), eq(bookmarks.userId, userId)));
   revalidateBookmarkData();
   publishBookmarkEvent(userId, "bookmark.deleted", id);
@@ -571,6 +583,7 @@ export async function updateBookmarkCategoryForUser(
   bookmarkId: string,
   categoryId: string | null
 ) {
+  await consumeApiQuotaOrThrow(userId);
   const groupId = categoryId === "" ? null : categoryId;
   const resolvedGroupId = await resolveGroupIdForUser(userId, groupId);
   const [updatedRow] = await db.update(bookmarks).set({ groupId: resolvedGroupId, ...touchBookmark() }).where(and(eq(bookmarks.id, bookmarkId), eq(bookmarks.userId, userId))).returning({ id: bookmarks.id });
@@ -596,6 +609,7 @@ export async function refreshBookmarkForUser(
   if (!bookmark) return { ok: false, reason: "not_found" };
   const normalizedUrl = bookmark.url?.trim();
   if (!normalizedUrl) return { ok: false, reason: "missing_url" };
+  await consumeApiQuotaOrThrow(userId);
   const unfurled = await unfurlUrl(normalizedUrl);
   await db.update(bookmarks).set({
     title: unfurled.title ?? bookmark.title,

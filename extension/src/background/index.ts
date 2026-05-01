@@ -125,7 +125,7 @@ async function fetchWithAuth<T>(
 }
 
 async function validateToken(token: string): Promise<TokenValidationResult> {
-  const url = `${API_BASE_URL.replace(/\/$/, '')}/api/sync?mode=initial&limit=1`
+  const url = `${API_BASE_URL.replace(/\/$/, '')}/api/settings`
   try {
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },

@@ -1,6 +1,25 @@
-import { pgTable, text, boolean, integer, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  boolean,
+  integer,
+  timestamp,
+  uniqueIndex,
+  date,
+} from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
+
+export const subscriptionPlans = pgTable("SubscriptionPlan", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  slug: text("slug").notNull().unique(),
+  displayName: text("displayName").notNull(),
+  googlePlayProductId: text("googlePlayProductId").unique(),
+  aiGroupingAllowed: boolean("aiGroupingAllowed").notNull().default(true),
+  groupColoringAllowed: boolean("groupColoringAllowed").notNull().default(true),
+  apiQuotaPerDay: integer("apiQuotaPerDay"),
+  sortOrder: integer("sortOrder").notNull().default(0),
+});
 
 export const users = pgTable("User", {
   id: text("id").primaryKey().$defaultFn(() => createId()),
@@ -12,12 +31,45 @@ export const users = pgTable("User", {
   autoGroupEnabled: boolean("autoGroupEnabled").notNull().default(false),
   createdAt: timestamp("createdAt", { precision: 3 }).notNull().defaultNow(),
   bannedUntil: timestamp("bannedUntil", { precision: 3 }),
+  subscriptionPlanId: text("subscriptionPlanId")
+    .notNull()
+    .references(() => subscriptionPlans.id, { onDelete: "restrict" }),
+  planSource: text("planSource").notNull().default("default"),
 });
+
+export const userPlaySubscriptions = pgTable("UserPlaySubscription", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  userId: text("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  productId: text("productId").notNull(),
+  purchaseToken: text("purchaseToken").notNull().unique(),
+  expiryTime: timestamp("expiryTime", { precision: 3 }),
+  autoRenewing: boolean("autoRenewing").notNull().default(false),
+  lastVerifiedAt: timestamp("lastVerifiedAt", { precision: 3 }),
+  rawPayload: text("rawPayload"),
+});
+
+export const apiUsageDaily = pgTable(
+  "ApiUsageDaily",
+  {
+    id: text("id").primaryKey().$defaultFn(() => createId()),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    day: date("day", { mode: "string" }).notNull(),
+    requestCount: integer("requestCount").notNull().default(0),
+  },
+  (t) => [uniqueIndex("ApiUsageDaily_userId_day_key").on(t.userId, t.day)]
+);
 
 export const appConfig = pgTable("AppConfig", {
   id: integer("id").primaryKey(),
   publicSignupEnabled: boolean("publicSignupEnabled").notNull().default(true),
+  aiProvider: text("aiProvider").notNull().default("openrouter"),
+  aiModel: text("aiModel").notNull().default("google/gemini-2.0-flash-001"),
   openrouterApiKey: text("openrouterApiKey"),
+  groqApiKey: text("groqApiKey"),
   resendApiKey: text("resendApiKey"),
   resendFromEmail: text("resendFromEmail"),
 });
@@ -76,12 +128,28 @@ export const bookmarks = pgTable("Bookmark", {
   updatedAt: timestamp("updatedAt", { precision: 3 }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-// Relations (used by the relational query API)
-export const usersRelations = relations(users, ({ many }) => ({
+export const subscriptionPlansRelations = relations(subscriptionPlans, ({ many }) => ({
+  users: many(users),
+}));
+
+export const usersRelations = relations(users, ({ one, many }) => ({
+  subscriptionPlan: one(subscriptionPlans, {
+    fields: [users.subscriptionPlanId],
+    references: [subscriptionPlans.id],
+  }),
+  playSubscriptions: many(userPlaySubscriptions),
   groups: many(groups),
   bookmarks: many(bookmarks),
   apiTokens: many(apiTokens),
   passwordResetTokens: many(passwordResetTokens),
+}));
+
+export const userPlaySubscriptionsRelations = relations(userPlaySubscriptions, ({ one }) => ({
+  user: one(users, { fields: [userPlaySubscriptions.userId], references: [users.id] }),
+}));
+
+export const apiUsageDailyRelations = relations(apiUsageDaily, ({ one }) => ({
+  user: one(users, { fields: [apiUsageDaily.userId], references: [users.id] }),
 }));
 
 export const groupsRelations = relations(groups, ({ one, many }) => ({

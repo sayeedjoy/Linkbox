@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { KeyRoundIcon, MailIcon, RouterIcon } from "lucide-react";
-import { updateServiceConfig } from "@/app/actions/app-config";
+import { CheckCircle2Icon, KeyRoundIcon, MailIcon, XCircleIcon } from "lucide-react";
+import { testSmtpConnection, updateServiceConfig } from "@/app/actions/app-config";
 import type { ServiceConfigForAdmin } from "@/lib/app-config";
 import {
   Card,
@@ -17,32 +17,31 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 type Props = {
   initialConfig: ServiceConfigForAdmin;
 };
 
 export function ServiceConfigCard({ initialConfig }: Props) {
-  const [openrouterConfigured, setOpenrouterConfigured] = useState(
-    initialConfig.openrouterConfigured
-  );
   const [resendConfigured, setResendConfigured] = useState(
     initialConfig.resendConfigured
   );
-  const [openrouterApiKey, setOpenrouterApiKey] = useState("");
   const [resendApiKey, setResendApiKey] = useState("");
   const [resendFromEmail, setResendFromEmail] = useState(
     initialConfig.resendFromEmail
   );
-  const [clearOpenrouterApiKey, setClearOpenrouterApiKey] = useState(false);
   const [clearResendApiKey, setClearResendApiKey] = useState(false);
+  const [testStatus, setTestStatus] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isTesting, startTesting] = useTransition();
 
   function handleSave() {
     startTransition(async () => {
       const result = await updateServiceConfig({
-        openrouterApiKey,
-        clearOpenrouterApiKey,
         resendApiKey,
         clearResendApiKey,
         resendFromEmail,
@@ -53,14 +52,29 @@ export function ServiceConfigCard({ initialConfig }: Props) {
         return;
       }
 
-      setOpenrouterConfigured(result.openrouterConfigured);
       setResendConfigured(result.resendConfigured);
       setResendFromEmail(result.resendFromEmail);
-      setOpenrouterApiKey("");
       setResendApiKey("");
-      setClearOpenrouterApiKey(false);
       setClearResendApiKey(false);
+      setTestStatus(null);
       toast.success("Service settings saved");
+    });
+  }
+
+  function handleTestConnection() {
+    setTestStatus(null);
+    startTesting(async () => {
+      const result = await testSmtpConnection({
+        resendApiKey: clearResendApiKey ? "" : resendApiKey,
+        resendFromEmail,
+      });
+
+      if (!result.success) {
+        setTestStatus({ type: "error", message: result.error });
+        return;
+      }
+
+      setTestStatus({ type: "success", message: result.message });
     });
   }
 
@@ -70,11 +84,11 @@ export function ServiceConfigCard({ initialConfig }: Props) {
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle className="text-sm font-semibold">
-              Service Credentials
+              SMTP Configuration
             </CardTitle>
             <CardDescription>
-              Manage OpenRouter and Resend without editing environment files.
-              Existing keys are never displayed.
+              Confirm SMTP credential status, save credentials, and test the
+              Resend connection.
             </CardDescription>
           </div>
           <KeyRoundIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
@@ -82,44 +96,29 @@ export function ServiceConfigCard({ initialConfig }: Props) {
       </CardHeader>
 
       <CardContent className="space-y-4 border-t border-border pt-4">
-        <div className="space-y-2 rounded-xl border border-border bg-muted/20 p-3">
-          <div className="flex items-center justify-between gap-3">
-            <Label
-              htmlFor="openrouter-api-key"
-              className="flex items-center gap-2 text-sm font-medium"
-            >
-              <RouterIcon className="size-4 text-muted-foreground" />
-              OpenRouter API key
-            </Label>
-            <Badge variant={openrouterConfigured ? "secondary" : "outline"}>
-              {openrouterConfigured ? "Configured" : "Missing"}
-            </Badge>
-          </div>
-          <Input
-            id="openrouter-api-key"
-            type="password"
-            value={openrouterApiKey}
-            onChange={(event) => setOpenrouterApiKey(event.target.value)}
-            placeholder={
-              openrouterConfigured
-                ? "Paste a new key to replace the current key"
-                : "sk-or-v1-..."
-            }
-            disabled={isPending || clearOpenrouterApiKey}
-            autoComplete="off"
-          />
-          {openrouterConfigured && (
-            <label className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Checkbox
-                checked={clearOpenrouterApiKey}
-                onCheckedChange={(checked) =>
-                  setClearOpenrouterApiKey(checked === true)
-                }
-                disabled={isPending}
-              />
-              Clear saved OpenRouter key
-            </label>
+        <div
+          className={cn(
+            "flex items-start gap-2 rounded-lg border px-3 py-2 text-xs",
+            resendConfigured
+              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+              : "border-destructive/30 bg-destructive/10 text-destructive"
           )}
+        >
+          {resendConfigured ? (
+            <CheckCircle2Icon className="mt-0.5 size-4 shrink-0" />
+          ) : (
+            <XCircleIcon className="mt-0.5 size-4 shrink-0" />
+          )}
+          <div>
+            <p className="font-medium">
+              {resendConfigured ? "Configured" : "Not configured"}
+            </p>
+            <p>
+              {resendConfigured
+                ? "A Resend API key is saved and ready to use."
+                : "No Resend API key is saved yet."}
+            </p>
+          </div>
         </div>
 
         <div className="space-y-2 rounded-xl border border-border bg-muted/20 p-3">
@@ -181,10 +180,33 @@ export function ServiceConfigCard({ initialConfig }: Props) {
           size="sm"
           className="w-full"
           onClick={handleSave}
-          disabled={isPending}
+          disabled={isPending || isTesting}
         >
-          {isPending ? "Saving..." : "Save service credentials"}
+          {isPending ? "Saving..." : "Save email settings"}
         </Button>
+
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full"
+          onClick={handleTestConnection}
+          disabled={isPending || isTesting}
+        >
+          {isTesting ? "Testing..." : "Test connection"}
+        </Button>
+
+        {testStatus ? (
+          <p
+            className={cn(
+              "text-xs",
+              testStatus.type === "success"
+                ? "text-emerald-600 dark:text-emerald-400"
+                : "text-destructive"
+            )}
+          >
+            {testStatus.message}
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   );

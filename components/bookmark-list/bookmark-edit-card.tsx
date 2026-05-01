@@ -51,9 +51,10 @@ export const BookmarkEditCard = forwardRef<
     onSave: () => void;
     onCancel: () => void;
     onGroupsChange?: () => void;
+    groupColoringAllowed?: boolean;
   }
 >(function BookmarkEditCardInner(
-  { bookmark, groups, editForm, onEditFormChange, onSave, onCancel, onGroupsChange },
+  { bookmark, groups, editForm, onEditFormChange, onSave, onCancel, onGroupsChange, groupColoringAllowed = true },
   ref
 ) {
   const isDesktop = useIsDesktop();
@@ -61,7 +62,6 @@ export const BookmarkEditCard = forwardRef<
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(GROUP_COLORS[0]);
-
   const handleCreate = useCallback(async () => {
     const name = newName.trim();
     if (!name) return;
@@ -222,6 +222,7 @@ export const BookmarkEditCard = forwardRef<
         onCancel={() => setCreateOpen(false)}
         open={createOpen}
         onOpenChange={setCreateOpen}
+        coloringAllowed={groupColoringAllowed}
       />
     </li>
   );
