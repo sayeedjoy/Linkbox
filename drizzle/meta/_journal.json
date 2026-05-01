@@ -43,6 +43,13 @@
       "when": 1777646147197,
       "tag": "0005_misty_ben_grimm",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1777658767473,
+      "tag": "0006_milky_grim_reaper",
+      "breakpoints": true
     }
   ]
 }

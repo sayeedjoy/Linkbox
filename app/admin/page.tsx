@@ -2,18 +2,21 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
-import { count, sql } from "drizzle-orm";
 import { UsersIcon, BookmarkIcon, FolderIcon, RatioIcon } from "lucide-react";
-import { db, users, bookmarks, groups } from "@/lib/db";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
 } from "@/components/ui/card";
-import { ActivityChart, type ActivityDataPoint } from "@/components/admin/activity-chart";
+import { ActivityChart } from "@/components/admin/activity-chart";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { TopDomainsCard } from "@/components/admin/top-domains-card";
+import {
+  getCachedAdminActivityTimeline,
+  getCachedAdminOverviewStats,
+  getCachedAdminTopDomains,
+} from "@/lib/admin-overview-cache";
 
 export const metadata: Metadata = { title: "Overview" };
 
@@ -29,59 +32,6 @@ function firstParam(value: string | string[] | undefined): string | null {
   if (typeof value === "string") return value;
   if (Array.isArray(value) && value.length > 0) return value[0] ?? null;
   return null;
-}
-
-async function getAdminStats() {
-  await connection();
-  const [[{ totalUsers }], [{ totalBookmarks }], [{ totalGroups }]] =
-    await Promise.all([
-      db.select({ totalUsers: count() }).from(users),
-      db.select({ totalBookmarks: count() }).from(bookmarks),
-      db.select({ totalGroups: count() }).from(groups),
-    ]);
-
-  const avgBookmarks =
-    totalUsers > 0 ? (totalBookmarks / totalUsers).toFixed(1) : "0";
-
-  return {
-    stats: [
-      { label: "Total Users", value: totalUsers, note: "Registered accounts" },
-      { label: "Bookmarks", value: totalBookmarks, note: "Across all users" },
-      { label: "Groups", value: totalGroups, note: "Organizational folders" },
-      {
-        label: "Avg/User",
-        value: avgBookmarks,
-        note: "Bookmarks per account",
-      },
-    ],
-  };
-}
-
-interface DayCountRow {
-  day: string;
-  count: number;
-}
-
-async function getActivityTimeline(): Promise<{
-  data7d: ActivityDataPoint[];
-  data30d: ActivityDataPoint[];
-}> {
-  await connection();
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  const result = await db.execute<{ day: string; count: string }>(
-    sql`SELECT DATE_TRUNC('day', "createdAt")::date::text AS day, COUNT(*)::text AS count FROM "Bookmark" WHERE "createdAt" >= ${thirtyDaysAgo} GROUP BY day ORDER BY day ASC`
-  );
-  const rows: DayCountRow[] = result.rows.map((r) => ({
-    day: r.day,
-    count: Number(r.count),
-  }));
-  const mapped = rows.map((r) => ({
-    date: r.day.split("T")[0] as string,
-    count: r.count,
-  }));
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const data7d = mapped.filter((d) => new Date(d.date) >= sevenDaysAgo);
-  return { data7d, data30d: mapped };
 }
 
 function StatsSkeleton() {
@@ -103,9 +53,11 @@ function StatsSkeleton() {
 }
 
 async function OverviewData() {
-  const [{ stats }, activityData] = await Promise.all([
-    getAdminStats(),
-    getActivityTimeline(),
+  await connection();
+  const [{ stats }, activityData, topDomains] = await Promise.all([
+    getCachedAdminOverviewStats(),
+    getCachedAdminActivityTimeline(),
+    getCachedAdminTopDomains(),
   ]);
 
   return (
@@ -141,7 +93,7 @@ async function OverviewData() {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <ActivityChart data7d={activityData.data7d} data30d={activityData.data30d} />
-        <TopDomainsCard />
+        <TopDomainsCard rows={topDomains.rows} total={topDomains.total} />
       </div>
     </div>
   );

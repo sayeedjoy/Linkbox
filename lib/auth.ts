@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getServerSession, type Session } from "next-auth";
 import { eq } from "drizzle-orm";
 import { authOptions } from "@/lib/auth-config";
@@ -10,19 +11,21 @@ type SessionUserRecord = {
   image: string | null;
 };
 
-async function getExistingSessionUser(
-  session: Session | null
-): Promise<SessionUserRecord | null> {
-  const id = session?.user?.id;
-  if (!id) return null;
-
+const loadSessionUserRecord = cache(async (userId: string): Promise<SessionUserRecord | null> => {
   const [user] = await db
     .select({ id: users.id, email: users.email, name: users.name, image: users.image })
     .from(users)
-    .where(eq(users.id, id))
+    .where(eq(users.id, userId))
     .limit(1);
 
   return user ?? null;
+});
+
+async function getExistingSessionUser(session: Session | null): Promise<SessionUserRecord | null> {
+  const id = session?.user?.id;
+  if (!id) return null;
+
+  return loadSessionUserRecord(id);
 }
 
 export async function getVerifiedAuthSession(): Promise<Session | null> {

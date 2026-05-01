@@ -9,9 +9,11 @@ import {
   eq,
   gt,
   ilike,
+  inArray,
   isNull,
   lte,
   or,
+  sql,
 } from "drizzle-orm";
 import { db, users, bookmarks, subscriptionPlans } from "@/lib/db";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -105,7 +107,7 @@ async function getAdminUsers(
   const activeClause = or(isNull(users.bannedUntil), lte(users.bannedUntil, now));
   const bannedClause = gt(users.bannedUntil, now);
 
-  const bookmarkCount = count(bookmarks.id);
+  const bookmarksPerUserSql = sql<number>`(SELECT COUNT(*)::int FROM ${bookmarks} WHERE ${bookmarks.userId} = ${users.id})`;
 
   const effectiveSortBy = sortBy ?? "joined";
   const effectiveSortDir = sortDir ?? "desc";
@@ -121,11 +123,17 @@ async function getAdminUsers(
           : [desc(users.email), asc(users.name)]
         : effectiveSortBy === "bookmarks"
           ? effectiveSortDir === "asc"
-            ? [asc(bookmarkCount), asc(users.email)]
-            : [desc(bookmarkCount), asc(users.email)]
+            ? [asc(bookmarksPerUserSql), asc(users.email)]
+            : [desc(bookmarksPerUserSql), asc(users.email)]
           : effectiveSortDir === "asc"
             ? [asc(users.createdAt), asc(users.email)]
             : [desc(users.createdAt), asc(users.email)];
+
+  const filteredUserIds = db
+    .select({ id: users.id })
+    .from(users)
+    .innerJoin(subscriptionPlans, eq(users.subscriptionPlanId, subscriptionPlans.id))
+    .where(whereClause);
 
   const [
     [{ totalUsers: totalUsersCount }],
@@ -140,10 +148,8 @@ async function getAdminUsers(
       .where(whereClause),
     db
       .select({ totalBookmarks: count(bookmarks.id) })
-      .from(users)
-      .innerJoin(subscriptionPlans, eq(users.subscriptionPlanId, subscriptionPlans.id))
-      .leftJoin(bookmarks, eq(bookmarks.userId, users.id))
-      .where(whereClause),
+      .from(bookmarks)
+      .where(inArray(bookmarks.userId, filteredUserIds)),
     db
       .select({ activeCount: count() })
       .from(users)
@@ -167,15 +173,13 @@ async function getAdminUsers(
       email: users.email,
       createdAt: users.createdAt,
       bannedUntil: users.bannedUntil,
-      bookmarkCount,
+      bookmarkCount: bookmarksPerUserSql.mapWith(Number),
       planSlug: subscriptionPlans.slug,
       planDisplayName: subscriptionPlans.displayName,
     })
     .from(users)
     .innerJoin(subscriptionPlans, eq(users.subscriptionPlanId, subscriptionPlans.id))
-    .leftJoin(bookmarks, eq(bookmarks.userId, users.id))
     .where(whereClause)
-    .groupBy(users.id, subscriptionPlans.slug, subscriptionPlans.displayName)
     .orderBy(...orderBy)
     .limit(USERS_PER_PAGE)
     .offset(skip);

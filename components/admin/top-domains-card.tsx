@@ -1,5 +1,3 @@
-import { sql } from "drizzle-orm";
-import { db } from "@/lib/db";
 import {
   Card,
   CardContent,
@@ -9,23 +7,12 @@ import {
 } from "@/components/ui/card";
 import { GlobeIcon } from "lucide-react";
 
-interface DomainRow {
-  domain: string;
-  count: number;
-}
+export type TopDomainsCardProps = {
+  rows: { domain: string; count: number }[];
+  total: number;
+};
 
-async function getTopDomains(limit = 10) {
-  const result = await db.execute<{ domain: string; count: string }>(
-    sql`SELECT lower(regexp_replace(regexp_replace(url, '^https?://(www\.)?', ''), '[/?#].*$', '')) AS domain, COUNT(*)::text AS count FROM "Bookmark" WHERE url IS NOT NULL AND url <> '' GROUP BY domain ORDER BY count DESC LIMIT ${limit}`
-  );
-  const rows: DomainRow[] = result.rows.map((r) => ({ domain: r.domain, count: Number(r.count) }));
-  const total = rows.reduce((s, r) => s + r.count, 0);
-  return { rows, total };
-}
-
-export async function TopDomainsCard() {
-  const { rows, total } = await getTopDomains();
-
+export function TopDomainsCard({ rows, total }: TopDomainsCardProps) {
   return (
     <Card>
       <CardHeader className="pb-2">

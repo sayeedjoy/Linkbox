@@ -74,6 +74,7 @@ export async function createGroup(name: string, color?: string) {
     .returning();
   revalidatePath("/");
   revalidateTag("groups", "max");
+  revalidateTag("admin-stats", "max");
   publishUserEvent(userId, { type: "group.created", entity: "group", id: group.id });
   return group;
 }
@@ -128,6 +129,7 @@ export async function deleteGroup(id: string) {
   await db.delete(groups).where(and(eq(groups.id, id), eq(groups.userId, userId)));
   revalidatePath("/");
   revalidateTag("groups", "max");
+  revalidateTag("admin-stats", "max");
   publishUserEvent(userId, { type: "group.deleted", entity: "group", id });
   return { ok: true };
 }
@@ -145,6 +147,7 @@ export async function createGroupForUser(userId: string, name: string, color?: s
     .returning();
   revalidatePath("/");
   revalidateTag("groups", "max");
+  revalidateTag("admin-stats", "max");
   publishUserEvent(userId, { type: "group.created", entity: "group", id: group.id });
   return group;
 }
@@ -179,6 +182,7 @@ export async function deleteGroupForUser(userId: string, id: string) {
   await db.delete(groups).where(and(eq(groups.id, id), eq(groups.userId, userId)));
   revalidatePath("/");
   revalidateTag("groups", "max");
+  revalidateTag("admin-stats", "max");
   publishUserEvent(userId, { type: "group.deleted", entity: "group", id });
   return { ok: true };
 }

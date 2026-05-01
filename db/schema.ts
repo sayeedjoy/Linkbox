@@ -141,18 +141,25 @@ export const groups = pgTable(
   (t) => [uniqueIndex("Group_userId_name_key").on(t.userId, t.name)]
 );
 
-export const bookmarks = pgTable("Bookmark", {
-  id: text("id").primaryKey().$defaultFn(() => createId()),
-  userId: text("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
-  groupId: text("groupId").references(() => groups.id, { onDelete: "set null" }),
-  url: text("url"),
-  title: text("title"),
-  description: text("description"),
-  faviconUrl: text("faviconUrl"),
-  previewImageUrl: text("previewImageUrl"),
-  createdAt: timestamp("createdAt", { precision: 3 }).notNull().defaultNow(),
-  updatedAt: timestamp("updatedAt", { precision: 3 }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+export const bookmarks = pgTable(
+  "Bookmark",
+  {
+    id: text("id").primaryKey().$defaultFn(() => createId()),
+    userId: text("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    groupId: text("groupId").references(() => groups.id, { onDelete: "set null" }),
+    url: text("url"),
+    title: text("title"),
+    description: text("description"),
+    faviconUrl: text("faviconUrl"),
+    previewImageUrl: text("previewImageUrl"),
+    createdAt: timestamp("createdAt", { precision: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { precision: 3 }).notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("Bookmark_userId_idx").on(t.userId),
+    index("Bookmark_createdAt_idx").on(t.createdAt),
+  ]
+);
 
 export const subscriptionPlansRelations = relations(subscriptionPlans, ({ many }) => ({
   users: many(users),

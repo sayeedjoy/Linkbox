@@ -39,6 +39,7 @@ function revalidateBookmarkData() {
   revalidateTag("bookmarks", "max");
   revalidateTag("bookmark-count", "max");
   revalidateTag("groups", "max");
+  revalidateTag("admin-stats", "max");
 }
 
 function publishBookmarkEvent(
