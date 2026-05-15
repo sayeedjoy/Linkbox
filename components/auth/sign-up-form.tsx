@@ -107,7 +107,7 @@ export function SignUpForm() {
             aria-hidden={true}
           />
           <h3 className="text-balance mt-2 text-center text-lg font-bold text-foreground dark:text-foreground">
-            Create new account for workspace
+            Create new account
           </h3>
         </div>
 

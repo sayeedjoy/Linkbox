@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 
 export function PublicSignupCard({
@@ -22,53 +23,56 @@ export function PublicSignupCard({
 
   return (
     <Card size="sm">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-semibold">Public Signup</CardTitle>
+      <CardHeader>
+        <CardTitle>Public Signup</CardTitle>
         <CardDescription>
           Control whether new users can register. Existing users can always sign
           in. Requires the latest database migration.
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex items-center justify-between gap-4 border-t border-border pt-3">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-foreground">
-            {enabled ? "Enabled" : "Disabled"}
-          </p>
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            {enabled
-              ? "Anyone with access can create an account."
-              : "Only existing users can sign in."}
-          </p>
-        </div>
-        <Switch
-          checked={enabled}
-          disabled={isPending}
-          onCheckedChange={(checked) => {
-            const previous = enabled;
-            setEnabled(checked);
-            startTransition(async () => {
-              try {
-                const result = await updatePublicSignupEnabled(checked);
-                if (!result.success) {
-                  setEnabled(previous);
-                  toast.error(result.error);
-                  return;
-                }
+      <CardContent>
+        <Field orientation="horizontal" data-disabled={isPending || undefined}>
+          <FieldContent>
+            <FieldLabel htmlFor="public-signup">
+              {enabled ? "Enabled" : "Disabled"}
+            </FieldLabel>
+            <p className="text-sm text-muted-foreground">
+              {enabled
+                ? "Anyone with access can create an account."
+                : "Only existing users can sign in."}
+            </p>
+          </FieldContent>
+          <Switch
+            id="public-signup"
+            checked={enabled}
+            disabled={isPending}
+            onCheckedChange={(checked) => {
+              const previous = enabled;
+              setEnabled(checked);
+              startTransition(async () => {
+                try {
+                  const result = await updatePublicSignupEnabled(checked);
+                  if (!result.success) {
+                    setEnabled(previous);
+                    toast.error(result.error);
+                    return;
+                  }
 
-                setEnabled(result.publicSignupEnabled);
-                toast.success(
-                  result.publicSignupEnabled
-                    ? "Public signup enabled"
-                    : "Public signup disabled"
-                );
-              } catch {
-                setEnabled(previous);
-                toast.error("Failed to update signup setting");
-              }
-            });
-          }}
-          aria-label="Toggle public signup"
-        />
+                  setEnabled(result.publicSignupEnabled);
+                  toast.success(
+                    result.publicSignupEnabled
+                      ? "Public signup enabled"
+                      : "Public signup disabled"
+                  );
+                } catch {
+                  setEnabled(previous);
+                  toast.error("Failed to update signup setting");
+                }
+              });
+            }}
+            aria-label="Toggle public signup"
+          />
+        </Field>
       </CardContent>
     </Card>
   );
