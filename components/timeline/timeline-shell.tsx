@@ -16,8 +16,8 @@ import type { GroupWithCount } from "@/lib/types";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
 import { refreshBookmark, deleteBookmark, getBookmarks, createBookmark, updateBookmark } from "@/app/actions/bookmarks";
 import { getGroups } from "@/app/actions/groups";
-import { timelineBookmarksKey, groupsKey, bookmarkCountKey } from "@/lib/query-keys";
-import type { RealtimeEvent } from "@/lib/realtime";
+import { timelineBookmarksKey, groupsKey } from "@/lib/query-keys";
+import { useBookmarkRealtime } from "@/hooks/use-bookmark-realtime";
 
 type TimelineSort = "date-desc" | "name-asc";
 
@@ -107,39 +107,7 @@ export function TimelineShell({
     refetchOnWindowFocus: false,
   });
 
-  /* ── Realtime SSE – mirrors the dashboard EventSource pattern ── */
-  useEffect(() => {
-    if (!userId) return;
-    const eventSource = new EventSource("/api/realtime/bookmarks");
-    let invalidateTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const scheduleInvalidate = () => {
-      if (invalidateTimer) return;
-      invalidateTimer = setTimeout(() => {
-        invalidateTimer = null;
-        void queryClient.invalidateQueries({ queryKey: ["bookmarks", userId] });
-        void queryClient.invalidateQueries({ queryKey: groupsKey(userId) });
-        void queryClient.invalidateQueries({ queryKey: bookmarkCountKey(userId) });
-        void queryClient.invalidateQueries({ queryKey: timelineBookmarksKey(userId) });
-      }, 120);
-    };
-
-    eventSource.onmessage = (evt) => {
-      if (!evt?.data) return;
-      try {
-        const payload = JSON.parse(evt.data) as RealtimeEvent;
-        if (payload.userId !== userId) return;
-        scheduleInvalidate();
-      } catch {
-        // Ignore malformed events and keep the stream alive.
-      }
-    };
-
-    return () => {
-      if (invalidateTimer) clearTimeout(invalidateTimer);
-      eventSource.close();
-    };
-  }, [queryClient, userId]);
+  useBookmarkRealtime(userId);
 
   const bookmarksRaw = useMemo(
     () => bookmarksQuery.data ?? (shouldUseInitialBookmarks ? initialBookmarks : []),

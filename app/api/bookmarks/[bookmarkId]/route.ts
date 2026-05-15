@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { eq, and } from "drizzle-orm";
 import { userIdFromBearerToken } from "@/lib/api-auth";
 import { guardBookmarkWrite } from "@/lib/bookmark-write-guard";
@@ -11,6 +12,15 @@ function corsHeaders(request: Request): Record<string, string> {
   if (origin?.startsWith("chrome-extension://"))
     return { "Access-Control-Allow-Origin": origin };
   return {};
+}
+
+function revalidateBookmarkData() {
+  revalidatePath("/");
+  revalidatePath("/timeline");
+  revalidateTag("bookmarks", "max");
+  revalidateTag("bookmark-count", "max");
+  revalidateTag("groups", "max");
+  revalidateTag("admin-stats", "max");
 }
 
 export async function DELETE(
@@ -32,6 +42,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Bookmark not found" }, { status: 404, headers: corsHeaders(request) });
 
   publishUserEvent(userId, { type: "bookmark.deleted", entity: "bookmark", id: bookmarkId });
+  revalidateBookmarkData();
   return new NextResponse(null, { status: 204, headers: corsHeaders(request) });
 }
 

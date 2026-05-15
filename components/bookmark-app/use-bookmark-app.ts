@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useDeferredValue } from "react";
 import { useQueryState } from "nuqs";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
@@ -11,8 +11,8 @@ import { getBookmarks, getTotalBookmarkCount, createBookmark, createNote, create
 import { getGroups } from "@/app/actions/groups";
 import { parseTextForUrls, parseImageForUrls, unfurlUrl } from "@/app/actions/parse";
 import { filterBookmarks, makeOptimisticBookmark } from "./utils";
-import { groupsKey, bookmarksKey, bookmarkCountKey, timelineBookmarksKey } from "@/lib/query-keys";
-import type { RealtimeEvent } from "@/lib/realtime";
+import { groupsKey, bookmarksKey, bookmarkCountKey } from "@/lib/query-keys";
+import { useBookmarkRealtime } from "@/hooks/use-bookmark-realtime";
 
 const OPT_PREFIX = "opt-";
 const LAST_GROUP_KEY = "bookmark-last-group";
@@ -83,44 +83,7 @@ export function useBookmarkApp({
     });
   }, []);
 
-  useEffect(() => {
-    if (!userId) return;
-    const eventSource = new EventSource("/api/realtime/bookmarks");
-    let invalidateTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const scheduleInvalidate = () => {
-      if (invalidateTimer) return;
-      invalidateTimer = setTimeout(() => {
-        invalidateTimer = null;
-        void queryClient.invalidateQueries({ queryKey: ["bookmarks", userId] });
-        void queryClient.invalidateQueries({ queryKey: groupsKey(userId) });
-        void queryClient.invalidateQueries({ queryKey: bookmarkCountKey(userId) });
-        void queryClient.invalidateQueries({ queryKey: timelineBookmarksKey(userId) });
-      }, 120);
-    };
-
-    eventSource.onmessage = (evt) => {
-      if (!evt?.data) return;
-      try {
-        const payload = JSON.parse(evt.data) as RealtimeEvent;
-        if (payload.userId !== userId) return;
-        if (payload.type === "user.deleted") {
-          eventSource.close();
-          void signOut({ redirect: false });
-          window.location.href = "/sign-in";
-          return;
-        }
-        scheduleInvalidate();
-      } catch {
-        // Ignore malformed events and keep the stream alive.
-      }
-    };
-
-    return () => {
-      if (invalidateTimer) clearTimeout(invalidateTimer);
-      eventSource.close();
-    };
-  }, [queryClient, userId]);
+  useBookmarkRealtime(userId);
 
   const groupsQuery = useQuery({
     queryKey: userId ? groupsKey(userId) : ["groups", "anon"],

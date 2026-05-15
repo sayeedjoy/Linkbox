@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { eq, and } from "drizzle-orm";
 import { userIdFromBearerToken } from "@/lib/api-auth";
 import { guardBookmarkWrite, type BookmarkWriteSource } from "@/lib/bookmark-write-guard";
@@ -18,6 +19,15 @@ const ALLOWED_SOURCES: BookmarkWriteSource[] = [
   "extension_save",
   "browser_realtime",
 ];
+
+function revalidateBookmarkData() {
+  revalidatePath("/");
+  revalidatePath("/timeline");
+  revalidateTag("bookmarks", "max");
+  revalidateTag("bookmark-count", "max");
+  revalidateTag("groups", "max");
+  revalidateTag("admin-stats", "max");
+}
 
 function parseSource(raw: unknown): BookmarkWriteSource {
   if (typeof raw === "string" && (ALLOWED_SOURCES as string[]).includes(raw)) {
@@ -114,6 +124,7 @@ export async function PUT(request: Request) {
     id: updated.id,
     data: { groupId: updated.groupId ?? null },
   });
+  revalidateBookmarkData();
   return NextResponse.json(updated, { status: 200, headers });
 }
 
@@ -185,6 +196,7 @@ export async function DELETE(request: Request) {
   for (const bookmark of toDelete) {
     publishUserEvent(userId, { type: "bookmark.deleted", entity: "bookmark", id: bookmark.id });
   }
+  revalidateBookmarkData();
   return new NextResponse(null, { status: 204, headers });
 }
 
