@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.6.0] - 2026-05-15
+
+### Added
+- **Browser bookmark import** — The extension can now read native Chrome bookmarks (`bookmarks` permission) and bulk-upload them to LinkArena. Import is triggered from the web app's settings modal via `chrome.runtime.sendMessage` and runs in chunks up to 2,000 items per batch, with duplicates deduped per group and everything routed into an auto-created "Imported - Browser" group.
+- **Realtime browser bookmark sync** — New bookmarks created in Chrome are picked up via `chrome.bookmarks.onCreated` and pushed to LinkArena in real time, tagged with `source: "browser_realtime"`. A `bulkImportInProgress` flag suppresses this listener during bulk imports so the same items aren't sent twice.
+- **Web ↔ extension bridge** — Added `externally_connectable.matches` for `localhost:3000`, `linkarena.app`, and `*.linkarena.app` so the web app can detect the installed extension and invoke import/ping commands. Allowed origins are configurable at build time via `VITE_ALLOWED_WEB_ORIGINS`.
+
+### Notes
+- Browser bookmark import is gated server-side by the Pro plan's `browserImportAllowed` entitlement; free-tier users will see the API reject the request.
+
 ## [1.5.0] - 2026-04-14
 
 ### Fixed
