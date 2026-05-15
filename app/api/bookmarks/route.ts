@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { eq, and } from "drizzle-orm";
 import { userIdFromBearerToken } from "@/lib/api-auth";
 import { tryConsumeApiQuota } from "@/lib/api-quota";
+import { getPlanFeaturesForUser } from "@/lib/plan-entitlements";
 import { createBookmarkFromMetadataForUser } from "@/app/actions/bookmarks";
 import { db, bookmarks, groups } from "@/lib/db";
 import { publishUserEvent } from "@/lib/realtime";
@@ -110,7 +111,7 @@ export async function POST(request: Request) {
   const userId = await userIdFromBearerToken(request.headers.get("Authorization"));
   if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders(request) });
-  let body: { url?: string; title?: string; description?: string; groupId?: string | null; faviconUrl?: string | null };
+  let body: { url?: string; title?: string; description?: string; groupId?: string | null; faviconUrl?: string | null; source?: string };
   try {
     body = await request.json();
   } catch {
@@ -123,12 +124,26 @@ export async function POST(request: Request) {
   const description = typeof body.description === "string" ? body.description : undefined;
   const groupId = body.groupId === null || body.groupId === undefined ? undefined : (typeof body.groupId === "string" ? body.groupId : undefined);
   const faviconUrl = typeof body.faviconUrl === "string" && body.faviconUrl.trim().startsWith("http") ? body.faviconUrl.trim() : null;
+  const ALLOWED_SOURCES = new Set(["manual", "extension_save", "browser_realtime"]);
+  const source = typeof body.source === "string" && ALLOWED_SOURCES.has(body.source) ? body.source : null;
+
+  if (source === "browser_realtime") {
+    const plan = await getPlanFeaturesForUser(userId);
+    if (!plan.browserImportAllowed) {
+      return NextResponse.json(
+        { error: "Browser bookmark sync requires a Pro plan." },
+        { status: 403, headers: corsHeaders(request) }
+      );
+    }
+  }
+
   try {
     const bookmark = await createBookmarkFromMetadataForUser(
       userId,
       url,
       { title: title ?? null, description: description ?? null, faviconUrl, previewImageUrl: null },
-      groupId ?? null
+      groupId ?? null,
+      source
     );
     return NextResponse.json(bookmark, { status: 200, headers: corsHeaders(request) });
   } catch (e) {

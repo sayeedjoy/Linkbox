@@ -459,6 +459,27 @@ export async function createBookmark(
   return withGroup as BookmarkWithGroup;
 }
 
+const BROWSER_IMPORT_GROUP_NAME = "Imported - Browser";
+
+async function ensureBrowserImportGroup(userId: string): Promise<string> {
+  const [existing] = await db
+    .select({ id: groups.id })
+    .from(groups)
+    .where(and(eq(groups.userId, userId), eq(groups.name, BROWSER_IMPORT_GROUP_NAME)))
+    .limit(1);
+  if (existing) return existing.id;
+  const [{ maxOrder }] = await db
+    .select({ maxOrder: sql<number>`coalesce(max(${groups.order}), -1)` })
+    .from(groups)
+    .where(eq(groups.userId, userId));
+  const [created] = await db
+    .insert(groups)
+    .values({ userId, name: BROWSER_IMPORT_GROUP_NAME, color: null, order: (maxOrder ?? -1) + 1 })
+    .returning({ id: groups.id });
+  publishUserEvent(userId, { type: "group.created", entity: "group", id: created.id });
+  return created.id;
+}
+
 export async function createBookmarkFromMetadataForUser(
   userId: string,
   url: string,
@@ -468,11 +489,17 @@ export async function createBookmarkFromMetadataForUser(
     faviconUrl?: string | null;
     previewImageUrl?: string | null;
   },
-  groupId?: string | null
+  groupId?: string | null,
+  source?: string | null
 ) {
   const normalized = url.trim();
   if (!normalized.startsWith("http")) throw new Error("Invalid URL");
-  const gid = await resolveGroupIdForUser(userId, groupId);
+  let gid: string | null = null;
+  if (groupId) {
+    gid = await resolveGroupIdForUser(userId, groupId);
+  } else if (source === "browser_realtime") {
+    gid = await ensureBrowserImportGroup(userId);
+  }
   await consumeApiQuotaOrThrow(userId);
   const [existingRow] = await db
     .select({ id: bookmarks.id })
@@ -498,7 +525,14 @@ export async function createBookmarkFromMetadataForUser(
   }
   const [bookmark] = await db
     .insert(bookmarks)
-    .values({ userId, groupId: gid, url: normalized, ...data, ...touchBookmark() })
+    .values({
+      userId,
+      groupId: gid,
+      url: normalized,
+      ...data,
+      ...(source ? { source } : {}),
+      ...touchBookmark(),
+    })
     .returning();
   const withGroup = await findBookmarkWithGroup(bookmark.id, userId);
   revalidateBookmarkData();
@@ -519,10 +553,11 @@ export async function createBookmarkFromMetadata(
     faviconUrl?: string | null;
     previewImageUrl?: string | null;
   },
-  groupId?: string | null
+  groupId?: string | null,
+  source?: string | null
 ) {
   const userId = await currentUserId();
-  return createBookmarkFromMetadataForUser(userId, url, metadata, groupId);
+  return createBookmarkFromMetadataForUser(userId, url, metadata, groupId, source);
 }
 
 export async function createNote(content: string, groupId?: string | null) {

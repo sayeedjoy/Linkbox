@@ -41,6 +41,7 @@ export function makeOptimisticBookmark(
     description: null,
     faviconUrl: null,
     previewImageUrl: null,
+    source: "manual",
     createdAt: now,
     updatedAt: now,
     group: group ? { id: group.id, name: group.name, color: group.color } : null,

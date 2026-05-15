@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CheckIcon, XIcon, SparklesIcon, PaletteIcon, ZapIcon } from "lucide-react";
+import { CheckIcon, XIcon, SparklesIcon, PaletteIcon, ZapIcon, DownloadIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -32,6 +32,11 @@ function PlanCard({ plan, isPopular }: { plan: PlanApiItem; isPopular?: boolean 
       label: "Group colors",
       icon: <PaletteIcon className="size-4" />,
       included: plan.groupColoringAllowed,
+    },
+    {
+      label: "Browser bookmark import & sync",
+      icon: <DownloadIcon className="size-4" />,
+      included: plan.browserImportAllowed,
     },
     {
       label: "API quota",

@@ -127,6 +127,21 @@ extension/              Chrome extension (Manifest V3)
 - `RESEND_API_KEY`, `RESEND_FROM_EMAIL` - Email
 - `OPENROUTER_API_KEY` - AI categorization
 - `ADMIN_EMAIL` - Admin access
+- `ALLOWED_CHROME_EXTENSION_IDS` - Comma-separated allow-list of extension IDs that may call `/api/extension/*` endpoints (used by `isExtensionOrigin`)
+- `NEXT_PUBLIC_LINKARENA_EXTENSION_ID` - Production extension ID; the web app uses this to send cross-extension messages for browser bookmark import
+- `VITE_ALLOWED_WEB_ORIGINS` (extension build) - Comma-separated list of web origins permitted to send `externally_connectable` messages to the extension
+
+## Browser Bookmark Import
+
+Pro-only feature that pulls native Chrome bookmarks via the extension.
+
+- **Plan flag:** `subscriptionPlans.browserImportAllowed`; surfaced through `getPlanFeaturesForUser` and the entitlements payload returned by `/api/settings`, `/api/mobile/auth/*`, and `/api/mobile/billing/google-play`.
+- **Source attribution:** `bookmarks.source` text column. Values used today: `manual` (default), `browser_import` (bulk via extension), `browser_realtime` (live `chrome.bookmarks.onCreated` sync), `extension_save` (manual single-link save), `json_import` (reserved for the JSON file flow).
+- **Endpoints:**
+  - `POST /api/extension/import` — accepts up to 2,000 items, requires Bearer + `chrome-extension://` origin, inserts in 500-row chunks, dedupes per-group, auto-creates the `Imported - Browser` group, publishes realtime events.
+  - `POST /api/bookmarks` — extended to accept an optional `source` field. When `source === "browser_realtime"` the bookmark is auto-routed to the `Imported - Browser` group (created on first hit) and gated by `browserImportAllowed`.
+- **Extension:** adds the `bookmarks` permission + `externally_connectable.matches` so the web app can invoke `chrome.runtime.sendMessage(EXTENSION_ID, { type: "import-bookmarks" | "ping" })`. The background script also subscribes to `chrome.bookmarks.onCreated`, suppressed during bulk imports via the `bulkImportInProgress` flag.
+- **Web bridge:** `lib/extension-bridge.ts` exposes `isExtensionInstalled` / `sendToExtension`; the settings modal uses both for the "Import browser bookmarks" button.
 
 ## Deployment
 

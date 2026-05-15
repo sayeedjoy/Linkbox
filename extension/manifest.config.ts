@@ -24,6 +24,7 @@ export default defineManifest({
     'storage',
     'sidePanel',
     'contentSettings',
+    'bookmarks',
   ],
   background: {
     service_worker: 'src/background/index.ts',
@@ -35,5 +36,12 @@ export default defineManifest({
   }],
   side_panel: {
     default_path: 'src/sidepanel/index.html',
+  },
+  externally_connectable: {
+    matches: [
+      'http://localhost:3000/*',
+      'https://linkarena.app/*',
+      'https://*.linkarena.app/*',
+    ],
   },
 })

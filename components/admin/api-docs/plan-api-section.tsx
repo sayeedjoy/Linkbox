@@ -41,6 +41,7 @@ export function PlanApiDocsSection() {
   "autoGroupEnabled": false,
   "aiGroupingAllowed": true,
   "groupColoringAllowed": true,
+  "browserImportAllowed": false,
   "apiQuotaPerDay": null,
   "planSource": "default",
   "plan": { "slug": "free", "displayName": "Free" }
@@ -79,6 +80,7 @@ export function PlanApiDocsSection() {
       "googlePlayProductId": "your_subscription_product_id",
       "aiGroupingAllowed": true,
       "groupColoringAllowed": true,
+      "browserImportAllowed": true,
       "apiQuotaPerDay": null,
       "sortOrder": 1
     }

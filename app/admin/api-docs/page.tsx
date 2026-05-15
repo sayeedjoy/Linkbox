@@ -73,6 +73,7 @@ export default async function AdminApiDocsPage() {
     "autoGroupEnabled": false,
     "aiGroupingAllowed": true,
     "groupColoringAllowed": true,
+    "browserImportAllowed": false,
     "apiQuotaPerDay": null,
     "planSource": "default",
     "plan": { "slug": "free", "displayName": "Free" }
@@ -104,6 +105,7 @@ export default async function AdminApiDocsPage() {
     "autoGroupEnabled": false,
     "aiGroupingAllowed": true,
     "groupColoringAllowed": true,
+    "browserImportAllowed": false,
     "apiQuotaPerDay": null,
     "planSource": "default",
     "plan": { "slug": "free", "displayName": "Free" }

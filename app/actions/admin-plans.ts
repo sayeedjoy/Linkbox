@@ -13,6 +13,7 @@ export type AdminPlanRow = {
   googlePlayProductId: string | null;
   aiGroupingAllowed: boolean;
   groupColoringAllowed: boolean;
+  browserImportAllowed: boolean;
   apiQuotaPerDay: number | null;
   sortOrder: number;
 };
@@ -32,6 +33,7 @@ export async function getPlansForAdmin(): Promise<AdminPlanRow[]> {
       googlePlayProductId: subscriptionPlans.googlePlayProductId,
       aiGroupingAllowed: subscriptionPlans.aiGroupingAllowed,
       groupColoringAllowed: subscriptionPlans.groupColoringAllowed,
+      browserImportAllowed: subscriptionPlans.browserImportAllowed,
       apiQuotaPerDay: subscriptionPlans.apiQuotaPerDay,
       sortOrder: subscriptionPlans.sortOrder,
     })
@@ -45,6 +47,7 @@ export async function updatePlanAsAdmin(input: {
   googlePlayProductId: string | null;
   aiGroupingAllowed: boolean;
   groupColoringAllowed: boolean;
+  browserImportAllowed: boolean;
   apiQuotaPerDay: number | null;
 }): Promise<{ success: true } | { success: false; error: string }> {
   try {
@@ -70,6 +73,7 @@ export async function updatePlanAsAdmin(input: {
         googlePlayProductId: gp,
         aiGroupingAllowed: input.aiGroupingAllowed,
         groupColoringAllowed: input.groupColoringAllowed,
+        browserImportAllowed: input.browserImportAllowed,
         apiQuotaPerDay: quota,
       })
       .where(eq(subscriptionPlans.id, input.id));

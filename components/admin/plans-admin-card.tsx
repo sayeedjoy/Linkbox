@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   BookmarkIcon,
   CrownIcon,
+  DownloadIcon,
   LayersIcon,
   PaletteIcon,
   RotateCcwIcon,
@@ -69,6 +70,9 @@ function PlanEditor({ initial }: { initial: AdminPlanRow }) {
   const [groupColoringAllowed, setGroupColoringAllowed] = useState(
     initial.groupColoringAllowed
   );
+  const [browserImportAllowed, setBrowserImportAllowed] = useState(
+    initial.browserImportAllowed
+  );
   const [apiQuotaInput, setApiQuotaInput] = useState(initialQuotaText);
   const [isUnlimited, setIsUnlimited] = useState(initialIsUnlimited);
   const [isPending, startTransition] = useTransition();
@@ -83,6 +87,7 @@ function PlanEditor({ initial }: { initial: AdminPlanRow }) {
     if (trimmedGp !== initialGp.trim()) return true;
     if (aiGroupingAllowed !== initial.aiGroupingAllowed) return true;
     if (groupColoringAllowed !== initial.groupColoringAllowed) return true;
+    if (browserImportAllowed !== initial.browserImportAllowed) return true;
     if (isUnlimited !== initialIsUnlimited) return true;
     if (!isUnlimited && apiQuotaInput.trim() !== initialQuotaText) return true;
     return false;
@@ -91,12 +96,14 @@ function PlanEditor({ initial }: { initial: AdminPlanRow }) {
     trimmedGp,
     aiGroupingAllowed,
     groupColoringAllowed,
+    browserImportAllowed,
     isUnlimited,
     apiQuotaInput,
     initial.displayName,
     initialGp,
     initial.aiGroupingAllowed,
     initial.groupColoringAllowed,
+    initial.browserImportAllowed,
     initialIsUnlimited,
     initialQuotaText,
   ]);
@@ -115,6 +122,7 @@ function PlanEditor({ initial }: { initial: AdminPlanRow }) {
     setGooglePlayProductId(initialGp);
     setAiGroupingAllowed(initial.aiGroupingAllowed);
     setGroupColoringAllowed(initial.groupColoringAllowed);
+    setBrowserImportAllowed(initial.browserImportAllowed);
     setApiQuotaInput(initialQuotaText);
     setIsUnlimited(initialIsUnlimited);
   }
@@ -137,6 +145,7 @@ function PlanEditor({ initial }: { initial: AdminPlanRow }) {
         googlePlayProductId: trimmedGp || null,
         aiGroupingAllowed,
         groupColoringAllowed,
+        browserImportAllowed,
         apiQuotaPerDay: quota.value,
       });
       if (!result.success) {
@@ -150,6 +159,7 @@ function PlanEditor({ initial }: { initial: AdminPlanRow }) {
   const titleLabel = trimmedDisplayName || initial.displayName;
   const aiId = `plan-${initial.id}-ai`;
   const colorsId = `plan-${initial.id}-colors`;
+  const browserImportId = `plan-${initial.id}-browser-import`;
   const quotaId = `plan-${initial.id}-quota`;
   const unlimitedId = `plan-${initial.id}-unlimited`;
   const nameId = `plan-${initial.id}-name`;
@@ -267,6 +277,24 @@ function PlanEditor({ initial }: { initial: AdminPlanRow }) {
                   id={colorsId}
                   checked={groupColoringAllowed}
                   onCheckedChange={setGroupColoringAllowed}
+                  disabled={isPending}
+                />
+              </Field>
+
+              <Field orientation="horizontal">
+                <FieldContent>
+                  <FieldLabel htmlFor={browserImportId} className="flex items-center gap-2">
+                    <DownloadIcon className="size-3.5 text-muted-foreground" />
+                    Browser bookmark import
+                  </FieldLabel>
+                  <FieldDescription>
+                    Allow these users to import and sync native browser bookmarks via the extension.
+                  </FieldDescription>
+                </FieldContent>
+                <Switch
+                  id={browserImportId}
+                  checked={browserImportAllowed}
+                  onCheckedChange={setBrowserImportAllowed}
                   disabled={isPending}
                 />
               </Field>

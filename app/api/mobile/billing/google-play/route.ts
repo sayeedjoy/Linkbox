@@ -137,6 +137,7 @@ export async function POST(request: Request) {
         autoGroupEnabled: entitlements.autoGroupEnabled,
         aiGroupingAllowed: entitlements.aiGroupingAllowed,
         groupColoringAllowed: entitlements.groupColoringAllowed,
+        browserImportAllowed: entitlements.browserImportAllowed,
         apiQuotaPerDay: entitlements.apiQuotaPerDay,
         planSource: entitlements.planSource,
         plan: { slug: entitlements.slug, displayName: entitlements.displayName },

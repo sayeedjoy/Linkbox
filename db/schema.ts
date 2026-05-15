@@ -18,6 +18,7 @@ export const subscriptionPlans = pgTable("SubscriptionPlan", {
   googlePlayProductId: text("googlePlayProductId").unique(),
   aiGroupingAllowed: boolean("aiGroupingAllowed").notNull().default(true),
   groupColoringAllowed: boolean("groupColoringAllowed").notNull().default(true),
+  browserImportAllowed: boolean("browserImportAllowed").notNull().default(false),
   apiQuotaPerDay: integer("apiQuotaPerDay"),
   sortOrder: integer("sortOrder").notNull().default(0),
 });
@@ -152,6 +153,7 @@ export const bookmarks = pgTable(
     description: text("description"),
     faviconUrl: text("faviconUrl"),
     previewImageUrl: text("previewImageUrl"),
+    source: text("source").notNull().default("manual"),
     createdAt: timestamp("createdAt", { precision: 3 }).notNull().defaultNow(),
     updatedAt: timestamp("updatedAt", { precision: 3 }).notNull().defaultNow().$onUpdate(() => new Date()),
   },

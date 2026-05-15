@@ -14,6 +14,7 @@ export type PlanFeaturesForUser = {
   displayName: string;
   aiGroupingAllowed: boolean;
   groupColoringAllowed: boolean;
+  browserImportAllowed: boolean;
   apiQuotaPerDay: number | null;
 };
 
@@ -29,6 +30,7 @@ export async function getPlanFeaturesForUser(userId: string): Promise<PlanFeatur
       displayName: subscriptionPlans.displayName,
       aiGroupingAllowed: subscriptionPlans.aiGroupingAllowed,
       groupColoringAllowed: subscriptionPlans.groupColoringAllowed,
+      browserImportAllowed: subscriptionPlans.browserImportAllowed,
       apiQuotaPerDay: subscriptionPlans.apiQuotaPerDay,
     })
     .from(users)
@@ -71,6 +73,7 @@ export async function getAllPlansOrdered() {
       googlePlayProductId: subscriptionPlans.googlePlayProductId,
       aiGroupingAllowed: subscriptionPlans.aiGroupingAllowed,
       groupColoringAllowed: subscriptionPlans.groupColoringAllowed,
+      browserImportAllowed: subscriptionPlans.browserImportAllowed,
       apiQuotaPerDay: subscriptionPlans.apiQuotaPerDay,
       sortOrder: subscriptionPlans.sortOrder,
     })
@@ -87,6 +90,7 @@ export async function getEntitlementsPayload(userId: string): Promise<Entitlemen
       displayName: subscriptionPlans.displayName,
       aiGroupingAllowed: subscriptionPlans.aiGroupingAllowed,
       groupColoringAllowed: subscriptionPlans.groupColoringAllowed,
+      browserImportAllowed: subscriptionPlans.browserImportAllowed,
       apiQuotaPerDay: subscriptionPlans.apiQuotaPerDay,
     })
     .from(users)
@@ -100,6 +104,7 @@ export async function getEntitlementsPayload(userId: string): Promise<Entitlemen
     displayName: userRow.displayName,
     aiGroupingAllowed: userRow.aiGroupingAllowed,
     groupColoringAllowed: userRow.groupColoringAllowed,
+    browserImportAllowed: userRow.browserImportAllowed,
     apiQuotaPerDay: userRow.apiQuotaPerDay,
     autoGroupEnabled: userRow.autoGroupEnabled,
   };

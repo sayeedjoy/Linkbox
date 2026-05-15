@@ -10,6 +10,19 @@ export const STORAGE_KEYS = {
 export const BOOKMARKS_CACHE_TTL_MS = 5 * 60 * 1000
 export const GROUPS_CACHE_TTL_MS = 30 * 60 * 1000
 
+export const BROWSER_IMPORT_LIMIT = 2000
+
+export const ALLOWED_WEB_ORIGINS: readonly string[] = (() => {
+  const fromEnv =
+    typeof import.meta !== 'undefined' &&
+    (import.meta as unknown as { env?: { VITE_ALLOWED_WEB_ORIGINS?: string } }).env
+      ?.VITE_ALLOWED_WEB_ORIGINS
+  const list = fromEnv
+    ? fromEnv.split(',').map((s) => s.trim()).filter(Boolean)
+    : ['http://localhost:3000', 'https://linkarena.app']
+  return list
+})()
+
 export const API_BASE_URL =
   (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: { VITE_BOOKMARK_API_URL?: string } }).env?.VITE_BOOKMARK_API_URL) ||
   'http://localhost:3000/'

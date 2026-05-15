@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
-import { Sun, Moon, Monitor, Download, Upload, Trash2 } from "lucide-react";
+import { Sun, Moon, Monitor, Download, Upload, Trash2, Chrome } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { toast } from "sonner";
 import {
@@ -39,6 +39,11 @@ import {
   getWebDashboardEntitlements,
   updateAutoGroupEnabled,
 } from "@/app/actions/settings";
+import {
+  isExtensionConfigured,
+  isExtensionInstalled,
+  sendToExtension,
+} from "@/lib/extension-bridge";
 
 const MAX_IMPORT_ITEMS = 5000;
 
@@ -63,7 +68,9 @@ export function SettingsModal({
   const [autoGroup, setAutoGroup] = useState(false);
   const [autoGroupLoading, setAutoGroupLoading] = useState(false);
   const [aiGroupingAllowed, setAiGroupingAllowed] = useState(true);
+  const [browserImportAllowed, setBrowserImportAllowed] = useState(false);
   const [planLabel, setPlanLabel] = useState<string | null>(null);
+  const [isImportingBrowser, setIsImportingBrowser] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -90,6 +97,7 @@ export function SettingsModal({
       .then((e) => {
         setAutoGroup(e.autoGroupEnabled);
         setAiGroupingAllowed(e.aiGroupingAllowed);
+        setBrowserImportAllowed(e.browserImportAllowed);
         setPlanLabel(e.displayName);
       })
       .catch(() => {})
@@ -222,6 +230,56 @@ export function SettingsModal({
     }
   }, [importItems]);
 
+  const handleImportFromBrowser = useCallback(async () => {
+    if (!browserImportAllowed) {
+      toast.error(
+        planLabel
+          ? `Browser import is not included in the ${planLabel} plan.`
+          : "Browser import requires a Pro plan."
+      );
+      return;
+    }
+    if (!isExtensionConfigured()) {
+      toast.error("Install the LinkArena browser extension to use this feature.");
+      return;
+    }
+    setIsImportingBrowser(true);
+    try {
+      const installed = await isExtensionInstalled();
+      if (!installed) {
+        toast.error("Install the LinkArena browser extension to use this feature.");
+        return;
+      }
+      const result = await sendToExtension<{
+        ok?: boolean;
+        created?: number;
+        skipped?: number;
+        invalidCount?: number;
+        error?: string;
+      }>({ type: "import-bookmarks" }, 120_000);
+      if (!result.ok) {
+        toast.error(`Browser import failed: ${result.error}`);
+        return;
+      }
+      const data = result.data ?? {};
+      if (data.ok === false) {
+        toast.error(data.error ?? "Browser import failed");
+        return;
+      }
+      const created = data.created ?? 0;
+      const skipped = data.skipped ?? 0;
+      const invalid = data.invalidCount ?? 0;
+      const parts = [`Imported ${created} bookmarks`];
+      if (skipped > 0) parts.push(`${skipped} already saved`);
+      if (invalid > 0) parts.push(`${invalid} skipped`);
+      toast.success(parts.join(" • "));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Browser import failed");
+    } finally {
+      setIsImportingBrowser(false);
+    }
+  }, [browserImportAllowed, planLabel]);
+
   const handleDeleteAccount = useCallback(async () => {
     setIsDeleting(true);
     try {
@@ -324,6 +382,28 @@ export function SettingsModal({
               className="hidden"
               onChange={handleImportFileChange}
             />
+            <button
+              type="button"
+              onClick={handleImportFromBrowser}
+              disabled={isImportingBrowser}
+              className="w-full rounded-lg border border-border px-2.5 py-2 text-sm flex items-start gap-2 hover:bg-muted/50 hover:border-primary/15 transition-colors text-left disabled:opacity-60 disabled:pointer-events-none"
+            >
+              <Chrome className="size-4 mt-0.5 text-muted-foreground shrink-0" />
+              <span className="flex flex-col gap-0.5">
+                <span>
+                  {isImportingBrowser ? "Importing from browser…" : "Import browser bookmarks"}
+                </span>
+                {!browserImportAllowed && planLabel ? (
+                  <span className="text-xs text-amber-600 dark:text-amber-500">
+                    Not included in the {planLabel} plan.
+                  </span>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    Pulls Chrome bookmarks via the LinkArena extension (up to 2,000).
+                  </span>
+                )}
+              </span>
+            </button>
             <div className="border-t border-border pt-4">
               <button
                 type="button"
