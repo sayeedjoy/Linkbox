@@ -5,16 +5,7 @@ import { GripVertical, Pen, Copy, ArrowUpRight, Trash2, Check, RefreshCw } from 
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
 import { formatDate, safeHostname } from "./utils";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { cn } from "@/lib/utils";
 
 const COPIED_RESET_MS = 2000;
@@ -229,20 +220,13 @@ export const BookmarkRow = forwardRef<HTMLLIElement, {
           </button>
         </div>
       </div>
-      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete bookmark?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete this bookmark.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={() => onDelete(bookmark.id)}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="Delete bookmark?"
+        description="This action cannot be undone. This will permanently delete this bookmark."
+        onConfirm={() => onDelete(bookmark.id)}
+      />
     </li>
   );
 });

@@ -8,16 +8,7 @@ import { BookmarkHeroInput } from "@/components/bookmark-hero-input";
 import { BookmarkList } from "@/components/bookmark-list";
 import { MultiSelectToolbar } from "@/components/multi-select";
 import { MoveToGroupDialog } from "@/components/move-to-group-dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { useBookmarkApp } from "./use-bookmark-app";
 import type { BookmarkWithGroup } from "@/app/actions/bookmarks";
 import type { GroupWithCount } from "@/lib/types";
@@ -163,22 +154,13 @@ export function BookmarkApp({
         groups={groups}
         onConfirm={handleMoveConfirm}
       />
-      <AlertDialog open={bulkDeleteConfirmOpen} onOpenChange={setBulkDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete selected bookmarks?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete {selectedIds.size} selected bookmark{selectedIds.size === 1 ? "" : "s"}.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={confirmBulkDelete}>
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={bulkDeleteConfirmOpen}
+        onOpenChange={setBulkDeleteConfirmOpen}
+        title="Delete selected bookmarks?"
+        description={`This action cannot be undone. This will permanently delete ${selectedIds.size} selected bookmark${selectedIds.size === 1 ? "" : "s"}.`}
+        onConfirm={confirmBulkDelete}
+      />
       <PreviewDialog
         bookmark={previewBookmark}
         open={!!previewBookmark}

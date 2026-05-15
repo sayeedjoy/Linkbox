@@ -6,16 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Clipboard, Trash2, Check } from "lucide-react";
@@ -234,25 +225,15 @@ export function GenerateApiTokenModal({
         ) : null}
       </DialogContent>
     </Dialog>
-    <AlertDialog open={revokeTargetId !== null} onOpenChange={(open) => !open && setRevokeTargetId(null)}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete this API token?</AlertDialogTitle>
-          <AlertDialogDescription>
-            It will stop working immediately. This cannot be undone.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            variant="destructive"
-            onClick={() => revokeTargetId && handleRevoke(revokeTargetId)}
-          >
-            Delete
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <DeleteConfirmDialog
+      open={revokeTargetId !== null}
+      onOpenChange={(open) => !open && setRevokeTargetId(null)}
+      title="Delete this API token?"
+      description="It will stop working immediately. This cannot be undone."
+      onConfirm={() => {
+        if (revokeTargetId) handleRevoke(revokeTargetId);
+      }}
+    />
     </>
   );
 }
