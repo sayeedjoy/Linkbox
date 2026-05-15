@@ -50,6 +50,20 @@
       "when": 1777658767473,
       "tag": "0006_milky_grim_reaper",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1778837730417,
+      "tag": "0007_minor_lake",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1778850000000,
+      "tag": "0008_quota_and_entitlements",
+      "breakpoints": true
     }
   ]
 }

@@ -6,7 +6,11 @@
       "Bash(pnpm remove *)",
       "Bash(pnpm exec *)",
       "Bash(pnpm run *)",
-      "Bash(cmd /c pnpm db:generate)"
+      "Bash(cmd /c pnpm db:generate)",
+      "PowerShell(pnpm db:migrate *)",
+      "PowerShell(pnpm lint *)",
+      "Bash(pnpm db:generate)",
+      "Bash(cmd /c pnpm build)"
     ]
   }
 }

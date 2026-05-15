@@ -1,5 +1,22 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- **Quota model** — Daily limit is now counted per bookmark written, not per API call. Realtime browser sync and one-click bulk import both consume from the same `bookmarkQuotaPerDay` budget.
+- **Plan flags split** — The single `browserImportAllowed` flag has been replaced by two independent admin-toggleable flags: `browserRealtimeSyncAllowed` (live `chrome.bookmarks.onCreated` sync) and `browserBulkImportAllowed` (one-click import of existing bookmarks).
+- **403 on realtime sync** — When the server returns 403 for `source: "browser_realtime"`, the extension flips an in-memory flag and stops firing `chrome.bookmarks.onCreated` requests until the service worker restarts. Avoids spamming the server with rejected requests when an admin disables the entitlement.
+
+## [1.6.0] - 2026-05-15
+
+### Added
+- **Browser bookmark import** — The extension can now read native Chrome bookmarks (`bookmarks` permission) and bulk-upload them to LinkArena. Import is triggered from the web app's settings modal via `chrome.runtime.sendMessage` and runs in chunks up to 2,000 items per batch, with duplicates deduped per group and everything routed into an auto-created "Imported - Browser" group.
+- **Realtime browser bookmark sync** — New bookmarks created in Chrome are picked up via `chrome.bookmarks.onCreated` and pushed to LinkArena in real time, tagged with `source: "browser_realtime"`. A `bulkImportInProgress` flag suppresses this listener during bulk imports so the same items aren't sent twice.
+- **Web ↔ extension bridge** — Added `externally_connectable.matches` for `localhost:3000`, `linkarena.app`, and `*.linkarena.app` so the web app can detect the installed extension and invoke import/ping commands. Allowed origins are configurable at build time via `VITE_ALLOWED_WEB_ORIGINS`.
+
+### Notes
+- Browser bookmark import is gated server-side by the Pro plan's `browserImportAllowed` entitlement; free-tier users will see the API reject the request.
+
 ## [1.5.0] - 2026-04-14
 
 ### Fixed

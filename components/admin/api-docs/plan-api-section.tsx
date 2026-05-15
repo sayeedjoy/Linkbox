@@ -41,13 +41,17 @@ export function PlanApiDocsSection() {
   "autoGroupEnabled": false,
   "aiGroupingAllowed": true,
   "groupColoringAllowed": true,
-  "apiQuotaPerDay": null,
+  "browserBulkImportAllowed": false,
+  "browserRealtimeSyncAllowed": true,
+  "bookmarkQuotaPerDay": 50,
+  "apiQuotaPerDay": 50,
   "planSource": "default",
   "plan": { "slug": "free", "displayName": "Free" }
 }`}
         notes={[
           "planSource is default | play | admin.",
-          "apiQuotaPerDay is null when unlimited.",
+          "bookmarkQuotaPerDay is null when unlimited; counts every bookmark written, not API calls.",
+          "apiQuotaPerDay is a deprecated alias for bookmarkQuotaPerDay kept for one release.",
           "CORS allows chrome-extension:// origins.",
         ]}
       />
@@ -79,7 +83,9 @@ export function PlanApiDocsSection() {
       "googlePlayProductId": "your_subscription_product_id",
       "aiGroupingAllowed": true,
       "groupColoringAllowed": true,
-      "apiQuotaPerDay": null,
+      "browserBulkImportAllowed": true,
+      "browserRealtimeSyncAllowed": true,
+      "bookmarkQuotaPerDay": null,
       "sortOrder": 1
     }
   ]
@@ -109,6 +115,9 @@ export function PlanApiDocsSection() {
     "autoGroupEnabled": false,
     "aiGroupingAllowed": true,
     "groupColoringAllowed": true,
+    "browserBulkImportAllowed": true,
+    "browserRealtimeSyncAllowed": true,
+    "bookmarkQuotaPerDay": null,
     "apiQuotaPerDay": null,
     "planSource": "play",
     "plan": { "slug": "premium", "displayName": "Pro" }

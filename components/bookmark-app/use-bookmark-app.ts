@@ -576,6 +576,20 @@ export function useBookmarkApp({
         setSearchQuery("");
         setInputValue("");
       }
+      if ((e.metaKey || e.ctrlKey) && (e.key === "a" || e.key === "A") && !inDialog) {
+        if (displayedBookmarks.length === 0) return;
+        e.preventDefault();
+        setSelectedIds((prev) => {
+          const allSelected = displayedBookmarks.every((b) => prev.has(b.id));
+          if (allSelected) {
+            setSelectionMode(false);
+            return new Set();
+          }
+          setSelectionMode(true);
+          return new Set(displayedBookmarks.map((b) => b.id));
+        });
+        return;
+      }
       if (e.key === "?" && !e.ctrlKey && !e.metaKey && !e.altKey && !inInput && !inDialog) {
         e.preventDefault();
         setShowShortcuts((s) => !s);

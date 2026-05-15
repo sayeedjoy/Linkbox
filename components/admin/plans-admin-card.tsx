@@ -5,8 +5,10 @@ import { toast } from "sonner";
 import {
   BookmarkIcon,
   CrownIcon,
+  DownloadIcon,
   LayersIcon,
   PaletteIcon,
+  RefreshCwIcon,
   RotateCcwIcon,
   SaveIcon,
   SparklesIcon,
@@ -59,8 +61,8 @@ function PlanSlugIcon({ slug, className }: { slug: string; className?: string })
 }
 
 function PlanEditor({ initial }: { initial: AdminPlanRow }) {
-  const initialQuotaText = initial.apiQuotaPerDay == null ? "" : String(initial.apiQuotaPerDay);
-  const initialIsUnlimited = initial.apiQuotaPerDay == null;
+  const initialQuotaText = initial.bookmarkQuotaPerDay == null ? "" : String(initial.bookmarkQuotaPerDay);
+  const initialIsUnlimited = initial.bookmarkQuotaPerDay == null;
   const initialGp = initial.googlePlayProductId ?? "";
 
   const [displayName, setDisplayName] = useState(initial.displayName);
@@ -69,7 +71,13 @@ function PlanEditor({ initial }: { initial: AdminPlanRow }) {
   const [groupColoringAllowed, setGroupColoringAllowed] = useState(
     initial.groupColoringAllowed
   );
-  const [apiQuotaInput, setApiQuotaInput] = useState(initialQuotaText);
+  const [browserBulkImportAllowed, setBrowserBulkImportAllowed] = useState(
+    initial.browserBulkImportAllowed
+  );
+  const [browserRealtimeSyncAllowed, setBrowserRealtimeSyncAllowed] = useState(
+    initial.browserRealtimeSyncAllowed
+  );
+  const [quotaInput, setQuotaInput] = useState(initialQuotaText);
   const [isUnlimited, setIsUnlimited] = useState(initialIsUnlimited);
   const [isPending, startTransition] = useTransition();
 
@@ -83,27 +91,33 @@ function PlanEditor({ initial }: { initial: AdminPlanRow }) {
     if (trimmedGp !== initialGp.trim()) return true;
     if (aiGroupingAllowed !== initial.aiGroupingAllowed) return true;
     if (groupColoringAllowed !== initial.groupColoringAllowed) return true;
+    if (browserBulkImportAllowed !== initial.browserBulkImportAllowed) return true;
+    if (browserRealtimeSyncAllowed !== initial.browserRealtimeSyncAllowed) return true;
     if (isUnlimited !== initialIsUnlimited) return true;
-    if (!isUnlimited && apiQuotaInput.trim() !== initialQuotaText) return true;
+    if (!isUnlimited && quotaInput.trim() !== initialQuotaText) return true;
     return false;
   }, [
     trimmedDisplayName,
     trimmedGp,
     aiGroupingAllowed,
     groupColoringAllowed,
+    browserBulkImportAllowed,
+    browserRealtimeSyncAllowed,
     isUnlimited,
-    apiQuotaInput,
+    quotaInput,
     initial.displayName,
     initialGp,
     initial.aiGroupingAllowed,
     initial.groupColoringAllowed,
+    initial.browserBulkImportAllowed,
+    initial.browserRealtimeSyncAllowed,
     initialIsUnlimited,
     initialQuotaText,
   ]);
 
   function computeQuota(): { ok: true; value: number | null } | { ok: false } {
     if (isUnlimited) return { ok: true, value: null };
-    const t = apiQuotaInput.trim();
+    const t = quotaInput.trim();
     if (!t) return { ok: true, value: null };
     const n = Number.parseInt(t, 10);
     if (!Number.isFinite(n) || n < 0 || String(n) !== t) return { ok: false };
@@ -115,7 +129,9 @@ function PlanEditor({ initial }: { initial: AdminPlanRow }) {
     setGooglePlayProductId(initialGp);
     setAiGroupingAllowed(initial.aiGroupingAllowed);
     setGroupColoringAllowed(initial.groupColoringAllowed);
-    setApiQuotaInput(initialQuotaText);
+    setBrowserBulkImportAllowed(initial.browserBulkImportAllowed);
+    setBrowserRealtimeSyncAllowed(initial.browserRealtimeSyncAllowed);
+    setQuotaInput(initialQuotaText);
     setIsUnlimited(initialIsUnlimited);
   }
 
@@ -126,7 +142,7 @@ function PlanEditor({ initial }: { initial: AdminPlanRow }) {
     }
     const quota = computeQuota();
     if (!quota.ok) {
-      toast.error("API quota must be a non-negative whole number.");
+      toast.error("Daily bookmark limit must be a non-negative whole number.");
       return;
     }
 
@@ -137,7 +153,9 @@ function PlanEditor({ initial }: { initial: AdminPlanRow }) {
         googlePlayProductId: trimmedGp || null,
         aiGroupingAllowed,
         groupColoringAllowed,
-        apiQuotaPerDay: quota.value,
+        browserBulkImportAllowed,
+        browserRealtimeSyncAllowed,
+        bookmarkQuotaPerDay: quota.value,
       });
       if (!result.success) {
         toast.error(result.error);
@@ -150,6 +168,8 @@ function PlanEditor({ initial }: { initial: AdminPlanRow }) {
   const titleLabel = trimmedDisplayName || initial.displayName;
   const aiId = `plan-${initial.id}-ai`;
   const colorsId = `plan-${initial.id}-colors`;
+  const bulkImportId = `plan-${initial.id}-browser-bulk-import`;
+  const realtimeSyncId = `plan-${initial.id}-browser-realtime-sync`;
   const quotaId = `plan-${initial.id}-quota`;
   const unlimitedId = `plan-${initial.id}-unlimited`;
   const nameId = `plan-${initial.id}-name`;
@@ -186,7 +206,7 @@ function PlanEditor({ initial }: { initial: AdminPlanRow }) {
                     {isMappedToPlay ? "Mapped to Play" : "No Play product"}
                   </Badge>
                   <Badge variant="outline" className="text-[10px]">
-                    {isUnlimited ? "Unlimited API" : `${apiQuotaInput || "0"} req/day`}
+                    {isUnlimited ? "Unlimited bookmarks" : `${quotaInput || "0"} bookmarks/day`}
                   </Badge>
                 </div>
               </div>
@@ -270,11 +290,47 @@ function PlanEditor({ initial }: { initial: AdminPlanRow }) {
                   disabled={isPending}
                 />
               </Field>
+
+              <Field orientation="horizontal">
+                <FieldContent>
+                  <FieldLabel htmlFor={realtimeSyncId} className="flex items-center gap-2">
+                    <RefreshCwIcon className="size-3.5 text-muted-foreground" />
+                    Realtime browser auto-sync
+                  </FieldLabel>
+                  <FieldDescription>
+                    Auto-add new Chrome bookmarks into LinkArena as the user saves them.
+                  </FieldDescription>
+                </FieldContent>
+                <Switch
+                  id={realtimeSyncId}
+                  checked={browserRealtimeSyncAllowed}
+                  onCheckedChange={setBrowserRealtimeSyncAllowed}
+                  disabled={isPending}
+                />
+              </Field>
+
+              <Field orientation="horizontal">
+                <FieldContent>
+                  <FieldLabel htmlFor={bulkImportId} className="flex items-center gap-2">
+                    <DownloadIcon className="size-3.5 text-muted-foreground" />
+                    Bulk import existing browser bookmarks
+                  </FieldLabel>
+                  <FieldDescription>
+                    One-click import of the user&apos;s existing Chrome bookmarks library.
+                  </FieldDescription>
+                </FieldContent>
+                <Switch
+                  id={bulkImportId}
+                  checked={browserBulkImportAllowed}
+                  onCheckedChange={setBrowserBulkImportAllowed}
+                  disabled={isPending}
+                />
+              </Field>
             </FieldGroup>
           </FieldSet>
 
           <Field>
-            <FieldLabel htmlFor={quotaId}>API quota</FieldLabel>
+            <FieldLabel htmlFor={quotaId}>Daily bookmark limit</FieldLabel>
             <InputGroup
               className={cn(isUnlimited && "opacity-60")}
             >
@@ -282,16 +338,19 @@ function PlanEditor({ initial }: { initial: AdminPlanRow }) {
                 id={quotaId}
                 type="text"
                 inputMode="numeric"
-                value={isUnlimited ? "" : apiQuotaInput}
-                onChange={(e) => setApiQuotaInput(e.target.value)}
-                placeholder={isUnlimited ? "No daily cap" : "e.g. 1000"}
+                value={isUnlimited ? "" : quotaInput}
+                onChange={(e) => setQuotaInput(e.target.value)}
+                placeholder={isUnlimited ? "No daily cap" : "e.g. 50"}
                 disabled={isPending || isUnlimited}
                 autoComplete="off"
               />
               <InputGroupAddon align="inline-end">
-                <InputGroupText>req / day · UTC</InputGroupText>
+                <InputGroupText>bookmarks / day · UTC</InputGroupText>
               </InputGroupAddon>
             </InputGroup>
+            <FieldDescription>
+              Counts every bookmark written across all sources (manual, extension save, realtime sync, bulk import).
+            </FieldDescription>
             <Field orientation="horizontal" className="pt-1">
               <FieldContent>
                 <FieldLabel htmlFor={unlimitedId} className="text-xs font-normal text-muted-foreground">

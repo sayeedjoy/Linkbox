@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { eq, and } from "drizzle-orm";
 import { userIdFromBearerToken } from "@/lib/api-auth";
-import { tryConsumeApiQuota } from "@/lib/api-quota";
+import { guardBookmarkWrite, type BookmarkWriteSource } from "@/lib/bookmark-write-guard";
 import { createBookmarkFromMetadataForUser } from "@/app/actions/bookmarks";
 import { db, bookmarks, groups } from "@/lib/db";
 import { publishUserEvent } from "@/lib/realtime";
@@ -13,26 +13,37 @@ function corsHeaders(request: Request): Record<string, string> {
   return {};
 }
 
+const ALLOWED_SOURCES: BookmarkWriteSource[] = [
+  "manual",
+  "extension_save",
+  "browser_realtime",
+];
+
+function parseSource(raw: unknown): BookmarkWriteSource {
+  if (typeof raw === "string" && (ALLOWED_SOURCES as string[]).includes(raw)) {
+    return raw as BookmarkWriteSource;
+  }
+  return "manual";
+}
+
 export async function PUT(request: Request) {
+  const headers = corsHeaders(request);
   const userId = await userIdFromBearerToken(request.headers.get("Authorization"));
   if (!userId)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders(request) });
-  const quota = await tryConsumeApiQuota(userId);
-  if (!quota.ok) {
-    return NextResponse.json(
-      { error: "Daily API limit reached", limit: quota.limit, resetsAt: quota.resetsAt },
-      { status: 429, headers: corsHeaders(request) }
-    );
-  }
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers });
+
+  const guard = await guardBookmarkWrite(userId, { source: "manual", units: 1, headers });
+  if (!guard.ok) return guard.response;
+
   let body: { url?: string; title?: string; description?: string; groupId?: string | null; faviconUrl?: string | null };
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400, headers: corsHeaders(request) });
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400, headers });
   }
   const url = typeof body.url === "string" ? body.url.trim() : "";
   if (!url || !url.startsWith("http"))
-    return NextResponse.json({ error: "Invalid URL" }, { status: 400, headers: corsHeaders(request) });
+    return NextResponse.json({ error: "Invalid URL" }, { status: 400, headers });
 
   const [existing] = await db
     .select({
@@ -54,7 +65,7 @@ export async function PUT(request: Request) {
     .limit(1);
 
   if (!existing)
-    return NextResponse.json({ error: "Bookmark not found" }, { status: 404, headers: corsHeaders(request) });
+    return NextResponse.json({ error: "Bookmark not found" }, { status: 404, headers });
 
   const updateData: { title?: string | null; description?: string | null; groupId?: string | null; faviconUrl?: string | null; updatedAt: Date } = { updatedAt: new Date() };
   if (body.title !== undefined) updateData.title = typeof body.title === "string" ? body.title : null;
@@ -69,7 +80,7 @@ export async function PUT(request: Request) {
         .where(and(eq(groups.id, body.groupId), eq(groups.userId, userId)))
         .limit(1);
       if (!group)
-        return NextResponse.json({ error: "Group not found" }, { status: 400, headers: corsHeaders(request) });
+        return NextResponse.json({ error: "Group not found" }, { status: 400, headers });
       updateData.groupId = group.id;
     } else {
       updateData.groupId = null;
@@ -103,71 +114,78 @@ export async function PUT(request: Request) {
     id: updated.id,
     data: { groupId: updated.groupId ?? null },
   });
-  return NextResponse.json(updated, { status: 200, headers: corsHeaders(request) });
+  return NextResponse.json(updated, { status: 200, headers });
 }
 
 export async function POST(request: Request) {
+  const headers = corsHeaders(request);
   const userId = await userIdFromBearerToken(request.headers.get("Authorization"));
   if (!userId)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders(request) });
-  let body: { url?: string; title?: string; description?: string; groupId?: string | null; faviconUrl?: string | null };
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers });
+
+  let body: { url?: string; title?: string; description?: string; groupId?: string | null; faviconUrl?: string | null; source?: string };
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400, headers: corsHeaders(request) });
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400, headers });
   }
   const url = typeof body.url === "string" ? body.url.trim() : "";
   if (!url || !url.startsWith("http"))
-    return NextResponse.json({ error: "Invalid URL" }, { status: 400, headers: corsHeaders(request) });
+    return NextResponse.json({ error: "Invalid URL" }, { status: 400, headers });
+
   const title = typeof body.title === "string" ? body.title : undefined;
   const description = typeof body.description === "string" ? body.description : undefined;
   const groupId = body.groupId === null || body.groupId === undefined ? undefined : (typeof body.groupId === "string" ? body.groupId : undefined);
   const faviconUrl = typeof body.faviconUrl === "string" && body.faviconUrl.trim().startsWith("http") ? body.faviconUrl.trim() : null;
+  const source = parseSource(body.source);
+
+  const guard = await guardBookmarkWrite(userId, { source, units: 1, headers });
+  if (!guard.ok) return guard.response;
+
   try {
     const bookmark = await createBookmarkFromMetadataForUser(
       userId,
       url,
       { title: title ?? null, description: description ?? null, faviconUrl, previewImageUrl: null },
-      groupId ?? null
+      groupId ?? null,
+      source
     );
-    return NextResponse.json(bookmark, { status: 200, headers: corsHeaders(request) });
+    return NextResponse.json(bookmark, { status: 200, headers });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Failed to create bookmark";
-    return NextResponse.json({ error: message }, { status: 400, headers: corsHeaders(request) });
+    return NextResponse.json({ error: message }, { status: 400, headers });
   }
 }
 
 export async function DELETE(request: Request) {
+  const headers = corsHeaders(request);
   const userId = await userIdFromBearerToken(request.headers.get("Authorization"));
   if (!userId)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders(request) });
-  const quota = await tryConsumeApiQuota(userId);
-  if (!quota.ok) {
-    return NextResponse.json(
-      { error: "Daily API limit reached", limit: quota.limit, resetsAt: quota.resetsAt },
-      { status: 429, headers: corsHeaders(request) }
-    );
-  }
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers });
+
+  const guard = await guardBookmarkWrite(userId, { source: "manual", units: 1, headers });
+  if (!guard.ok) return guard.response;
+
   let body: { url?: string };
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400, headers: corsHeaders(request) });
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400, headers });
   }
   const url = typeof body.url === "string" ? body.url.trim() : "";
   if (!url || !url.startsWith("http"))
-    return NextResponse.json({ error: "Invalid URL" }, { status: 400, headers: corsHeaders(request) });
+    return NextResponse.json({ error: "Invalid URL" }, { status: 400, headers });
 
   const toDelete = await db.select({ id: bookmarks.id }).from(bookmarks).where(and(eq(bookmarks.userId, userId), eq(bookmarks.url, url)));
   const result = await db.delete(bookmarks).where(and(eq(bookmarks.userId, userId), eq(bookmarks.url, url))).returning({ id: bookmarks.id });
 
   if (result.length === 0)
-    return NextResponse.json({ error: "Bookmark not found" }, { status: 404, headers: corsHeaders(request) });
+    return NextResponse.json({ error: "Bookmark not found" }, { status: 404, headers });
 
   for (const bookmark of toDelete) {
     publishUserEvent(userId, { type: "bookmark.deleted", entity: "bookmark", id: bookmark.id });
   }
-  return new NextResponse(null, { status: 204, headers: corsHeaders(request) });
+  return new NextResponse(null, { status: 204, headers });
 }
 
 export async function OPTIONS(request: Request) {

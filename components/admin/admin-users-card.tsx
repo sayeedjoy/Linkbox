@@ -33,16 +33,7 @@ import {
   banUserAsAdmin,
   unbanUserAsAdmin,
 } from "@/app/actions/admin-users";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -846,39 +837,19 @@ export function AdminUsersCard({
         </CardContent>
       </Card>
 
-      <AlertDialog
+      <DeleteConfirmDialog
         open={targetUser !== null}
         onOpenChange={(open) => !open && setTargetUser(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete user?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {targetUser
-                ? `Delete ${targetUser.email} and all of their bookmarks, groups, API tokens, and reset tokens. This cannot be undone.`
-                : "Delete this user and all associated data. This cannot be undone."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={isPending}
-              onClick={(event) => {
-                event.preventDefault();
-                handleDelete();
-              }}
-            >
-              {isPending ? (
-                <Spinner data-icon="inline-start" />
-              ) : (
-                <Trash data-icon="inline-start" />
-              )}
-              {isPending ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="Delete user?"
+        description={
+          targetUser
+            ? `Delete ${targetUser.email} and all of their bookmarks, groups, API tokens, and reset tokens. This cannot be undone.`
+            : "Delete this user and all associated data. This cannot be undone."
+        }
+        isPending={isPending}
+        pendingLabel="Deleting..."
+        onConfirm={handleDelete}
+      />
 
       <UserDetailDialog
         userId={detailUser?.id ?? null}

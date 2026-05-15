@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CheckIcon, XIcon, SparklesIcon, PaletteIcon, ZapIcon } from "lucide-react";
+import { CheckIcon, XIcon, SparklesIcon, PaletteIcon, ZapIcon, DownloadIcon, RefreshCwIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -34,13 +34,23 @@ function PlanCard({ plan, isPopular }: { plan: PlanApiItem; isPopular?: boolean 
       included: plan.groupColoringAllowed,
     },
     {
-      label: "API quota",
+      label: "Realtime browser auto-sync",
+      icon: <RefreshCwIcon className="size-4" />,
+      included: plan.browserRealtimeSyncAllowed,
+    },
+    {
+      label: "Bulk import existing browser bookmarks",
+      icon: <DownloadIcon className="size-4" />,
+      included: plan.browserBulkImportAllowed,
+    },
+    {
+      label: "Daily bookmark limit",
       icon: <ZapIcon className="size-4" />,
       included: true,
       value:
-        plan.apiQuotaPerDay == null
-          ? "Unlimited requests / day"
-          : `${plan.apiQuotaPerDay} requests / day`,
+        plan.bookmarkQuotaPerDay == null
+          ? "Unlimited bookmarks / day"
+          : `${plan.bookmarkQuotaPerDay} bookmarks / day`,
     },
   ];
 

@@ -24,6 +24,7 @@ export interface BookmarkCreatePayload {
   description?: string
   groupId?: string | null
   faviconUrl?: string | null
+  source?: 'manual' | 'extension_save' | 'browser_realtime'
 }
 
 export interface BookmarkResponse {

@@ -8,7 +8,14 @@ import type {
   UpdateBookmarkCategoryPayload,
   UpdateBookmarkPayload,
 } from '../types/messages'
-import { API_BASE_URL, BOOKMARKS_CACHE_TTL_MS, GROUPS_CACHE_TTL_MS, STORAGE_KEYS } from '../lib/constants'
+import {
+  ALLOWED_WEB_ORIGINS,
+  API_BASE_URL,
+  BOOKMARKS_CACHE_TTL_MS,
+  BROWSER_IMPORT_LIMIT,
+  GROUPS_CACHE_TTL_MS,
+  STORAGE_KEYS,
+} from '../lib/constants'
 
 type FetchListResult<T> = { data: T; unauthorized: boolean }
 type FetchAllResult = {
@@ -58,6 +65,11 @@ let realtimeSuppressedUntil = 0
 let consecutive401Count = 0
 const AUTH_CLEAR_THRESHOLD = 3
 
+// Set to true after the server returns 403 on a `browser_realtime` save (plan
+// disallows realtime sync). Resets when the service worker restarts or the
+// user re-authenticates via setToken/clearToken. Stored in memory only.
+let realtimeSyncDisabled = false
+
 async function getToken(): Promise<string | null> {
   const out = await chrome.storage.local.get(STORAGE_KEYS.apiToken)
   const token = out[STORAGE_KEYS.apiToken]
@@ -80,6 +92,7 @@ async function setStoredToken(token: string | null): Promise<void> {
 
 async function clearAuthState(): Promise<void> {
   stopRealtimeSync()
+  realtimeSyncDisabled = false
   await setStoredToken(null)
 }
 
@@ -677,6 +690,182 @@ function setBadge(text: string, color: string): void {
   chrome.action.setBadgeText({ text })
   chrome.action.setBadgeBackgroundColor({ color })
 }
+
+let bulkImportInProgress = false
+const recentlySyncedUrls = new Map<string, number>()
+const RECENT_URL_TTL_MS = 60_000
+
+function rememberRecentUrl(url: string): void {
+  const now = Date.now()
+  recentlySyncedUrls.set(url, now)
+  // Cheap cleanup of stale entries.
+  if (recentlySyncedUrls.size > 256) {
+    for (const [key, t] of recentlySyncedUrls) {
+      if (now - t > RECENT_URL_TTL_MS) recentlySyncedUrls.delete(key)
+    }
+  }
+}
+
+function wasRecentlySynced(url: string): boolean {
+  const t = recentlySyncedUrls.get(url)
+  if (typeof t !== 'number') return false
+  if (Date.now() - t > RECENT_URL_TTL_MS) {
+    recentlySyncedUrls.delete(url)
+    return false
+  }
+  return true
+}
+
+type ImportApiResponse = {
+  created: number
+  updated: number
+  skipped: number
+  invalidCount: number
+  groupId: string
+  groupCreated: boolean
+}
+
+async function importBrowserBookmarks(): Promise<
+  | { ok: true; data: ImportApiResponse }
+  | { ok: false; error: string; status?: number }
+> {
+  const token = await getToken()
+  if (!token) return { ok: false, error: 'not_signed_in', status: 401 }
+
+  let tree: chrome.bookmarks.BookmarkTreeNode[]
+  try {
+    tree = await chrome.bookmarks.getTree()
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'bookmarks_unavailable' }
+  }
+
+  type Flat = { url: string; title: string; createdAt: string | null }
+  const flat: Flat[] = []
+  const walk = (nodes: chrome.bookmarks.BookmarkTreeNode[]): void => {
+    for (const node of nodes) {
+      if (typeof node.url === 'string' && /^https?:\/\//i.test(node.url)) {
+        flat.push({
+          url: node.url,
+          title: node.title ?? '',
+          createdAt:
+            typeof node.dateAdded === 'number' ? new Date(node.dateAdded).toISOString() : null,
+        })
+      }
+      if (node.children?.length) walk(node.children)
+    }
+  }
+  walk(tree)
+
+  const capped = flat.slice(0, BROWSER_IMPORT_LIMIT)
+
+  bulkImportInProgress = true
+  try {
+    const url = `${API_BASE_URL.replace(/\/$/, '')}/api/extension/import`
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ bookmarks: capped }),
+    })
+    if (!res.ok) {
+      let message = `request_failed_${res.status}`
+      try {
+        const errorBody = (await res.json()) as { error?: string }
+        if (typeof errorBody?.error === 'string') message = errorBody.error
+      } catch {}
+      return { ok: false, error: message, status: res.status }
+    }
+    const data = (await res.json()) as ImportApiResponse
+    for (const item of capped) rememberRecentUrl(item.url)
+    void revalidateAll('initial').then((allResult) => {
+      if (allResult.unauthorized) return
+      return broadcastBookmarksUpdated({
+        bookmarks: allResult.bookmarks,
+        groups: allResult.groups,
+        syncInProgress: allResult.syncInProgress,
+      })
+    })
+    return { ok: true, data }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'network_error' }
+  } finally {
+    bulkImportInProgress = false
+  }
+}
+
+function isAllowedWebOrigin(origin: string | undefined | null): boolean {
+  if (!origin) return false
+  return ALLOWED_WEB_ORIGINS.some((allowed) => {
+    if (allowed === origin) return true
+    // Allow trailing-slash variants.
+    if (allowed.endsWith('/') && allowed.slice(0, -1) === origin) return true
+    return false
+  })
+}
+
+chrome.runtime.onMessageExternal.addListener(
+  (
+    message: { type?: string },
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response?: unknown) => void
+  ) => {
+    if (!isAllowedWebOrigin(sender.origin ?? sender.url ?? null)) {
+      sendResponse({ ok: false, error: 'forbidden_origin' })
+      return false
+    }
+    const type = message?.type
+    if (type === 'ping') {
+      sendResponse({ ok: true, version: chrome.runtime.getManifest().version })
+      return false
+    }
+    if (type === 'import-bookmarks') {
+      importBrowserBookmarks().then((result) => {
+        if (result.ok) {
+          sendResponse({ ok: true, ...result.data })
+        } else {
+          sendResponse({ ok: false, error: result.error, status: result.status })
+        }
+      })
+      return true
+    }
+    sendResponse({ ok: false, error: 'unknown_message_type' })
+    return false
+  }
+)
+
+chrome.bookmarks.onCreated.addListener((_id, bookmark) => {
+  if (bulkImportInProgress) return
+  if (realtimeSyncDisabled) return
+  const url = bookmark.url
+  if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return
+  if (wasRecentlySynced(url)) return
+  rememberRecentUrl(url)
+  void (async () => {
+    const token = await getToken()
+    if (!token) return
+    const title = bookmark.title?.trim() || new URL(url).hostname
+    const result = await createBookmark({
+      url,
+      title,
+      groupId: null,
+      faviconUrl: null,
+      source: 'browser_realtime',
+    })
+    if (result.ok) {
+      const optimistic = await optimisticAddBookmarkToCache(result.data)
+      await broadcastBookmarksUpdated(optimistic)
+      realtimeSuppressedUntil = Date.now() + REALTIME_SUPPRESS_AFTER_LOCAL_MUTATION_MS
+      return
+    }
+    // 403 from the server means the user's plan disallows realtime sync.
+    // Stop firing for this service-worker lifetime to avoid wasted requests.
+    if (result.status === 403) {
+      realtimeSyncDisabled = true
+    }
+  })()
+})
 
 chrome.runtime.onMessage.addListener(
   (
