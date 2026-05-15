@@ -45,6 +45,7 @@ interface MultiSelectToolbarProps {
 
 // Desktop horizontal toolbar
 function DesktopToolbar({
+  selectedCount,
   allSelected,
   onSelectAll,
   onMove,
@@ -55,7 +56,7 @@ function DesktopToolbar({
   hasUsername,
   onMakePublic,
   onMakePrivate,
-}: Omit<MultiSelectToolbarProps, "selectedCount">) {
+}: MultiSelectToolbarProps) {
   return (
     <motion.div
       initial={{ y: 100, opacity: 0 }}
@@ -66,6 +67,13 @@ function DesktopToolbar({
     >
       <div className="w-auto overflow-x-auto rounded-lg bg-popover text-popover-foreground p-1 shadow-md ring-1 ring-foreground/10">
         <div className="flex min-w-max items-center gap-0.5">
+          <span
+            className="shrink-0 px-2 py-1 text-[13px] font-medium tabular-nums text-muted-foreground"
+            aria-live="polite"
+          >
+            {selectedCount} selected
+          </span>
+          <div className="h-4 w-px bg-border mx-0.5 -my-1" />
           <Button
             variant="ghost"
             size="sm"
