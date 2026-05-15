@@ -65,6 +65,11 @@ let realtimeSuppressedUntil = 0
 let consecutive401Count = 0
 const AUTH_CLEAR_THRESHOLD = 3
 
+// Set to true after the server returns 403 on a `browser_realtime` save (plan
+// disallows realtime sync). Resets when the service worker restarts or the
+// user re-authenticates via setToken/clearToken. Stored in memory only.
+let realtimeSyncDisabled = false
+
 async function getToken(): Promise<string | null> {
   const out = await chrome.storage.local.get(STORAGE_KEYS.apiToken)
   const token = out[STORAGE_KEYS.apiToken]
@@ -87,6 +92,7 @@ async function setStoredToken(token: string | null): Promise<void> {
 
 async function clearAuthState(): Promise<void> {
   stopRealtimeSync()
+  realtimeSyncDisabled = false
   await setStoredToken(null)
 }
 
@@ -831,6 +837,7 @@ chrome.runtime.onMessageExternal.addListener(
 
 chrome.bookmarks.onCreated.addListener((_id, bookmark) => {
   if (bulkImportInProgress) return
+  if (realtimeSyncDisabled) return
   const url = bookmark.url
   if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return
   if (wasRecentlySynced(url)) return
@@ -850,6 +857,12 @@ chrome.bookmarks.onCreated.addListener((_id, bookmark) => {
       const optimistic = await optimisticAddBookmarkToCache(result.data)
       await broadcastBookmarksUpdated(optimistic)
       realtimeSuppressedUntil = Date.now() + REALTIME_SUPPRESS_AFTER_LOCAL_MUTATION_MS
+      return
+    }
+    // 403 from the server means the user's plan disallows realtime sync.
+    // Stop firing for this service-worker lifetime to avoid wasted requests.
+    if (result.status === 403) {
+      realtimeSyncDisabled = true
     }
   })()
 })

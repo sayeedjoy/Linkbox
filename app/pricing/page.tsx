@@ -16,8 +16,9 @@ export type PlanApiItem = {
   googlePlayProductId: string | null;
   aiGroupingAllowed: boolean;
   groupColoringAllowed: boolean;
-  browserImportAllowed: boolean;
-  apiQuotaPerDay: number | null;
+  browserBulkImportAllowed: boolean;
+  browserRealtimeSyncAllowed: boolean;
+  bookmarkQuotaPerDay: number | null;
   sortOrder: number;
 };
 

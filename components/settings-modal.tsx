@@ -69,7 +69,7 @@ export function SettingsModal({
   const [autoGroup, setAutoGroup] = useState(false);
   const [autoGroupLoading, setAutoGroupLoading] = useState(false);
   const [aiGroupingAllowed, setAiGroupingAllowed] = useState(true);
-  const [browserImportAllowed, setBrowserImportAllowed] = useState(false);
+  const [browserBulkImportAllowed, setBrowserBulkImportAllowed] = useState(false);
   const [planLabel, setPlanLabel] = useState<string | null>(null);
   const [isImportingBrowser, setIsImportingBrowser] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -98,7 +98,7 @@ export function SettingsModal({
       .then((e) => {
         setAutoGroup(e.autoGroupEnabled);
         setAiGroupingAllowed(e.aiGroupingAllowed);
-        setBrowserImportAllowed(e.browserImportAllowed);
+        setBrowserBulkImportAllowed(e.browserBulkImportAllowed);
         setPlanLabel(e.displayName);
       })
       .catch(() => {})
@@ -232,7 +232,7 @@ export function SettingsModal({
   }, [importItems]);
 
   const handleImportFromBrowser = useCallback(async () => {
-    if (!browserImportAllowed) {
+    if (!browserBulkImportAllowed) {
       toast.error(
         planLabel
           ? `Browser import is not included in the ${planLabel} plan.`
@@ -279,7 +279,7 @@ export function SettingsModal({
     } finally {
       setIsImportingBrowser(false);
     }
-  }, [browserImportAllowed, planLabel]);
+  }, [browserBulkImportAllowed, planLabel]);
 
   const handleDeleteAccount = useCallback(async () => {
     setIsDeleting(true);
@@ -394,7 +394,7 @@ export function SettingsModal({
                 <span>
                   {isImportingBrowser ? "Importing from browser…" : "Import browser bookmarks"}
                 </span>
-                {!browserImportAllowed && planLabel ? (
+                {!browserBulkImportAllowed && planLabel ? (
                   <span className="text-xs text-amber-600 dark:text-amber-500">
                     Not included in the {planLabel} plan.
                   </span>

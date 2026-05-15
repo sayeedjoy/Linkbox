@@ -5,7 +5,6 @@ import { eq, and, asc, count, sql } from "drizzle-orm";
 import { db, groups, bookmarks } from "@/lib/db";
 import { currentUserId } from "@/lib/auth";
 import { publishUserEvent } from "@/lib/realtime";
-import { consumeApiQuotaOrThrow } from "@/lib/api-quota";
 import { getPlanFeaturesForUser, resolveGroupColorForPlan } from "@/lib/plan-entitlements";
 
 export type GroupWithCount = {
@@ -65,7 +64,6 @@ export async function createGroup(name: string, color?: string) {
   const trimmedName = name.trim();
   if (!trimmedName) throw new Error("Group name is required");
   const plan = await getPlanFeaturesForUser(userId);
-  await consumeApiQuotaOrThrow(userId, plan);
   const resolvedColor = resolveGroupColorForPlan(plan.groupColoringAllowed, color ?? null);
   const maxOrder = await getMaxGroupOrder(userId);
   const [group] = await db
@@ -95,7 +93,7 @@ export async function updateGroup(
   if (data.color !== undefined) updatePayload.color = resolveGroupColorForPlan(plan!.groupColoringAllowed, data.color);
   if (data.order !== undefined) updatePayload.order = data.order;
   if (Object.keys(updatePayload).length === 0) return { ok: true };
-  await consumeApiQuotaOrThrow(userId, plan ?? undefined);
+  void plan;
   await db.update(groups).set(updatePayload).where(and(eq(groups.id, id), eq(groups.userId, userId)));
   revalidatePath("/");
   revalidateTag("groups", "max");
@@ -105,7 +103,6 @@ export async function updateGroup(
 
 export async function reorderGroups(orderedIds: string[]) {
   const userId = await currentUserId();
-  await consumeApiQuotaOrThrow(userId);
   await db.transaction(async (tx) => {
     for (let i = 0; i < orderedIds.length; i++) {
       await tx
@@ -124,7 +121,7 @@ export async function reorderGroups(orderedIds: string[]) {
 
 export async function deleteGroup(id: string) {
   const userId = await currentUserId();
-  await consumeApiQuotaOrThrow(userId);
+  // Cascading nullify of bookmark.groupId is a side-effect of group deletion, not a user bookmark write — exempt from quota.
   await db.update(bookmarks).set({ groupId: null, updatedAt: new Date() }).where(and(eq(bookmarks.groupId, id), eq(bookmarks.userId, userId)));
   await db.delete(groups).where(and(eq(groups.id, id), eq(groups.userId, userId)));
   revalidatePath("/");
@@ -138,7 +135,6 @@ export async function createGroupForUser(userId: string, name: string, color?: s
   const trimmedName = name.trim();
   if (!trimmedName) throw new Error("Group name is required");
   const plan = await getPlanFeaturesForUser(userId);
-  await consumeApiQuotaOrThrow(userId, plan);
   const resolvedColor = resolveGroupColorForPlan(plan.groupColoringAllowed, color ?? null);
   const maxOrder = await getMaxGroupOrder(userId);
   const [group] = await db
@@ -168,7 +164,7 @@ export async function updateGroupForUser(
   if (data.color !== undefined) updatePayload.color = resolveGroupColorForPlan(plan!.groupColoringAllowed, data.color);
   if (data.order !== undefined) updatePayload.order = data.order;
   if (Object.keys(updatePayload).length === 0) return { ok: true };
-  await consumeApiQuotaOrThrow(userId, plan ?? undefined);
+  void plan;
   await db.update(groups).set(updatePayload).where(and(eq(groups.id, id), eq(groups.userId, userId)));
   revalidatePath("/");
   revalidateTag("groups", "max");
@@ -177,7 +173,7 @@ export async function updateGroupForUser(
 }
 
 export async function deleteGroupForUser(userId: string, id: string) {
-  await consumeApiQuotaOrThrow(userId);
+  // Cascading nullify of bookmark.groupId is a side-effect of group deletion, not a user bookmark write — exempt from quota.
   await db.update(bookmarks).set({ groupId: null, updatedAt: new Date() }).where(and(eq(bookmarks.groupId, id), eq(bookmarks.userId, userId)));
   await db.delete(groups).where(and(eq(groups.id, id), eq(groups.userId, userId)));
   revalidatePath("/");

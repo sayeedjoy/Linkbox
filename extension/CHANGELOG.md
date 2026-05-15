@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- **Quota model** — Daily limit is now counted per bookmark written, not per API call. Realtime browser sync and one-click bulk import both consume from the same `bookmarkQuotaPerDay` budget.
+- **Plan flags split** — The single `browserImportAllowed` flag has been replaced by two independent admin-toggleable flags: `browserRealtimeSyncAllowed` (live `chrome.bookmarks.onCreated` sync) and `browserBulkImportAllowed` (one-click import of existing bookmarks).
+- **403 on realtime sync** — When the server returns 403 for `source: "browser_realtime"`, the extension flips an in-memory flag and stops firing `chrome.bookmarks.onCreated` requests until the service worker restarts. Avoids spamming the server with rejected requests when an admin disables the entitlement.
+
 ## [1.6.0] - 2026-05-15
 
 ### Added

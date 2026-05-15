@@ -13,8 +13,9 @@ export type AdminPlanRow = {
   googlePlayProductId: string | null;
   aiGroupingAllowed: boolean;
   groupColoringAllowed: boolean;
-  browserImportAllowed: boolean;
-  apiQuotaPerDay: number | null;
+  browserBulkImportAllowed: boolean;
+  browserRealtimeSyncAllowed: boolean;
+  bookmarkQuotaPerDay: number | null;
   sortOrder: number;
 };
 
@@ -33,8 +34,9 @@ export async function getPlansForAdmin(): Promise<AdminPlanRow[]> {
       googlePlayProductId: subscriptionPlans.googlePlayProductId,
       aiGroupingAllowed: subscriptionPlans.aiGroupingAllowed,
       groupColoringAllowed: subscriptionPlans.groupColoringAllowed,
-      browserImportAllowed: subscriptionPlans.browserImportAllowed,
-      apiQuotaPerDay: subscriptionPlans.apiQuotaPerDay,
+      browserBulkImportAllowed: subscriptionPlans.browserBulkImportAllowed,
+      browserRealtimeSyncAllowed: subscriptionPlans.browserRealtimeSyncAllowed,
+      bookmarkQuotaPerDay: subscriptionPlans.bookmarkQuotaPerDay,
       sortOrder: subscriptionPlans.sortOrder,
     })
     .from(subscriptionPlans)
@@ -47,8 +49,9 @@ export async function updatePlanAsAdmin(input: {
   googlePlayProductId: string | null;
   aiGroupingAllowed: boolean;
   groupColoringAllowed: boolean;
-  browserImportAllowed: boolean;
-  apiQuotaPerDay: number | null;
+  browserBulkImportAllowed: boolean;
+  browserRealtimeSyncAllowed: boolean;
+  bookmarkQuotaPerDay: number | null;
 }): Promise<{ success: true } | { success: false; error: string }> {
   try {
     await requireAdminSession();
@@ -59,10 +62,10 @@ export async function updatePlanAsAdmin(input: {
       input.googlePlayProductId === null || input.googlePlayProductId === undefined
         ? null
         : input.googlePlayProductId.trim() || null;
-    const quota = input.apiQuotaPerDay;
+    const quota = input.bookmarkQuotaPerDay;
     if (quota !== null) {
       if (!Number.isInteger(quota) || quota < 0) {
-        return { success: false, error: "API quota per day must be a non-negative integer or empty." };
+        return { success: false, error: "Daily bookmark limit must be a non-negative integer or empty." };
       }
     }
 
@@ -73,8 +76,9 @@ export async function updatePlanAsAdmin(input: {
         googlePlayProductId: gp,
         aiGroupingAllowed: input.aiGroupingAllowed,
         groupColoringAllowed: input.groupColoringAllowed,
-        browserImportAllowed: input.browserImportAllowed,
-        apiQuotaPerDay: quota,
+        browserBulkImportAllowed: input.browserBulkImportAllowed,
+        browserRealtimeSyncAllowed: input.browserRealtimeSyncAllowed,
+        bookmarkQuotaPerDay: quota,
       })
       .where(eq(subscriptionPlans.id, input.id));
 

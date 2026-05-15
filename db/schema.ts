@@ -18,8 +18,9 @@ export const subscriptionPlans = pgTable("SubscriptionPlan", {
   googlePlayProductId: text("googlePlayProductId").unique(),
   aiGroupingAllowed: boolean("aiGroupingAllowed").notNull().default(true),
   groupColoringAllowed: boolean("groupColoringAllowed").notNull().default(true),
-  browserImportAllowed: boolean("browserImportAllowed").notNull().default(false),
-  apiQuotaPerDay: integer("apiQuotaPerDay"),
+  browserBulkImportAllowed: boolean("browserBulkImportAllowed").notNull().default(false),
+  browserRealtimeSyncAllowed: boolean("browserRealtimeSyncAllowed").notNull().default(true),
+  bookmarkQuotaPerDay: integer("bookmarkQuotaPerDay"),
   sortOrder: integer("sortOrder").notNull().default(0),
 });
 

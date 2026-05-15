@@ -28,20 +28,25 @@ function stableLockKey(userId: string, day: string): number {
 }
 
 export type ConsumeQuotaResult =
-  | { ok: true }
+  | { ok: true; remaining: number | null }
   | { ok: false; limit: number; resetsAt: string };
 
 type QuotaPlanFeatures = {
-  apiQuotaPerDay: number | null;
+  bookmarkQuotaPerDay: number | null;
 };
 
-export async function tryConsumeApiQuota(
+export async function consumeBookmarkQuota(
   userId: string,
+  units: number,
   planOverride?: QuotaPlanFeatures
 ): Promise<ConsumeQuotaResult> {
+  if (!Number.isInteger(units) || units < 0) {
+    throw new Error(`consumeBookmarkQuota: units must be a non-negative integer (got ${units})`);
+  }
+
   const plan = planOverride ?? (await getPlanFeaturesForUser(userId));
-  const limit = plan.apiQuotaPerDay;
-  if (limit == null) return { ok: true };
+  const limit = plan.bookmarkQuotaPerDay;
+  if (limit == null) return { ok: true, remaining: null };
 
   const day = utcDayString();
   const resetsAt = nextUtcMidnightIso(day);
@@ -57,17 +62,19 @@ export async function tryConsumeApiQuota(
       .limit(1);
 
     const current = row?.requestCount ?? 0;
-    if (current >= limit) {
+    const nextCount = current + units;
+    if (nextCount > limit) {
       return { ok: false, limit, resetsAt };
     }
 
-    const nextCount = current + 1;
+    if (units === 0) return { ok: true, remaining: limit - current };
+
     if (!row) {
       await tx.insert(apiUsageDaily).values({
         id: createId(),
         userId,
         day,
-        requestCount: 1,
+        requestCount: units,
       });
     } else {
       await tx
@@ -76,16 +83,17 @@ export async function tryConsumeApiQuota(
         .where(and(eq(apiUsageDaily.userId, userId), eq(apiUsageDaily.day, day)));
     }
 
-    return { ok: true };
+    return { ok: true, remaining: limit - nextCount };
   });
 }
 
-export async function consumeApiQuotaOrThrow(
+export async function consumeBookmarkQuotaOrThrow(
   userId: string,
+  units: number,
   planOverride?: QuotaPlanFeatures
 ): Promise<void> {
-  const r = await tryConsumeApiQuota(userId, planOverride);
+  const r = await consumeBookmarkQuota(userId, units, planOverride);
   if (!r.ok) {
-    throw new Error(`Daily API limit reached (${r.limit}). Resets at ${r.resetsAt}.`);
+    throw new Error(`Daily bookmark limit reached (${r.limit}). Resets at ${r.resetsAt}.`);
   }
 }
