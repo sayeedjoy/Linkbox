@@ -1,4 +1,4 @@
-import { startTransition, useState, useEffect, useMemo, useCallback } from 'react'
+import { startTransition, useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Copy, MoreVertical, Plus, RefreshCw, Search, Tags, Trash2 } from 'lucide-react'
 import { LOGO_URL } from '@/lib/constants'
 import { formatDate } from '@/lib/date'
@@ -98,6 +98,20 @@ export default function BookmarksView({ onSignOut }: { onSignOut: () => void }) 
   const [syncInProgress, setSyncInProgress] = useState(false)
   const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null)
   const [openCategoryMenuId, setOpenCategoryMenuId] = useState<string | null>(null)
+
+  const groupScrollRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    const el = groupScrollRef.current
+    if (!el) return
+    const onWheel = (e: WheelEvent) => {
+      if (e.deltaY !== 0) {
+        el.scrollLeft += e.deltaY
+        e.preventDefault()
+      }
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [])
 
   const applyData = useCallback((data: GetBookmarksAndGroupsResponse) => {
     startTransition(() => {
@@ -343,13 +357,8 @@ export default function BookmarksView({ onSignOut }: { onSignOut: () => void }) 
         <>
           <div className="shrink-0 min-w-0 overflow-hidden px-2">
             <div
+              ref={groupScrollRef}
               className="overflow-x-scroll flex flex-nowrap gap-1.5 items-center py-2 hidden-scrollbar"
-              onWheel={(e) => {
-                if (e.deltaY !== 0) {
-                  e.currentTarget.scrollLeft += e.deltaY
-                  e.preventDefault()
-                }
-              }}
             >
               <Badge
                 variant={selectedGroupId === null ? 'default' : 'secondary'}
