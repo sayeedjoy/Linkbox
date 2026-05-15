@@ -52,7 +52,17 @@ export async function userIdFromBearerToken(authHeader: string | null): Promise<
 }
 
 export function isExtensionOrigin(origin: string | null): boolean {
-  return Boolean(origin?.startsWith("chrome-extension://"));
+  if (!origin?.startsWith("chrome-extension://")) return false;
+  const extensionId = origin.slice("chrome-extension://".length).split("/")[0]?.trim();
+  if (!extensionId) return false;
+
+  const allowedExtensionIds = (process.env.ALLOWED_CHROME_EXTENSION_IDS ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+
+  if (allowedExtensionIds.length === 0) return false;
+  return allowedExtensionIds.includes(extensionId);
 }
 
 export async function resolveApiUserId(

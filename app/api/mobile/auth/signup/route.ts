@@ -6,6 +6,8 @@ import { db, users, apiTokens, subscriptionPlans } from "@/lib/db";
 import { getFreePlanId } from "@/lib/plan-entitlements";
 import { hashToken } from "@/lib/api-auth";
 import { isPublicSignupEnabled } from "@/lib/app-config";
+import { validatePasswordStrength } from "@/lib/password-policy";
+import { consumeRateLimit } from "@/lib/request-rate-limit";
 
 type SignupBody = {
   email?: string;
@@ -38,6 +40,14 @@ function parseName(input: unknown): string | null {
 }
 
 export async function POST(request: Request) {
+  const rateLimit = consumeRateLimit(request, "mobile-auth-signup", 5, 15 * 60 * 1000);
+  if (!rateLimit.ok) {
+    return NextResponse.json(
+      { error: "Too many signup attempts. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } }
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -55,6 +65,10 @@ export async function POST(request: Request) {
   if (!email || !password) {
     return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
   }
+  const passwordValidation = validatePasswordStrength(password);
+  if (!passwordValidation.ok) {
+    return NextResponse.json({ error: passwordValidation.error }, { status: 400 });
+  }
 
   const publicSignupEnabled = await isPublicSignupEnabled();
   if (!publicSignupEnabled) {
@@ -63,7 +77,7 @@ export async function POST(request: Request) {
 
   const [existingUser] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
   if (existingUser) {
-    return NextResponse.json({ error: "User already exists" }, { status: 409 });
+    return NextResponse.json({ error: "Unable to create account with provided credentials." }, { status: 400 });
   }
 
   const hashedPassword = await bcrypt.hash(password, 12);
@@ -97,7 +111,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     if (isPgUniqueConstraintError(error)) {
-      return NextResponse.json({ error: "User already exists" }, { status: 409 });
+      return NextResponse.json({ error: "Unable to create account with provided credentials." }, { status: 400 });
     }
     throw error;
   }

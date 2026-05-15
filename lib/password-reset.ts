@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db, users, passwordResetTokens } from "@/lib/db";
 import { hashToken } from "@/lib/api-auth";
 import { sendPasswordResetEmail } from "@/lib/email";
+import { validatePasswordStrength } from "@/lib/password-policy";
 
 export async function requestPasswordResetByEmail(email: string): Promise<{ ok: true }> {
   const normalized = email.trim().toLowerCase();
@@ -28,6 +29,8 @@ export async function resetPasswordWithToken(
   newPassword: string
 ): Promise<{ ok: true } | { error: string }> {
   if (!token?.trim()) return { error: "Invalid or expired reset link" };
+  const passwordValidation = validatePasswordStrength(newPassword);
+  if (!passwordValidation.ok) return { error: passwordValidation.error };
 
   const tokenHash = hashToken(token.trim());
   const [record] = await db

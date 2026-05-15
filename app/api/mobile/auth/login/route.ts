@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { eq, and } from "drizzle-orm";
 import { db, users, apiTokens, subscriptionPlans } from "@/lib/db";
 import { hashToken } from "@/lib/api-auth";
+import { consumeRateLimit } from "@/lib/request-rate-limit";
 
 type LoginBody = {
   email?: string;
@@ -19,6 +20,14 @@ function parseTokenName(input: unknown): string {
 }
 
 export async function POST(request: Request) {
+  const rateLimit = consumeRateLimit(request, "mobile-auth-login", 10, 15 * 60 * 1000);
+  if (!rateLimit.ok) {
+    return NextResponse.json(
+      { error: "Too many login attempts. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } }
+    );
+  }
+
   let body: LoginBody;
   try {
     body = await request.json();

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { resetPasswordWithToken } from "@/lib/password-reset";
+import { consumeRateLimit } from "@/lib/request-rate-limit";
 
 type ResetPasswordBody = {
   token?: string;
@@ -8,6 +9,14 @@ type ResetPasswordBody = {
 };
 
 export async function POST(request: Request) {
+  const rateLimit = consumeRateLimit(request, "mobile-auth-reset-password", 8, 15 * 60 * 1000);
+  if (!rateLimit.ok) {
+    return NextResponse.json(
+      { error: "Too many reset attempts. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } }
+    );
+  }
+
   let body: ResetPasswordBody;
   try {
     body = await request.json();

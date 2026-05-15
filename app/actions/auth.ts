@@ -13,12 +13,15 @@ import {
   requestPasswordResetByEmail,
   resetPasswordWithToken,
 } from "@/lib/password-reset";
+import { validatePasswordStrength } from "@/lib/password-policy";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type * as schema from "@/db/schema";
 
 export async function register(email: string, password: string, name?: string) {
   const publicSignupEnabled = await isPublicSignupEnabled();
   if (!publicSignupEnabled) throw new Error("Public signups are disabled");
+  const passwordValidation = validatePasswordStrength(password);
+  if (!passwordValidation.ok) throw new Error(passwordValidation.error);
 
   const [existing] = await db
     .select({ id: users.id })
