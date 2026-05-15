@@ -14,7 +14,7 @@ export function HeroSection() {
 	const isAuthenticated = status === "authenticated";
 	const publicSignupEnabled = useSignupConfig();
 	return (
-		<section>
+		<section className="sticky top-14 z-20 bg-background/90 backdrop-blur-sm">
 			<div className="relative flex flex-col items-center justify-center gap-5 px-4 py-12 md:px-4 md:py-24 lg:py-28">
 				<div
 					aria-hidden="true"
