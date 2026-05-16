@@ -20,7 +20,7 @@ const links = [
     },
     {
         title: 'Privacy',
-        href: '#',
+        href: '/privacy',
     },
 ]
 
