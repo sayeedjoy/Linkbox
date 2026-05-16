@@ -12,7 +12,7 @@ const links = [
     },
     {
         title: 'Support',
-        href: '#',
+        href: '/support',
     },
     {
         title: 'Terms',

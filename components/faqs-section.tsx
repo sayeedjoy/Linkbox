@@ -90,6 +90,6 @@ const questions = [
 		id: "item-8",
 		title: "How do I get help?",
 		content:
-			"Reach out to our support team anytime, or browse the help center for quick answers and guides.",
+			"Email us anytime at hello@sayeedjoy.com — or open the Support dialog from your dashboard profile menu to send a pre-filled bug report.",
 	},
 ];

@@ -187,10 +187,10 @@ export default function PrivacyPolicyPage() {
               <p>
                 Questions about this Privacy Policy? Email us at{" "}
                 <a
-                  href="mailto:support@linkarena.app"
+                  href="mailto:hello@sayeedjoy.com"
                   className="text-primary underline-offset-4 hover:underline"
                 >
-                  support@linkarena.app
+                  hello@sayeedjoy.com
                 </a>
                 .
               </p>

@@ -11,8 +11,18 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Key, Settings, LogOut } from "lucide-react";
+import { Key, Settings, LogOut, LifeBuoy } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
   getUserAvatarSeed,
@@ -52,14 +62,33 @@ const GenerateApiTokenModal = dynamic(
   { ssr: false, loading: () => null }
 );
 
+const SupportDialog = dynamic(
+  () => import("@/components/support-dialog").then((m) => ({ default: m.SupportDialog })),
+  { ssr: false, loading: () => null }
+);
+
 export function UserMenu() {
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [apiTokenModalOpen, setApiTokenModalOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const openSettings = useCallback(() => setSettingsOpen(true), []);
   const openApiTokenModal = useCallback(() => setApiTokenModalOpen(true), []);
+  const openSupport = useCallback(() => setSupportOpen(true), []);
+  const openLogoutConfirm = useCallback(() => setLogoutConfirmOpen(true), []);
+  const handleLogout = useCallback(async () => {
+    setIsLoggingOut(true);
+    try {
+      await signOut({ redirect: false });
+      window.location.href = "/sign-in";
+    } catch {
+      setIsLoggingOut(false);
+    }
+  }, []);
   const isDashboard = pathname === "/dashboard" || pathname?.startsWith("/dashboard/");
   const isTimeline = pathname === "/timeline" || pathname?.startsWith("/timeline/");
 
@@ -67,6 +96,7 @@ export function UserMenu() {
     if (menuOpen) {
       import("@/components/settings-modal");
       import("@/components/generate-api-token-modal");
+      import("@/components/support-dialog");
     }
   }, [menuOpen]);
 
@@ -125,12 +155,16 @@ export function UserMenu() {
             <Settings className="size-4" />
             Settings
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={openSupport}>
+            <LifeBuoy className="size-4" />
+            Support
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
-            onSelect={async () => {
-              await signOut({ redirect: false });
-              window.location.href = "/sign-in";
+            onSelect={(event) => {
+              event.preventDefault();
+              openLogoutConfirm();
             }}
           >
             <LogOut className="size-4" />
@@ -143,6 +177,37 @@ export function UserMenu() {
         open={apiTokenModalOpen}
         onOpenChange={setApiTokenModalOpen}
       />
+      <SupportDialog open={supportOpen} onOpenChange={setSupportOpen} />
+      <AlertDialog
+        open={logoutConfirmOpen}
+        onOpenChange={(open) => {
+          if (!isLoggingOut) setLogoutConfirmOpen(open);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Log out of LinkArena?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You&apos;ll need to sign in again to access your bookmarks on
+              this device.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isLoggingOut}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={isLoggingOut}
+              onClick={(e) => {
+                e.preventDefault();
+                handleLogout();
+              }}
+            >
+              <LogOut data-icon="inline-start" />
+              {isLoggingOut ? "Logging out..." : "Log out"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
