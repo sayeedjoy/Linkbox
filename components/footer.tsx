@@ -3,15 +3,7 @@ import Link from 'next/link'
 
 const links = [
     {
-        title: 'Features',
-        href: '#',
-    },
-    {
-        title: 'Solution',
-        href: '#',
-    },
-    {
-        title: 'Customers',
+        title: 'About Us',
         href: '#',
     },
     {
@@ -19,11 +11,15 @@ const links = [
         href: '#',
     },
     {
-        title: 'Help',
+        title: 'Support',
         href: '#',
     },
     {
-        title: 'About',
+        title: 'Terms',
+        href: '#',
+    },
+    {
+        title: 'Privacy',
         href: '#',
     },
 ]
@@ -158,7 +154,7 @@ export default function FooterSection() {
                         </svg>
                     </Link>
                 </div>
-                <span className="text-muted-foreground block text-center text-sm"> © {2026} Tailark, All rights reserved</span>
+                <span className="text-muted-foreground block text-center text-sm"> © {2026} LinkArena, All rights reserved</span>
             </div>
         </footer>
     )
