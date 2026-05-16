@@ -125,7 +125,7 @@ const features: FeatureType[] = [
 		description: "Drop a link or note. We fill in the rest.",
 	},
 	{
-		title: "Smart auto-sorting",
+		title: "AI auto-sorting",
 		icon: <Sparkles className="text-primary" />,
 		description: "New saves land in the right group on their own.",
 	},
