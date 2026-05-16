@@ -3,16 +3,19 @@ import { cva, type VariantProps } from "class-variance-authority";
 import type React from "react";
 import {
 	BookmarkPlus,
-	Link2,
+	Sparkles,
 	FolderKanban,
 	Search,
 	RefreshCw,
-	FileDown,
+	Chrome,
+	Smartphone,
+	DownloadCloud,
+	ShieldCheck,
 } from "lucide-react";
 import { DecorIcon } from "@/components/ui/decor-icon";
 
 const FeatureIconVariants = cva(
-	"pointer-events-none shrink-0 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
+	"pointer-events-none shrink-0 [&_svg]:shrink-0",
 	{
 		variants: {
 			size: {
@@ -27,7 +30,6 @@ const FeatureIconVariants = cva(
 		},
 		defaultVariants: {
 			size: "md",
-			tone: "muted",
 		},
 	}
 );
@@ -56,7 +58,7 @@ export function FeatureSection() {
 	return (
 		<div className="mx-auto max-w-5xl">
 			<h2 id="features" className="mb-5 text-center font-medium text-2xl md:text-3xl">
-				Core capabilities
+				Core Features
 			</h2>
 
 			<div className="relative">
@@ -89,10 +91,10 @@ export function FeatureSection() {
 							className="group relative p-8"
 							key={feature.title}
 						>
-							<FeatureIcon size="md" tone="muted">
+							<FeatureIcon size="md">
 								{feature.icon}
 							</FeatureIcon>
-							<h3 className="font-medium text-lg">{feature.title}</h3>
+							<h3 className="mt-3 font-medium text-lg">{feature.title}</h3>
 							<p className="text-muted-foreground text-sm leading-relaxed">
 								{feature.description}
 							</p>
@@ -118,35 +120,51 @@ function DashedLine({ className, ...props }: React.ComponentProps<"div">) {
 
 const features: FeatureType[] = [
 	{
-		title: "Save links & notes",
-		icon: <BookmarkPlus />,
-		description: "Paste URLs or type notes. Save links and notes instantly.",
+		title: "Save in a click",
+		icon: <BookmarkPlus className="text-primary" />,
+		description: "Drop a link or note. We fill in the rest.",
 	},
 	{
-		title: "Auto-unfurl metadata",
-		icon: <Link2 />,
-		description: "Title, description, favicon, and preview image pulled automatically.",
+		title: "Smart auto-sorting",
+		icon: <Sparkles className="text-primary" />,
+		description: "New saves land in the right group on their own.",
 	},
 	{
-		title: "Groups & organize",
-		icon: <FolderKanban />,
-		description: "Group bookmarks with color and ordering. Reorder and manage your collection.",
+		title: "Groups you can shape",
+		icon: <FolderKanban className="text-primary" />,
+		description: "Make groups, pick colours, drag to reorder.",
 		hideConnector: true,
 	},
 	{
-		title: "Search & timeline",
-		icon: <Search />,
-		description: "Search and timeline views for quick discovery.",
+		title: "Find anything fast",
+		icon: <Search className="text-primary" />,
+		description: "Search or scroll the timeline to find a link.",
 	},
 	{
-		title: "Realtime sync",
-		icon: <RefreshCw />,
-		description: "SSE keeps web app and extension in sync across active clients.",
+		title: "Always in sync",
+		icon: <RefreshCw className="text-primary" />,
+		description: "Save once, see it on every device instantly.",
 	},
 	{
-		title: "Edit, export & delete",
-		icon: <FileDown />,
-		description: "Edit, refresh metadata, delete bookmarks. Export anytime.",
+		title: "Browser extension",
+		icon: <Chrome className="text-primary" />,
+		description: "Save the page you're on in a single click.",
+		hideConnector: true,
+	},
+	{
+		title: "Bring your bookmarks",
+		icon: <DownloadCloud className="text-primary" />,
+		description: "Import your browser bookmarks in seconds.",
+	},
+	{
+		title: "On your phone too",
+		icon: <Smartphone className="text-primary" />,
+		description: "Your library, ready in your pocket.",
+	},
+	{
+		title: "Private and secure",
+		icon: <ShieldCheck className="text-primary" />,
+		description: "Your links stay yours. Always.",
 		hideConnector: true,
 	},
 ];

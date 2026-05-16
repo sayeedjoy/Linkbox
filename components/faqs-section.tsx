@@ -48,42 +48,48 @@ const questions = [
 		id: "item-1",
 		title: "What is LinkArena?",
 		content:
-			"LinkArena is a superfast bookmark manager with a web app and Chrome extension. Save links, auto-unfurl metadata, organize with groups, and sync everywhere in real time.",
+			"LinkArena is a simple, fast bookmark manager that helps you save, organize, and find your favorite links from anywhere.",
 	},
 	{
 		id: "item-2",
-		title: "How do I capture bookmarks quickly?",
+		title: "How do I save a bookmark?",
 		content:
-			"Install the Chrome extension for one-click capture from the popup or right-click context menu. Or add links directly from the web dashboard.",
+			"Install our Chrome extension to save any page in one click, or paste a link directly into the web app. It only takes a second.",
 	},
 	{
 		id: "item-3",
-		title: "How does realtime sync work?",
+		title: "Will my bookmarks stay in sync across devices?",
 		content:
-			"LinkArena uses Server-Sent Events to keep all your devices and browser tabs in sync. Add or edit a bookmark anywhere and it updates everywhere instantly.",
+			"Yes. Anything you save shows up instantly on all your devices and browser tabs, so you never have to refresh or wait.",
 	},
 	{
 		id: "item-4",
 		title: "Can I organize my bookmarks?",
 		content:
-			"Yes. Create groups, assign colors, reorder bookmarks, and use the dashboard to search and filter. Export your bookmarks anytime.",
+			"Absolutely. Sort your links into groups, give them colors, drag to reorder, and search or filter to find anything in seconds.",
 	},
 	{
 		id: "item-5",
-		title: "Does LinkArena integrate with other tools?",
+		title: "Which browsers does LinkArena work with?",
 		content:
-			"LinkArena is built with Next.js, PostgreSQL, and Prisma. The extension works in Chrome and Chromium-based browsers.",
+			"You can use the web app in any modern browser. Our extension works in Chrome and other Chromium-based browsers like Edge, Brave, and Arc.",
 	},
 	{
 		id: "item-6",
-		title: "How do I get support?",
+		title: "Is my data safe?",
 		content:
-			"Contact our customer support team or check the help center for guides and troubleshooting.",
+			"Yes. Your bookmarks are private to your account, and you can export everything anytime you want a backup.",
 	},
 	{
 		id: "item-7",
 		title: "How do I get started?",
 		content:
-			"Sign up for an account, install the Chrome extension, and start saving bookmarks. Your data syncs automatically across all devices.",
+			"Just sign up for a free account, install the Chrome extension, and start saving. That's it — you're ready to go.",
+	},
+	{
+		id: "item-8",
+		title: "How do I get help?",
+		content:
+			"Reach out to our support team anytime, or browse the help center for quick answers and guides.",
 	},
 ];
