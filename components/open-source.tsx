@@ -19,7 +19,7 @@ function GithubIcon({ className }: { className?: string }) {
 
 export function OpenSource() {
   return (
-    <section className="w-full px-4 py-20">
+    <section className="w-full px-4 py-12">
       <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
         <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
           Proudly Open-Sourced

@@ -57,7 +57,7 @@ type FeatureType = {
 export function FeatureSection() {
 	return (
 		<div className="mx-auto max-w-5xl">
-			<h2 id="features" className="mb-5 text-center font-medium text-2xl md:text-3xl">
+			<h2 id="features" className="mb-5 text-center text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
 				Core Features
 			</h2>
 

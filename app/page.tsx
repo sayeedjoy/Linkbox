@@ -18,7 +18,7 @@ export default async function Page() {
       <main className="min-h-dvh overflow-x-hidden bg-background">
         <Header />
         <HeroSection />
-        <section className="py-16 md:py-24">
+        <section className="py-8 md:py-12">
           <div className="mx-auto max-w-5xl px-4">
             <FeatureSection />
           </div>
@@ -27,7 +27,7 @@ export default async function Page() {
           <Pricing plans={plans} />
         </section>
         <GetProduct />
-        <section id="faqs" className="py-16 md:py-24">
+        <section id="faqs" className="py-8 md:py-12">
           <FaqsSection />
         </section>
         <OpenSource />

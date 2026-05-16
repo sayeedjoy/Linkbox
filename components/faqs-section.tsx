@@ -7,12 +7,12 @@ import {
 
 export function FaqsSection() {
 	return (
-		<div className="mx-auto w-full max-w-3xl space-y-7 px-4 pt-16">
-			<div className="space-y-2">
-				<h2 className="font-semibold text-3xl md:text-4xl">
+		<div className="mx-auto w-full max-w-3xl space-y-7 px-4">
+			<div>
+				<h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
 					Frequently Asked Questions
 				</h2>
-				<p className="max-w-2xl text-muted-foreground">
+				<p className="mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
 					Here are some common questions and answers about LinkArena. If you
 					don't find the answer you're looking for, feel free to reach out.
 				</p>

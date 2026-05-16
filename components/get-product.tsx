@@ -2,7 +2,7 @@ import Image from "next/image"
 
 export function GetProduct() {
   return (
-    <section className="w-full px-4 py-20">
+    <section className="w-full px-4 py-12">
       <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
         <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
           Get the Extension & App
