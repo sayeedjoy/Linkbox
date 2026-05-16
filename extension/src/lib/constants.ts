@@ -24,8 +24,10 @@ export const ALLOWED_WEB_ORIGINS: readonly string[] = (() => {
 })()
 
 export const API_BASE_URL =
-  (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: { VITE_BOOKMARK_API_URL?: string } }).env?.VITE_BOOKMARK_API_URL) ||
-  'http://localhost:3000/'
+  (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: { VITE_BOOKMARK_API_URL?: string; DEV?: boolean } }).env?.VITE_BOOKMARK_API_URL) ||
+  (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV
+    ? 'http://localhost:3000/'
+    : 'https://linkarena.app/')
 
 export const WEB_APP_URL = API_BASE_URL
 
