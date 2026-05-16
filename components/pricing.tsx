@@ -44,21 +44,16 @@ const PRO_YEARLY_TOTAL = PRO_YEARLY_PER_MONTH * 12;
 function buildFeatures(plan: PlanApiItem): PricingFeature[] {
   return [
     {
-      label: "Unlimited bookmarks",
-      icon: <CircleCheck className="size-4" />,
-      included: true,
-    },
-    {
-      label: "Unlimited groups",
-      icon: <CircleCheck className="size-4" />,
-      included: true,
-    },
-    {
       label:
         plan.bookmarkQuotaPerMonth == null
           ? "Unlimited bookmarks per month"
           : `${plan.bookmarkQuotaPerMonth} bookmarks per month`,
       icon: <ZapIcon className="size-4" />,
+      included: true,
+    },
+    {
+      label: "Unlimited groups",
+      icon: <CircleCheck className="size-4" />,
       included: true,
     },
     {
