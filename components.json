@@ -26,6 +26,7 @@
     "@efferd": "https://efferd.com/r/{name}.json",
     "@motion-primitives": "https://motion-primitives.com/c/{name}.json",
     "@skiper-ui": "https://skiper-ui.com/registry/{name}.json",
-    "@magicui": "https://magicui.design/r/{name}"
+    "@magicui": "https://magicui.design/r/{name}",
+    "@tailark": "https://tailark.com/r/{name}.json"
   }
 }

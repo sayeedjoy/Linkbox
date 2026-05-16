@@ -4,7 +4,7 @@ import { HeroSection } from "@/components/hero";
 import { FeatureSection } from "@/components/feature-section";
 import { Integrations } from "@/components/integrations";
 import { FaqsSection } from "@/components/faqs-section";
-import { Footer } from "@/components/footer";
+import Footer from "@/components/footer";
 import { Preloader } from "@/components/preloader";
 import { LandingCtaButtons } from "@/components/landing-cta-buttons";
 
