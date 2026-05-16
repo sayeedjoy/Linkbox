@@ -25,7 +25,7 @@ export type PlanApiItem = {
   groupColoringAllowed: boolean;
   browserBulkImportAllowed: boolean;
   browserRealtimeSyncAllowed: boolean;
-  bookmarkQuotaPerDay: number | null;
+  bookmarkQuotaPerMonth: number | null;
   sortOrder: number;
 };
 
@@ -55,9 +55,9 @@ function buildFeatures(plan: PlanApiItem): PricingFeature[] {
     },
     {
       label:
-        plan.bookmarkQuotaPerDay == null
-          ? "Unlimited bookmarks per day"
-          : `${plan.bookmarkQuotaPerDay} bookmarks per day`,
+        plan.bookmarkQuotaPerMonth == null
+          ? "Unlimited bookmarks per month"
+          : `${plan.bookmarkQuotaPerMonth} bookmarks per month`,
       icon: <ZapIcon className="size-4" />,
       included: true,
     },

@@ -1,24 +1,23 @@
 import { eq, and, sql } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
-import { db, apiUsageDaily } from "@/lib/db";
+import { db, apiUsageMonthly } from "@/lib/db";
 import { getPlanFeaturesForUser } from "@/lib/plan-entitlements";
 
-export function utcDayString(d = new Date()): string {
+export function utcMonthString(d = new Date()): string {
   const y = d.getUTCFullYear();
   const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  return `${y}-${m}`;
 }
 
-export function nextUtcMidnightIso(day: string): string {
-  const [y, mo, da] = day.split("-").map(Number);
-  const next = Date.UTC(y!, mo! - 1, da! + 1, 0, 0, 0, 0);
+export function nextUtcMonthStartIso(month: string): string {
+  const [y, mo] = month.split("-").map(Number);
+  const next = Date.UTC(y!, mo!, 1, 0, 0, 0, 0);
   return new Date(next).toISOString();
 }
 
-function stableLockKey(userId: string, day: string): number {
+function stableLockKey(userId: string, month: string): number {
   let h = 0;
-  const s = `${userId}:${day}`;
+  const s = `${userId}:${month}`;
   for (let i = 0; i < s.length; i++) {
     h = Math.imul(31, h) + s.charCodeAt(i);
     h |= 0;
@@ -32,7 +31,7 @@ export type ConsumeQuotaResult =
   | { ok: false; limit: number; resetsAt: string };
 
 type QuotaPlanFeatures = {
-  bookmarkQuotaPerDay: number | null;
+  bookmarkQuotaPerMonth: number | null;
 };
 
 export async function consumeBookmarkQuota(
@@ -45,20 +44,20 @@ export async function consumeBookmarkQuota(
   }
 
   const plan = planOverride ?? (await getPlanFeaturesForUser(userId));
-  const limit = plan.bookmarkQuotaPerDay;
+  const limit = plan.bookmarkQuotaPerMonth;
   if (limit == null) return { ok: true, remaining: null };
 
-  const day = utcDayString();
-  const resetsAt = nextUtcMidnightIso(day);
+  const month = utcMonthString();
+  const resetsAt = nextUtcMonthStartIso(month);
 
   return db.transaction(async (tx) => {
-    const lockKey = stableLockKey(userId, day);
+    const lockKey = stableLockKey(userId, month);
     await tx.execute(sql`SELECT pg_advisory_xact_lock(${lockKey})`);
 
     const [row] = await tx
-      .select({ requestCount: apiUsageDaily.requestCount })
-      .from(apiUsageDaily)
-      .where(and(eq(apiUsageDaily.userId, userId), eq(apiUsageDaily.day, day)))
+      .select({ requestCount: apiUsageMonthly.requestCount })
+      .from(apiUsageMonthly)
+      .where(and(eq(apiUsageMonthly.userId, userId), eq(apiUsageMonthly.month, month)))
       .limit(1);
 
     const current = row?.requestCount ?? 0;
@@ -70,17 +69,17 @@ export async function consumeBookmarkQuota(
     if (units === 0) return { ok: true, remaining: limit - current };
 
     if (!row) {
-      await tx.insert(apiUsageDaily).values({
+      await tx.insert(apiUsageMonthly).values({
         id: createId(),
         userId,
-        day,
+        month,
         requestCount: units,
       });
     } else {
       await tx
-        .update(apiUsageDaily)
+        .update(apiUsageMonthly)
         .set({ requestCount: nextCount })
-        .where(and(eq(apiUsageDaily.userId, userId), eq(apiUsageDaily.day, day)));
+        .where(and(eq(apiUsageMonthly.userId, userId), eq(apiUsageMonthly.month, month)));
     }
 
     return { ok: true, remaining: limit - nextCount };
@@ -94,6 +93,6 @@ export async function consumeBookmarkQuotaOrThrow(
 ): Promise<void> {
   const r = await consumeBookmarkQuota(userId, units, planOverride);
   if (!r.ok) {
-    throw new Error(`Daily bookmark limit reached (${r.limit}). Resets at ${r.resetsAt}.`);
+    throw new Error(`Monthly bookmark limit reached (${r.limit}). Resets at ${r.resetsAt}.`);
   }
 }

@@ -62,7 +62,7 @@ export async function guardBookmarkWrite(
     return {
       ok: false,
       response: NextResponse.json(
-        { error: "Daily bookmark limit reached", limit: quota.limit, resetsAt: quota.resetsAt },
+        { error: "Monthly bookmark limit reached", limit: quota.limit, resetsAt: quota.resetsAt },
         { status: 429, headers }
       ),
     };

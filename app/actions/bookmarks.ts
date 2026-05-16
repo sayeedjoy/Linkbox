@@ -232,7 +232,7 @@ export async function importBookmarks(items: ImportBookmarkItem[]) {
     const quotaCheck = await consumeBookmarkQuota(userId, wouldCreate, planFeatures);
     if (!quotaCheck.ok) {
       return {
-        error: `Daily bookmark limit reached (${quotaCheck.limit}). Resets at ${quotaCheck.resetsAt}.`,
+        error: `Monthly bookmark limit reached (${quotaCheck.limit}). Resets at ${quotaCheck.resetsAt}.`,
       };
     }
   }

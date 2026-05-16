@@ -16,13 +16,11 @@ export type PlanFeaturesForUser = {
   groupColoringAllowed: boolean;
   browserBulkImportAllowed: boolean;
   browserRealtimeSyncAllowed: boolean;
-  bookmarkQuotaPerDay: number | null;
+  bookmarkQuotaPerMonth: number | null;
 };
 
 export type EntitlementsPayload = PlanFeaturesForUser & {
   autoGroupEnabled: boolean;
-  /** @deprecated Use bookmarkQuotaPerDay. Kept for one release for mobile compatibility. */
-  apiQuotaPerDay: number | null;
 };
 
 export async function getPlanFeaturesForUser(userId: string): Promise<PlanFeaturesForUser> {
@@ -35,7 +33,7 @@ export async function getPlanFeaturesForUser(userId: string): Promise<PlanFeatur
       groupColoringAllowed: subscriptionPlans.groupColoringAllowed,
       browserBulkImportAllowed: subscriptionPlans.browserBulkImportAllowed,
       browserRealtimeSyncAllowed: subscriptionPlans.browserRealtimeSyncAllowed,
-      bookmarkQuotaPerDay: subscriptionPlans.bookmarkQuotaPerDay,
+      bookmarkQuotaPerMonth: subscriptionPlans.bookmarkQuotaPerMonth,
     })
     .from(users)
     .innerJoin(subscriptionPlans, eq(users.subscriptionPlanId, subscriptionPlans.id))
@@ -79,7 +77,7 @@ export async function getAllPlansOrdered() {
       groupColoringAllowed: subscriptionPlans.groupColoringAllowed,
       browserBulkImportAllowed: subscriptionPlans.browserBulkImportAllowed,
       browserRealtimeSyncAllowed: subscriptionPlans.browserRealtimeSyncAllowed,
-      bookmarkQuotaPerDay: subscriptionPlans.bookmarkQuotaPerDay,
+      bookmarkQuotaPerMonth: subscriptionPlans.bookmarkQuotaPerMonth,
       sortOrder: subscriptionPlans.sortOrder,
     })
     .from(subscriptionPlans)
@@ -97,7 +95,7 @@ export async function getEntitlementsPayload(userId: string): Promise<Entitlemen
       groupColoringAllowed: subscriptionPlans.groupColoringAllowed,
       browserBulkImportAllowed: subscriptionPlans.browserBulkImportAllowed,
       browserRealtimeSyncAllowed: subscriptionPlans.browserRealtimeSyncAllowed,
-      bookmarkQuotaPerDay: subscriptionPlans.bookmarkQuotaPerDay,
+      bookmarkQuotaPerMonth: subscriptionPlans.bookmarkQuotaPerMonth,
     })
     .from(users)
     .innerJoin(subscriptionPlans, eq(users.subscriptionPlanId, subscriptionPlans.id))
@@ -112,8 +110,7 @@ export async function getEntitlementsPayload(userId: string): Promise<Entitlemen
     groupColoringAllowed: userRow.groupColoringAllowed,
     browserBulkImportAllowed: userRow.browserBulkImportAllowed,
     browserRealtimeSyncAllowed: userRow.browserRealtimeSyncAllowed,
-    bookmarkQuotaPerDay: userRow.bookmarkQuotaPerDay,
-    apiQuotaPerDay: userRow.bookmarkQuotaPerDay,
+    bookmarkQuotaPerMonth: userRow.bookmarkQuotaPerMonth,
     autoGroupEnabled: userRow.autoGroupEnabled,
   };
 }

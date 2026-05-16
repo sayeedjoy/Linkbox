@@ -6,7 +6,6 @@ import {
   timestamp,
   index,
   uniqueIndex,
-  date,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
@@ -20,7 +19,7 @@ export const subscriptionPlans = pgTable("SubscriptionPlan", {
   groupColoringAllowed: boolean("groupColoringAllowed").notNull().default(true),
   browserBulkImportAllowed: boolean("browserBulkImportAllowed").notNull().default(false),
   browserRealtimeSyncAllowed: boolean("browserRealtimeSyncAllowed").notNull().default(true),
-  bookmarkQuotaPerDay: integer("bookmarkQuotaPerDay"),
+  bookmarkQuotaPerMonth: integer("bookmarkQuotaPerMonth"),
   sortOrder: integer("sortOrder").notNull().default(0),
 });
 
@@ -78,17 +77,17 @@ export const userPlayPurchaseEvents = pgTable(
   ]
 );
 
-export const apiUsageDaily = pgTable(
-  "ApiUsageDaily",
+export const apiUsageMonthly = pgTable(
+  "ApiUsageMonthly",
   {
     id: text("id").primaryKey().$defaultFn(() => createId()),
     userId: text("userId")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    day: date("day", { mode: "string" }).notNull(),
+    month: text("month").notNull(),
     requestCount: integer("requestCount").notNull().default(0),
   },
-  (t) => [uniqueIndex("ApiUsageDaily_userId_day_key").on(t.userId, t.day)]
+  (t) => [uniqueIndex("ApiUsageMonthly_userId_month_key").on(t.userId, t.month)]
 );
 
 export const appConfig = pgTable("AppConfig", {
@@ -189,8 +188,8 @@ export const userPlayPurchaseEventsRelations = relations(userPlayPurchaseEvents,
   user: one(users, { fields: [userPlayPurchaseEvents.userId], references: [users.id] }),
 }));
 
-export const apiUsageDailyRelations = relations(apiUsageDaily, ({ one }) => ({
-  user: one(users, { fields: [apiUsageDaily.userId], references: [users.id] }),
+export const apiUsageMonthlyRelations = relations(apiUsageMonthly, ({ one }) => ({
+  user: one(users, { fields: [apiUsageMonthly.userId], references: [users.id] }),
 }));
 
 export const groupsRelations = relations(groups, ({ one, many }) => ({

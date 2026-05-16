@@ -15,7 +15,7 @@ export type AdminPlanRow = {
   groupColoringAllowed: boolean;
   browserBulkImportAllowed: boolean;
   browserRealtimeSyncAllowed: boolean;
-  bookmarkQuotaPerDay: number | null;
+  bookmarkQuotaPerMonth: number | null;
   sortOrder: number;
 };
 
@@ -36,7 +36,7 @@ export async function getPlansForAdmin(): Promise<AdminPlanRow[]> {
       groupColoringAllowed: subscriptionPlans.groupColoringAllowed,
       browserBulkImportAllowed: subscriptionPlans.browserBulkImportAllowed,
       browserRealtimeSyncAllowed: subscriptionPlans.browserRealtimeSyncAllowed,
-      bookmarkQuotaPerDay: subscriptionPlans.bookmarkQuotaPerDay,
+      bookmarkQuotaPerMonth: subscriptionPlans.bookmarkQuotaPerMonth,
       sortOrder: subscriptionPlans.sortOrder,
     })
     .from(subscriptionPlans)
@@ -51,7 +51,7 @@ export async function updatePlanAsAdmin(input: {
   groupColoringAllowed: boolean;
   browserBulkImportAllowed: boolean;
   browserRealtimeSyncAllowed: boolean;
-  bookmarkQuotaPerDay: number | null;
+  bookmarkQuotaPerMonth: number | null;
 }): Promise<{ success: true } | { success: false; error: string }> {
   try {
     await requireAdminSession();
@@ -62,10 +62,10 @@ export async function updatePlanAsAdmin(input: {
       input.googlePlayProductId === null || input.googlePlayProductId === undefined
         ? null
         : input.googlePlayProductId.trim() || null;
-    const quota = input.bookmarkQuotaPerDay;
+    const quota = input.bookmarkQuotaPerMonth;
     if (quota !== null) {
       if (!Number.isInteger(quota) || quota < 0) {
-        return { success: false, error: "Daily bookmark limit must be a non-negative integer or empty." };
+        return { success: false, error: "Monthly bookmark limit must be a non-negative integer or empty." };
       }
     }
 
@@ -78,7 +78,7 @@ export async function updatePlanAsAdmin(input: {
         groupColoringAllowed: input.groupColoringAllowed,
         browserBulkImportAllowed: input.browserBulkImportAllowed,
         browserRealtimeSyncAllowed: input.browserRealtimeSyncAllowed,
-        bookmarkQuotaPerDay: quota,
+        bookmarkQuotaPerMonth: quota,
       })
       .where(eq(subscriptionPlans.id, input.id));
 

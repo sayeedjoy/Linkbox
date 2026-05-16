@@ -87,7 +87,7 @@ export async function POST(request: Request) {
       groupColoringAllowed: subscriptionPlans.groupColoringAllowed,
       browserBulkImportAllowed: subscriptionPlans.browserBulkImportAllowed,
       browserRealtimeSyncAllowed: subscriptionPlans.browserRealtimeSyncAllowed,
-      bookmarkQuotaPerDay: subscriptionPlans.bookmarkQuotaPerDay,
+      bookmarkQuotaPerMonth: subscriptionPlans.bookmarkQuotaPerMonth,
       planSource: users.planSource,
       planSlug: subscriptionPlans.slug,
       planDisplayName: subscriptionPlans.displayName,
@@ -108,8 +108,7 @@ export async function POST(request: Request) {
             groupColoringAllowed: entRow.groupColoringAllowed,
             browserBulkImportAllowed: entRow.browserBulkImportAllowed,
             browserRealtimeSyncAllowed: entRow.browserRealtimeSyncAllowed,
-            bookmarkQuotaPerDay: entRow.bookmarkQuotaPerDay,
-            apiQuotaPerDay: entRow.bookmarkQuotaPerDay,
+            bookmarkQuotaPerMonth: entRow.bookmarkQuotaPerMonth,
             planSource: entRow.planSource,
             plan: { slug: entRow.planSlug, displayName: entRow.planDisplayName },
           }

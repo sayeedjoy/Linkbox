@@ -61,8 +61,8 @@ function PlanSlugIcon({ slug, className }: { slug: string; className?: string })
 }
 
 function PlanEditor({ initial }: { initial: AdminPlanRow }) {
-  const initialQuotaText = initial.bookmarkQuotaPerDay == null ? "" : String(initial.bookmarkQuotaPerDay);
-  const initialIsUnlimited = initial.bookmarkQuotaPerDay == null;
+  const initialQuotaText = initial.bookmarkQuotaPerMonth == null ? "" : String(initial.bookmarkQuotaPerMonth);
+  const initialIsUnlimited = initial.bookmarkQuotaPerMonth == null;
   const initialGp = initial.googlePlayProductId ?? "";
 
   const [displayName, setDisplayName] = useState(initial.displayName);
@@ -142,7 +142,7 @@ function PlanEditor({ initial }: { initial: AdminPlanRow }) {
     }
     const quota = computeQuota();
     if (!quota.ok) {
-      toast.error("Daily bookmark limit must be a non-negative whole number.");
+      toast.error("Monthly bookmark limit must be a non-negative whole number.");
       return;
     }
 
@@ -155,7 +155,7 @@ function PlanEditor({ initial }: { initial: AdminPlanRow }) {
         groupColoringAllowed,
         browserBulkImportAllowed,
         browserRealtimeSyncAllowed,
-        bookmarkQuotaPerDay: quota.value,
+        bookmarkQuotaPerMonth: quota.value,
       });
       if (!result.success) {
         toast.error(result.error);
@@ -206,7 +206,7 @@ function PlanEditor({ initial }: { initial: AdminPlanRow }) {
                     {isMappedToPlay ? "Mapped to Play" : "No Play product"}
                   </Badge>
                   <Badge variant="outline" className="text-[10px]">
-                    {isUnlimited ? "Unlimited bookmarks" : `${quotaInput || "0"} bookmarks/day`}
+                    {isUnlimited ? "Unlimited bookmarks" : `${quotaInput || "0"} bookmarks/month`}
                   </Badge>
                 </div>
               </div>
@@ -330,7 +330,7 @@ function PlanEditor({ initial }: { initial: AdminPlanRow }) {
           </FieldSet>
 
           <Field>
-            <FieldLabel htmlFor={quotaId}>Daily bookmark limit</FieldLabel>
+            <FieldLabel htmlFor={quotaId}>Monthly bookmark limit</FieldLabel>
             <InputGroup
               className={cn(isUnlimited && "opacity-60")}
             >
@@ -340,12 +340,12 @@ function PlanEditor({ initial }: { initial: AdminPlanRow }) {
                 inputMode="numeric"
                 value={isUnlimited ? "" : quotaInput}
                 onChange={(e) => setQuotaInput(e.target.value)}
-                placeholder={isUnlimited ? "No daily cap" : "e.g. 50"}
+                placeholder={isUnlimited ? "No monthly cap" : "e.g. 500"}
                 disabled={isPending || isUnlimited}
                 autoComplete="off"
               />
               <InputGroupAddon align="inline-end">
-                <InputGroupText>bookmarks / day · UTC</InputGroupText>
+                <InputGroupText>bookmarks / month · UTC</InputGroupText>
               </InputGroupAddon>
             </InputGroup>
             <FieldDescription>
@@ -354,7 +354,7 @@ function PlanEditor({ initial }: { initial: AdminPlanRow }) {
             <Field orientation="horizontal" className="pt-1">
               <FieldContent>
                 <FieldLabel htmlFor={unlimitedId} className="text-xs font-normal text-muted-foreground">
-                  Unlimited (no daily cap)
+                  Unlimited (no monthly cap)
                 </FieldLabel>
               </FieldContent>
               <Switch
