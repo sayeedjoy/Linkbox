@@ -139,7 +139,7 @@ Pro-only feature that pulls native Chrome bookmarks via the extension.
 - **Source attribution:** `bookmarks.source` text column. Values used today: `manual` (default), `browser_import` (bulk via extension), `browser_realtime` (live `chrome.bookmarks.onCreated` sync), `extension_save` (manual single-link save), `json_import` (reserved for the JSON file flow).
 - **Endpoints:**
   - `POST /api/extension/import` — accepts up to 2,000 items, requires Bearer + `chrome-extension://` origin, inserts in 500-row chunks, dedupes per-group, auto-creates the `Imported - Browser` group, publishes realtime events.
-  - `POST /api/bookmarks` — extended to accept an optional `source` field. When `source === "browser_realtime"` the bookmark is auto-routed to the `Imported - Browser` group (created on first hit) and gated by `browserImportAllowed`.
+  - `POST /api/bookmarks` — extended to accept an optional `source` field. `source === "browser_realtime"` writes are gated by `browserImportAllowed` but flow through the normal create path (no group assigned → auto-categorized). Only bulk manual imports land in the `Imported - Browser` group; live-synced bookmarks do not.
 - **Extension:** adds the `bookmarks` permission + `externally_connectable.matches` so the web app can invoke `chrome.runtime.sendMessage(EXTENSION_ID, { type: "import-bookmarks" | "ping" })`. The background script also subscribes to `chrome.bookmarks.onCreated`, suppressed during bulk imports via the `bulkImportInProgress` flag.
 - **Web bridge:** `lib/extension-bridge.ts` exposes `isExtensionInstalled` / `sendToExtension`; the settings modal uses both for the "Import browser bookmarks" button.
 

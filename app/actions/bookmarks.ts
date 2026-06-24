@@ -503,27 +503,6 @@ export async function createBookmark(
   return withGroup as BookmarkWithGroup;
 }
 
-const BROWSER_IMPORT_GROUP_NAME = "Imported - Browser";
-
-async function ensureBrowserImportGroup(userId: string): Promise<string> {
-  const [existing] = await db
-    .select({ id: groups.id })
-    .from(groups)
-    .where(and(eq(groups.userId, userId), eq(groups.name, BROWSER_IMPORT_GROUP_NAME)))
-    .limit(1);
-  if (existing) return existing.id;
-  const [{ maxOrder }] = await db
-    .select({ maxOrder: sql<number>`coalesce(max(${groups.order}), -1)` })
-    .from(groups)
-    .where(eq(groups.userId, userId));
-  const [created] = await db
-    .insert(groups)
-    .values({ userId, name: BROWSER_IMPORT_GROUP_NAME, color: null, order: (maxOrder ?? -1) + 1 })
-    .returning({ id: groups.id });
-  publishUserEvent(userId, { type: "group.created", entity: "group", id: created.id });
-  return created.id;
-}
-
 export async function createBookmarkFromMetadataForUser(
   userId: string,
   url: string,
@@ -541,9 +520,10 @@ export async function createBookmarkFromMetadataForUser(
   let gid: string | null = null;
   if (groupId) {
     gid = await resolveGroupIdForUser(userId, groupId);
-  } else if (source === "browser_realtime") {
-    gid = await ensureBrowserImportGroup(userId);
   }
+  // Realtime browser sync (`browser_realtime`) is intentionally NOT routed to the
+  // "Imported - Browser" group — only bulk manual imports land there. Live-synced
+  // bookmarks flow through the normal path and get auto-categorized below.
   // Quota intentionally NOT consumed here: callers (API route via guard, or the
   // public `createBookmarkFromMetadata` server action) are responsible for charging.
   const [existingRow] = await db
