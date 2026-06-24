@@ -6,6 +6,7 @@ import { GeistPixelSquare, GeistPixelGrid, GeistPixelCircle } from "geist/font/p
 import { siteMetadata } from "@/lib/metadata";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeKeyboardShortcut } from "@/components/theme-keyboard-shortcut";
 import { NextAuthSessionProvider } from "@/components/session-provider";
 import { Providers } from "@/app/providers";
 import { Toaster } from "sonner";
@@ -27,6 +28,7 @@ export default function RootLayout({
           disableTransitionOnChange
           storageKey="bookmark-theme"
         >
+          <ThemeKeyboardShortcut />
           <NextAuthSessionProvider>
             <Providers>
               <Suspense fallback={null}>
