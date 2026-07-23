@@ -21,6 +21,7 @@ This extension uses:
 ## Security and Token Model
 
 - API token is stored in `chrome.storage.local` under `bookmark_apiToken`.
+- Local extension storage is restricted to trusted extension contexts.
 - Token never leaves the browser except in `Authorization: Bearer <token>` headers to your API base URL.
 - Token is not automatically deleted on API `401`; user controls removal via sign-out/clear token.
 - Token remains valid until revoked/regenerated server-side.
@@ -128,7 +129,7 @@ Configured in `manifest.config.ts`:
 - `tabs`: query active tab metadata
 - `storage`: persist token/cache/theme
 - `sidePanel`: side panel entry
-- `contentSettings`: extension content settings access
+- `https://linkarena.app/*`: call the LinkArena API from extension contexts
 
 ## Development
 
@@ -181,7 +182,7 @@ If missing, defaults to `http://localhost:3000/`.
 
 ### Realtime not updating
 - Confirm backend stream supports Bearer auth.
-- Check CORS for `chrome-extension://` origins on stream and bookmark endpoints.
+- Confirm the built manifest grants host access to the configured API origin.
 
 ### Build issues
 - If `npm` PowerShell policy blocks execution on Windows, run via `cmd /c npm ...`.

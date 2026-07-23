@@ -53,6 +53,12 @@ const REALTIME_RECONNECT_BASE_MS = 1000
 const REALTIME_RECONNECT_MAX_MS = 30000
 const REALTIME_SUPPRESS_AFTER_LOCAL_MUTATION_MS = 1500
 
+void chrome.storage.local
+  .setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' })
+  .catch((error: unknown) => {
+    console.error('Failed to restrict local storage access', error)
+  })
+
 let bookmarksInFlight: Promise<FetchListResult<ExportBookmark[]>> | null = null
 let groupsInFlight: Promise<FetchListResult<Group[]>> | null = null
 let allInFlight: Promise<FetchAllResult> | null = null

@@ -1,6 +1,11 @@
 import { defineManifest } from '@crxjs/vite-plugin'
 import pkg from './package.json'
 
+const hostPermissions =
+  process.env.NODE_ENV === 'production'
+    ? ['https://linkarena.app/*']
+    : ['http://localhost:3000/*', 'https://linkarena.app/*']
+
 export default defineManifest({
   manifest_version: 3,
   name: 'LinkArena',
@@ -23,9 +28,9 @@ export default defineManifest({
     'tabs',
     'storage',
     'sidePanel',
-    'contentSettings',
     'bookmarks',
   ],
+  host_permissions: hostPermissions,
   background: {
     service_worker: 'src/background/index.ts',
     type: 'module',

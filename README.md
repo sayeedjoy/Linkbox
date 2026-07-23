@@ -388,7 +388,7 @@ cmd /c pnpm build
 ### Extension not updating in realtime
 - Verify API base URL and token
 - Confirm `/api/realtime/bookmarks` is reachable
-- Ensure CORS allows `chrome-extension://` origins
+- Confirm the built extension manifest grants host access to the API origin
 
 ---
 

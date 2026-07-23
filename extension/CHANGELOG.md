@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.7.0] - 2026-07-23
 
 ### Fixed
 - **Content-script CSS leaking onto every site** — Removed the orphaned content script that matched `https://*/*`. It rendered nothing (its React root returned `null`) but still injected an empty `#crxjs-app` div and a leftover stylesheet with unscoped utility classes (`.opacity-0`, `.opacity-100`, `.popup-container`, …) into every page. On sites that use the same class names — e.g. ChatGPT, which hides its per-message action buttons with Tailwind's `opacity-0` — the injected rules collided and hid UI such as the message edit icon. The extension no longer injects any script or CSS into web pages.

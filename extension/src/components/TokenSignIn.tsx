@@ -56,7 +56,7 @@ export default function TokenSignIn({ onSuccess, className }: TokenSignInProps) 
       </div>
       <form onSubmit={handleSubmit} className="w-full space-y-3 max-w-[280px]">
         <Input
-          type="text"
+          type="password"
           value={token}
           onChange={(e) => setTokenValue(e.target.value)}
           placeholder="Paste your API token"
