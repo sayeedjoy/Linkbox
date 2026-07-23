@@ -116,7 +116,6 @@ Defined in `src/types/messages.ts`:
 - `src/background/index.ts`: service worker logic
 - `src/popup/*`: popup app entry
 - `src/components/*`: popup components
-- `src/content/*`: content script
 - `src/sidepanel/*`: side panel UI
 - `src/types/*`: shared message/data types
 - `public/icons/*`: extension icons

@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- **Content-script CSS leaking onto every site** — Removed the orphaned content script that matched `https://*/*`. It rendered nothing (its React root returned `null`) but still injected an empty `#crxjs-app` div and a leftover stylesheet with unscoped utility classes (`.opacity-0`, `.opacity-100`, `.popup-container`, …) into every page. On sites that use the same class names — e.g. ChatGPT, which hides its per-message action buttons with Tailwind's `opacity-0` — the injected rules collided and hid UI such as the message edit icon. The extension no longer injects any script or CSS into web pages.
+
 ### Changed
 - **Quota model** — Daily limit is now counted per bookmark written, not per API call. Realtime browser sync and one-click bulk import both consume from the same `bookmarkQuotaPerDay` budget.
 - **Plan flags split** — The single `browserImportAllowed` flag has been replaced by two independent admin-toggleable flags: `browserRealtimeSyncAllowed` (live `chrome.bookmarks.onCreated` sync) and `browserBulkImportAllowed` (one-click import of existing bookmarks).
